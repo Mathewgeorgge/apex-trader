@@ -2921,21 +2921,64 @@ function calculateStockMetrics(sym) {
 
     // High-Frequency Market Ticking Engine Loop
     setInterval(() => {
-      // Simulate live tick movement across active markets
+      // Simulate live tick movement across active markets with Realistic Multi-Candle Wave Cycles
       Object.keys(marketCatalog).forEach(mkt => {
         const symbols = marketCatalog[mkt].symbols;
         Object.keys(symbols).forEach(sym => {
           const item = symbols[sym];
-          const last = item.history[item.history.length - 1];
-          // Momentum drift: Top trending assets drift upward with positive expectation
-          const driftBias = (item.pctChange > 0 || (item.open && item.ltp > item.open)) ? 0.47 : 0.49;
-          const delta = (Math.random() - driftBias) * (item.ltp * 0.0015);
-          const newP = Math.round((item.ltp + delta) * 100) / 100;
+          if (!item.history || item.history.length === 0) return;
+
+          // 1. Initialize Dynamic Wave State for realistic alternating Green & Red price action
+          if (item.waveTrend === undefined) {
+            item.waveTrend = (Math.random() > 0.45) ? 1 : -1;
+            item.waveTicksLeft = Math.floor(Math.random() * 18) + 10;
+            item.ticksInCurrentCandle = 0;
+          }
+
+          // Cycle wave states between Momentum Rally (Green) and Healthy Pullback (Red)
+          item.waveTicksLeft--;
+          if (item.waveTicksLeft <= 0) {
+            // Flip wave or consolidate: 55% chance trend continuation, 45% pullback/mean reversion
+            item.waveTrend = (item.waveTrend === 1) ? (Math.random() < 0.55 ? -1 : 1) : 1;
+            item.waveTicksLeft = Math.floor(Math.random() * 16) + 10;
+          }
+
+          // Dynamic drift bias: Bullish wave drifts up (0.44), Pullback wave dips down (0.56)
+          const waveBias = (item.waveTrend === 1) ? 0.44 : 0.56;
+          const tickNoise = (Math.random() - waveBias) * (item.ltp * 0.0016);
+          const newP = Math.max(1.0, Math.round((item.ltp + tickNoise) * 100) / 100);
 
           item.ltp = newP;
+
+          // 2. Active Candlestick Lifecycle Engine
+          let last = item.history[item.history.length - 1];
+          item.ticksInCurrentCandle = (item.ticksInCurrentCandle || 0) + 1;
+
+          // Update current candle high, low, close
           last.close = newP;
           if (newP > last.high) last.high = newP;
           if (newP < last.low) last.low = newP;
+          last.volume = (last.volume || 1000) + Math.floor(Math.random() * 150 + 20);
+
+          // 3. New Candle Completion & Push (Every 10-12 ticks, close candle and start a fresh one!)
+          // This ensures the chart actively forms new green and red candles, scrolling rightwards!
+          const ticksPerCandle = (timeframeMinutes === 1) ? 8 : (timeframeMinutes === 3) ? 12 : 16;
+          if (item.ticksInCurrentCandle >= ticksPerCandle) {
+            // Close previous candle and push fresh new candle
+            const newCandle = {
+              time: Date.now(),
+              open: last.close,
+              high: last.close,
+              low: last.close,
+              close: last.close,
+              volume: Math.floor(Math.random() * 2500) + 800
+            };
+            item.history.push(newCandle);
+            if (item.history.length > 42) {
+              item.history.shift(); // Keep clean scrolling window of 42 candles
+            }
+            item.ticksInCurrentCandle = 0;
+          }
 
           // Multi-Stock Intelligent Breakout Scanner:
           // Instead of always sticking to 1 fixed stock, automatically scan the entire universe
