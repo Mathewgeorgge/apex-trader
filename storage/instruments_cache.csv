@@ -1,0 +1,9 @@
+instrument_token,exchange,tradingsymbol,name,lot_size,tick_size,instrument_type
+256265,NSE,NIFTY 50,Nifty 50,25,0.05,EQ
+260105,NSE,NIFTY BANK,Bank Nifty,15,0.05,EQ
+738561,NSE,RELIANCE,Reliance Industries,1,0.05,EQ
+341249,NSE,HDFCBANK,HDFC Bank,1,0.05,EQ
+408065,NSE,INFY,Infosys,1,0.05,EQ
+779521,NSE,SBIN,State Bank of India,1,0.05,EQ
+895745,NSE,TATASTEEL,Tata Steel,1,0.05,EQ
+2953217,NSE,TCS,Tata Consultancy Services,1,0.05,EQ

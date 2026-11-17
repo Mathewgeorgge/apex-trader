@@ -1,0 +1,12 @@
+# Zerodha Algo Trading Requirements
+# The user's Python environment already includes key packages (kiteconnect, pyotp, pandas, numpy, etc.)
+
+kiteconnect>=5.2.0
+pyotp>=2.9.0
+pandas>=2.0.0
+numpy>=1.24.0
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+requests>=2.31.0
+websocket-client>=1.6.0
+yfinance>=0.2.0

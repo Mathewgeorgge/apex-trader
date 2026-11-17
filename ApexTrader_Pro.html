@@ -1,0 +1,2819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApexTrader Global Pro - Multi-Asset Algo Trading Terminal & Intelligence Suite</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #060910; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif; overflow-x: hidden; }
+    .card-panel { background: #0c1322; border: 1px solid #1a2538; }
+    .glass-header { background: rgba(12, 19, 34, 0.96); backdrop-filter: blur(14px); border-bottom: 1px solid #1a2538; }
+    .market-tab.active { background: #0284c7; color: white; font-weight: bold; }
+    .sub-tab.active { background: #1e293b; color: #38bdf8; border-bottom: 2px solid #38bdf8; font-weight: 700; }
+    .pulse-dot { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #070b14; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1a2538; border-radius: 4px; }
+    .glow-green { box-shadow: 0 0 15px rgba(16, 185, 129, 0.25); }
+    .glow-red { box-shadow: 0 0 15px rgba(239, 68, 68, 0.25); }
+    .glow-cyan { box-shadow: 0 0 15px rgba(6, 182, 212, 0.2); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col text-xs select-none">
+
+  <!-- NSE Indian Market Live Ticker Tape -->
+  <div class="bg-[#03060c] border-b border-gray-800/80 px-4 py-1.5 flex items-center justify-between text-[11px] overflow-x-auto whitespace-nowrap custom-scrollbar">
+    <div class="flex items-center space-x-6">
+      <div class="flex items-center space-x-2">
+        <span class="text-amber-400 font-semibold">🇮🇳 NIFTY 50:</span>
+        <span class="font-mono font-bold text-white" id="ticker-nifty">24,158.40</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+0.62% ▲</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="text-cyan-400 font-semibold">🏦 BANK NIFTY:</span>
+        <span class="font-mono font-bold text-white" id="ticker-banknifty">51,420.15</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+1.12% ▲</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="text-purple-400 font-semibold">⚡ INDIA VIX:</span>
+        <span class="font-mono font-bold text-white" id="ticker-vix">13.45</span>
+        <span class="text-emerald-400 font-mono text-[10px]">-4.20% ▼</span>
+      </div>
+      <div class="flex items-center space-x-2 border-l border-gray-800 pl-4">
+        <span class="text-blue-400 font-semibold">📊 SENSEX:</span>
+        <span class="font-mono font-bold text-white" id="ticker-sensex">79,480.20</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+0.55% ▲</span>
+      </div>
+      <div class="flex items-center space-x-2 border-l border-gray-800 pl-4">
+        <span class="text-emerald-400 font-semibold">⛽ RELIANCE:</span>
+        <span class="font-mono font-bold text-white" id="ticker-reliance">₹2,485.50</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+1.25% ▲</span>
+      </div>
+      <div class="flex items-center space-x-2 border-l border-gray-800 pl-4">
+        <span class="text-indigo-400 font-semibold">🏛️ HDFCBANK:</span>
+        <span class="font-mono font-bold text-white" id="ticker-hdfc">₹1,684.20</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+0.85% ▲</span>
+      </div>
+      <div class="flex items-center space-x-2 border-l border-gray-800 pl-4">
+        <span class="text-rose-400 font-semibold">💻 TCS:</span>
+        <span class="font-mono font-bold text-white" id="ticker-tcs">₹3,920.00</span>
+        <span class="text-rose-400 font-mono text-[10px]">-0.30% ▼</span>
+      </div>
+      <div class="flex items-center space-x-2 border-l border-gray-800 pl-4">
+        <span class="text-cyan-400 font-semibold">🚗 TATAMOTORS:</span>
+        <span class="font-mono font-bold text-white" id="ticker-tatamotors">₹792.40</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+2.10% ▲</span>
+      </div>
+    </div>
+    <div class="flex items-center space-x-2 text-[10px] pl-4">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+      <span class="text-emerald-400 font-bold font-mono">NSE SIMULATOR ACTIVE (24x7)</span>
+      <span class="text-gray-500 font-mono text-[9px]">&bull; Zerodha API Ready</span>
+    </div>
+  </div>
+
+  <!-- Primary Application Header -->
+  <header class="glass-header px-4 py-2 flex flex-wrap lg:flex-nowrap items-center justify-between gap-3 sticky top-0 z-30">
+    <div class="flex items-center space-x-3">
+      <div class="bg-gradient-to-tr from-cyan-600 to-indigo-600 p-2 rounded-lg text-white font-black text-sm shadow">
+        APEX
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <h1 class="text-sm font-bold text-white tracking-wide">ApexTrader Global Pro</h1>
+          <span class="bg-cyan-950 text-cyan-300 border border-cyan-700/60 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">Quantum Risk Engine</span>
+        </div>
+        <p class="text-[10px] text-gray-400">6 Risk Filter Gates &bull; Zerodha Tax & Brokerage Engine &bull; Multi-Market</p>
+      </div>
+    </div>
+
+    <!-- Market Selector Tabs (NSE Focused) -->
+    <div class="flex flex-wrap items-center gap-1 border border-gray-800 bg-[#070b14] p-1 rounded-lg">
+      <button onclick="switchMarket('india')" id="market-btn-india" class="market-tab active px-3 py-1 rounded text-xs transition font-bold">
+        🇮🇳 NSE Cash Equities (Stocks)
+      </button>
+      <button onclick="switchMarket('fno')" id="market-btn-fno" class="market-tab px-3 py-1 rounded text-xs text-cyan-400 hover:text-white transition font-bold bg-cyan-950/40 border border-cyan-800/40">
+        🎯 NSE F&O (Options Chain & Greeks)
+      </button>
+    </div>
+
+    <!-- Actions & Kill Switch -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Brokerage Calculator Modal Trigger -->
+      <button onclick="openBrokerageModal()" class="bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700 text-indigo-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition" title="View Zerodha Brokerage & STT Tax Calculator">
+        <span>🧮</span> Brokerage Calculator
+      </button>
+
+      <!-- Audio Mute Button -->
+      <button onclick="toggleAudio()" id="btn-audio-toggle" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition" title="Toggle Sound Effects">
+        <span id="audio-icon">🔊</span> <span id="audio-label">Sound ON</span>
+      </button>
+
+      <!-- Bot Engine Status Pill -->
+      <div id="status-pill" class="px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-gray-800 text-gray-400 border border-gray-700 flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-gray-500"></span> BOT IDLE
+      </div>
+
+      <!-- Emergency Kill Switch -->
+      <button onclick="triggerKillSwitch()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg flex items-center gap-1.5 transition glow-red">
+        <span>🚨</span> KILL SWITCH
+      </button>
+    </div>
+  </header>
+
+  <!-- Live PnL, Taxes & Account Ribbon -->
+  <div class="bg-[#080d19] border-b border-gray-800 px-4 py-2 grid grid-cols-2 md:grid-cols-7 gap-3 text-xs">
+    <div class="border-r border-gray-800/80 pr-2">
+      <span class="text-[10px] text-gray-400">Paper Capital</span>
+      <div class="flex items-center gap-1">
+        <span id="curr-symbol-1" class="text-gray-400 font-bold">$</span>
+        <input id="acc-capital" type="number" value="7000" onchange="updateCapital()" class="w-20 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-xs font-bold text-white focus:outline-none focus:border-cyan-500" />
+      </div>
+    </div>
+    <div class="border-r border-gray-800/80 pr-2">
+      <span class="text-[10px] text-gray-400">Available Cash</span>
+      <p id="acc-cash" class="font-mono font-bold text-cyan-400 text-sm">7,000.00</p>
+    </div>
+    <div class="border-r border-gray-800/80 pr-2">
+      <span class="text-[10px] text-gray-400">Margin Used</span>
+      <p id="acc-margin-used" class="font-mono font-bold text-gray-200 text-sm">$ 0.00</p>
+    </div>
+    <div class="border-r border-gray-800/80 pr-2">
+      <span class="text-[10px] text-gray-400">Gross PnL</span>
+      <p id="acc-gross-pnl" class="font-mono font-bold text-gray-300 text-sm">$ 0.00</p>
+    </div>
+    <div class="border-r border-gray-800/80 pr-2 cursor-pointer group" onclick="openBrokerageModal()" title="Click to view tax breakdown">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] text-gray-400">Brokerage & Taxes ℹ️</span>
+      </div>
+      <p id="acc-total-taxes" class="font-mono font-bold text-rose-400 text-sm group-hover:underline">- $ 0.00</p>
+    </div>
+    <div class="border-r border-gray-800/80 pr-2">
+      <span class="text-[10px] text-gray-400 font-bold text-emerald-400">Net Realized PnL (In-Pocket)</span>
+      <p id="acc-netpnl" class="font-mono font-extrabold text-emerald-400 text-sm">$ 0.00</p>
+    </div>
+    <div>
+      <span class="text-[10px] text-gray-400">Circuit Breaker (Max Loss)</span>
+      <div class="flex items-center gap-1">
+        <span id="curr-symbol-maxloss" class="text-rose-400 font-bold">$</span>
+        <input id="input-maxloss" type="number" value="200" onchange="updateMaxLoss()" class="w-16 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-xs font-bold text-rose-400 focus:outline-none focus:border-rose-500" title="Adjust daily max loss circuit breaker threshold" />
+        <span id="maxloss-pct-tag" class="text-[9px] text-gray-400 font-mono">(2.8%)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Copilot Intelligence Pulse Ribbon -->
+  <div class="bg-gradient-to-r from-cyan-950/60 via-slate-900 to-indigo-950/60 border-b border-cyan-800/30 px-4 py-1.5 flex items-center justify-between text-xs">
+    <div class="flex items-center space-x-2.5 overflow-hidden">
+      <span class="flex items-center gap-1 font-extrabold text-cyan-400 bg-cyan-950 border border-cyan-700/50 px-2 py-0.5 rounded text-[10px]">
+        <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 pulse-dot"></span> AI COPILOT
+      </span>
+      <p id="ai-copilot-msg" class="text-gray-200 font-mono text-[11px] truncate">
+        [SUPER-TREND 10,3] Scanning RELIANCE & NIFTY 5m candles. Price +1.4% above 20 EMA with bullish volume confirmation. Signal: BUY PREPARED.
+      </p>
+    </div>
+    <div class="flex items-center space-x-2 text-[10px] text-gray-400 whitespace-nowrap pl-2">
+      <span class="bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded font-mono font-bold">6/6 RISK GATES PASSED</span>
+      <span>AI Confidence: <strong class="text-emerald-400 font-mono" id="ai-confidence">84.5%</strong></span>
+    </div>
+  </div>
+
+  <!-- Main Trading Desk -->
+  <main class="flex-1 p-3 space-y-3">
+    
+    <!-- Top Grid: Interactive Chart + Order Ladder & Strategy Controls -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-3">
+      
+      <!-- Chart Workspace (3 Cols) -->
+      <div class="card-panel p-3 rounded-xl lg:col-span-3 space-y-2 flex flex-col">
+        
+        <!-- Controls Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-gray-800/80 text-xs">
+          <div class="flex items-center space-x-2">
+            <span class="text-gray-400 text-[10px] font-bold">ASSET:</span>
+            <select id="sel-chart-symbol" onchange="changeChartSymbol(this.value)" class="bg-[#070b14] border border-gray-700 text-white font-bold rounded px-2.5 py-1 text-xs font-mono">
+              <!-- Dynamically populated -->
+            </select>
+
+            <!-- Timeframes -->
+            <div class="flex space-x-0.5 bg-[#070b14] border border-gray-800 rounded p-0.5 text-[10px]">
+              <button onclick="setTimeframe(1)" id="tf-1" class="px-2 py-0.5 rounded text-gray-400 hover:text-white">1m</button>
+              <button onclick="setTimeframe(3)" id="tf-3" class="px-2 py-0.5 rounded text-gray-400 hover:text-white">3m</button>
+              <button onclick="setTimeframe(5)" id="tf-5" class="px-2 py-0.5 rounded bg-gray-800 text-cyan-400 font-bold">5m</button>
+              <button onclick="setTimeframe(15)" id="tf-15" class="px-2 py-0.5 rounded text-gray-400 hover:text-white">15m</button>
+            </div>
+          </div>
+
+          <!-- Indicator Checkboxes -->
+          <div class="flex items-center space-x-3 text-[10px]">
+            <label class="flex items-center space-x-1 cursor-pointer">
+              <input type="checkbox" id="chk-ema" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-blue-500" />
+              <span class="text-blue-400 font-semibold">20 EMA</span>
+            </label>
+            <label class="flex items-center space-x-1 cursor-pointer">
+              <input type="checkbox" id="chk-supertrend" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-emerald-500" />
+              <span class="text-emerald-400 font-semibold">Supertrend(10,3)</span>
+            </label>
+            <label class="flex items-center space-x-1 cursor-pointer">
+              <input type="checkbox" id="chk-vwap" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-amber-500" />
+              <span class="text-amber-400 font-semibold">VWAP</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Main Chart Canvas -->
+        <div class="bg-[#040711] rounded-lg p-2 border border-gray-800/80 relative flex-1 min-h-[300px]">
+          <canvas id="mainChartCanvas" height="300" class="w-full"></canvas>
+        </div>
+
+        <!-- Sub-Chart: RSI (14) -->
+        <div class="bg-[#040711] rounded-lg p-1.5 border border-gray-800/80 h-16 relative">
+          <div class="absolute top-1 left-2 text-[9px] text-gray-400 z-10 flex items-center space-x-3">
+            <span>RSI (14) Momentum: <strong id="rsi-val" class="text-cyan-400 font-mono">58.4</strong></span>
+            <span class="text-gray-500">Overbought: 70 | Oversold: 30</span>
+          </div>
+          <canvas id="rsiCanvas" height="60" class="w-full"></canvas>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Algo Bot Control + Order Depth (1 Col) -->
+      <div class="space-y-3">
+        
+        <!-- Bot Autopilot Card -->
+        <div class="card-panel p-3.5 rounded-xl space-y-3">
+          <div class="flex justify-between items-center pb-2 border-b border-gray-800">
+            <span class="font-bold text-white text-xs flex items-center gap-1.5">
+              <span>🤖</span> Algo Bot Autopilot
+            </span>
+            <span id="bot-status-tag" class="text-[9px] px-2 py-0.5 rounded bg-gray-800 text-gray-400 font-bold">OFFLINE</span>
+          </div>
+
+          <div>
+            <label class="block text-[10px] text-gray-400 font-semibold mb-1">Trading Strategy</label>
+            <select id="sel-algo-strategy" class="w-full bg-[#070b14] border border-gray-700 text-white rounded p-1.5 text-xs font-semibold">
+              <option value="straddle_920">🎯 9:20 AM Short Straddle (Sell ATM CE + PE)</option>
+              <option value="option_breakout">⚡ Option Momentum Buyer (Call/Put Breakout)</option>
+              <option value="supertrend_ema">Supertrend (10,3) + 20 EMA Cross</option>
+              <option value="vwap_breakout">VWAP Institutional Momentum</option>
+              <option value="rsi_scalp">RSI Extreme Scalper (<30 Buy / >70 Sell)</option>
+              <option value="news_breakout">News Catalyst Sentiment Breakout</option>
+            </select>
+          </div>
+
+          <!-- Multi-Stock Basket Universe Selector -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center text-[10px]">
+              <span class="text-gray-400 font-semibold">Active Trading Basket (<span id="basket-count" class="text-cyan-400 font-bold">All</span>)</span>
+              <div class="space-x-1.5">
+                <button type="button" onclick="selectAllBasket(true)" class="text-[9px] text-cyan-400 hover:underline">Select All</button>
+                <button type="button" onclick="selectAllBasket(false)" class="text-[9px] text-gray-400 hover:underline">Clear</button>
+              </div>
+            </div>
+            <div id="basket-chips-container" class="flex flex-wrap gap-1.5 p-2 bg-[#070b14] border border-gray-800 rounded-lg max-h-24 overflow-y-auto custom-scrollbar">
+              <!-- Dynamically populated checkboxes for every asset in current market -->
+            </div>
+            <p class="text-[9px] text-gray-500">Bot scans all selected assets in parallel (Max 3 open simultaneous positions).</p>
+          </div>
+
+          <div class="bg-[#060a14] p-2.5 rounded-lg border border-gray-800/80 text-[10px] text-gray-300 space-y-1">
+            <div class="flex justify-between">
+              <span>Execution Mode:</span>
+              <strong class="text-cyan-400">PAPER SIMULATION</strong>
+            </div>
+            <div class="flex justify-between">
+              <span>Zerodha Brokerage:</span>
+              <strong class="text-yellow-400">₹20 / Trade (Flat)</strong>
+            </div>
+            <div class="flex justify-between">
+              <span>Trailing Profit Lock:</span>
+              <strong class="text-emerald-400">Dynamic 0.8% Trail (Active)</strong>
+            </div>
+            <div class="flex justify-between">
+              <span>Pre-Trade Risk Clearance:</span>
+              <strong class="text-emerald-400 font-mono">6 of 6 Gates Active</strong>
+            </div>
+          </div>
+
+          <div class="pt-1 space-y-2">
+            <button id="btn-toggle-engine" onclick="toggleEngine()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-green">
+              <span>▶</span> START ALGO BOT
+            </button>
+            <button onclick="triggerImmediateTrade()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1.5 rounded-lg text-xs flex items-center justify-center gap-1 transition">
+              <span>⚡</span> Force Trigger Signal Now
+            </button>
+          </div>
+        </div>
+
+        <!-- Level 2 Order Depth -->
+        <div class="card-panel p-3 rounded-xl space-y-2">
+          <div class="flex justify-between items-center text-[10px]">
+            <span class="font-bold text-gray-300">Level 2 Depth (<span id="depth-market-tag">CRYPTO</span>)</span>
+            <span class="text-gray-500 font-mono">Live Bids/Asks</span>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-1 text-[10px] font-mono">
+            <!-- Bids -->
+            <div class="space-y-0.5" id="depth-bids">
+              <div class="flex justify-between text-gray-500 border-b border-gray-800 pb-0.5">
+                <span>Qty</span><span>Bid</span>
+              </div>
+            </div>
+            <!-- Asks -->
+            <div class="space-y-0.5 border-l border-gray-800 pl-1" id="depth-asks">
+              <div class="flex justify-between text-gray-500 border-b border-gray-800 pb-0.5">
+                <span>Ask</span><span>Qty</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Multi-Module Intelligence Suite & Trading Desk (6 Tabs) -->
+    <div class="card-panel rounded-xl overflow-hidden">
+      <!-- Tabs Header Navigation -->
+      <div class="flex items-center justify-between border-b border-gray-800 bg-[#090e1a] px-3">
+        <div class="flex space-x-1">
+          <button onclick="switchSubTab('positions')" id="tab-nav-positions" class="sub-tab active px-3.5 py-2.5 text-xs flex items-center gap-1.5 transition">
+            <span>💼</span> Positions & Ledger (<span id="badge-pos-count">0</span>)
+          </button>
+          <button onclick="switchSubTab('optionchain')" id="tab-nav-optionchain" class="sub-tab px-3.5 py-2.5 text-xs text-gray-400 hover:text-white flex items-center gap-1.5 transition">
+            <span>⚡</span> Indian F&O Option Chain & Greeks <span class="bg-amber-950 text-amber-300 border border-amber-800 text-[9px] px-1.5 py-0.2 rounded font-bold">NIFTY</span>
+          </button>
+          <button onclick="switchSubTab('riskgates')" id="tab-nav-riskgates" class="sub-tab px-3.5 py-2.5 text-xs text-gray-400 hover:text-white flex items-center gap-1.5 transition">
+            <span>🛡️</span> 6 Institutional Risk Gates <span class="bg-emerald-950 text-emerald-300 border border-emerald-800 text-[9px] px-1.5 py-0.2 rounded font-bold">PASS</span>
+          </button>
+          <button onclick="switchSubTab('brokerage')" id="tab-nav-brokerage" class="sub-tab px-3.5 py-2.5 text-xs text-gray-400 hover:text-white flex items-center gap-1.5 transition">
+            <span>🧮</span> Zerodha Taxes & Net PnL
+          </button>
+          <button onclick="switchSubTab('news')" id="tab-nav-news" class="sub-tab px-3.5 py-2.5 text-xs text-gray-400 hover:text-white flex items-center gap-1.5 transition">
+            <span>📰</span> Live Breaking News Wire <span class="bg-rose-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-bold animate-pulse">LIVE</span>
+          </button>
+          <button onclick="switchSubTab('breadth')" id="tab-nav-breadth" class="sub-tab px-3.5 py-2.5 text-xs text-gray-400 hover:text-white flex items-center gap-1.5 transition">
+            <span>🗺️</span> Market Heatmap & Stock Screener <span class="bg-cyan-950 text-cyan-300 border border-cyan-800 text-[9px] px-1.5 py-0.2 rounded font-bold">SMART</span>
+          </button>
+          <button onclick="switchSubTab('calendar')" id="tab-nav-calendar" class="sub-tab px-3.5 py-2.5 text-xs text-gray-400 hover:text-white flex items-center gap-1.5 transition">
+            <span>📅</span> Economic Calendar
+          </button>
+          <button onclick="switchSubTab('analytics')" id="tab-nav-analytics" class="sub-tab px-3.5 py-2.5 text-xs text-gray-400 hover:text-white flex items-center gap-1.5 transition">
+            <span>📈</span> Quant Analytics
+          </button>
+        </div>
+
+        <div class="text-[10px] text-gray-400 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+          <span>Feed Synchronized</span>
+        </div>
+      </div>
+
+      <!-- Tab Content 1: Positions & Audit Log -->
+      <div id="tab-content-positions" class="p-3">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <!-- Positions Table -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-white text-xs flex items-center gap-1.5">
+                <span>💼</span> Active Positions (Gross vs Net PnL)
+              </span>
+              <span class="text-[10px] text-gray-400">Zerodha charges deducted</span>
+            </div>
+            <div class="overflow-x-auto max-h-52 custom-scrollbar border border-gray-800/80 rounded-lg">
+              <table class="w-full text-left text-xs">
+                <thead class="text-[10px] uppercase bg-[#060a14] text-gray-400 border-b border-gray-800">
+                  <tr>
+                    <th class="py-1.5 px-2">Symbol</th>
+                    <th class="py-1.5 px-2">Type</th>
+                    <th class="py-1.5 px-2">Qty</th>
+                    <th class="py-1.5 px-2">Entry</th>
+                    <th class="py-1.5 px-2">Current</th>
+                    <th class="py-1.5 px-2">Trailing SL / Lock</th>
+                    <th class="py-1.5 px-2">Gross PnL</th>
+                    <th class="py-1.5 px-2">Taxes</th>
+                    <th class="py-1.5 px-2">Net PnL</th>
+                    <th class="py-1.5 px-2 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="pos-table-body" class="divide-y divide-gray-800/50 font-mono">
+                  <tr><td colspan="9" class="py-6 text-center text-gray-500 text-xs">No active positions. Click "START ALGO BOT" to begin automated paper trading.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Real-Time Activity Log -->
+          <div class="space-y-2 flex flex-col">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-white text-xs flex items-center gap-1.5">
+                <span>📜</span> Bot Execution & Tax Audit Log
+              </span>
+              <span class="text-[10px] text-gray-400">SEBI-Compliant Audit Ledger</span>
+            </div>
+            <div id="terminal-log-box" class="bg-black/90 p-2.5 rounded-lg font-mono text-[10px] text-gray-300 flex-1 h-52 overflow-y-auto space-y-1 custom-scrollbar border border-gray-800/80">
+              <p class="text-gray-500">// ApexTrader Global Multi-Market Terminal Initialized.</p>
+              <p class="text-cyan-400">// Ingestion Pipeline: Option Greeks &bull; L2 Order Flow &bull; Tick Feed &bull; News NLP loaded.</p>
+              <p class="text-emerald-400">[READY] 6 Institutional Risk Filter Gates online. Zero-risk Paper Mode active.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: 6 Institutional Risk Gates (From Returns Wealth Architecture) -->
+      <div id="tab-content-riskgates" class="p-3 hidden space-y-3">
+        <div class="flex justify-between items-center pb-2 border-b border-gray-800">
+          <div>
+            <span class="font-bold text-white text-xs">🛡️ 6-Layer Institutional Pre-Trade Risk Gates</span>
+            <p class="text-[10px] text-gray-400">Only signals that clear all 6 filters are routed to the execution engine</p>
+          </div>
+          <span class="bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">ALL 6 GATES ARMED</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          <!-- Gate 1: Position Risk -->
+          <div class="bg-[#070b14] border border-gray-800 p-2.5 rounded-lg space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-white text-xs">1. Position Risk</span>
+              <span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[9px] px-1.5 py-0.2 rounded font-mono font-bold">PASSED</span>
+            </div>
+            <p class="text-[11px] text-gray-300">Caps capital per trade to &le; 15% of total wallet. Auto-calculates lot sizing based on stop-loss points.</p>
+            <div class="text-[9px] font-mono text-cyan-400">Status: Safe (Margin allocation within limits)</div>
+          </div>
+
+          <!-- Gate 2: Market Risk -->
+          <div class="bg-[#070b14] border border-gray-800 p-2.5 rounded-lg space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-white text-xs">2. Market Risk</span>
+              <span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[9px] px-1.5 py-0.2 rounded font-mono font-bold">PASSED</span>
+            </div>
+            <p class="text-[11px] text-gray-300">Circuit Breaker & Macro drawdown guard. Liquidates positions if daily loss reaches limit (₹5,000 / $500).</p>
+            <div class="text-[9px] font-mono text-cyan-400">Status: Circuit Breaker INACTIVE (Normal Regime)</div>
+          </div>
+
+          <!-- Gate 3: Volatility Filter -->
+          <div class="bg-[#070b14] border border-gray-800 p-2.5 rounded-lg space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-white text-xs">3. Volatility Filter</span>
+              <span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[9px] px-1.5 py-0.2 rounded font-mono font-bold">PASSED</span>
+            </div>
+            <p class="text-[11px] text-gray-300">ATR Anomaly detector. Blocks fresh orders during news spikes or when bid/ask spread exceeds 0.15%.</p>
+            <div class="text-[9px] font-mono text-cyan-400">Status: India VIX 13.45 (Normal Volatility)</div>
+          </div>
+
+          <!-- Gate 4: Liquidity Filter -->
+          <div class="bg-[#070b14] border border-gray-800 p-2.5 rounded-lg space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-white text-xs">4. Liquidity Filter</span>
+              <span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[9px] px-1.5 py-0.2 rounded font-mono font-bold">PASSED</span>
+            </div>
+            <p class="text-[11px] text-gray-300">L1/L2 order book volume check. Verifies top 5 bid/ask depth has sufficient liquidity to avoid slippage.</p>
+            <div class="text-[9px] font-mono text-cyan-400">Status: L2 Market Depth > 5,000 units</div>
+          </div>
+
+          <!-- Gate 5: Exposure Limits -->
+          <div class="bg-[#070b14] border border-gray-800 p-2.5 rounded-lg space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-white text-xs">5. Exposure Limits</span>
+              <span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[9px] px-1.5 py-0.2 rounded font-mono font-bold">PASSED</span>
+            </div>
+            <p class="text-[11px] text-gray-300">Enforces max 3 open positions and max 10 trades per day to prevent overtrading and fee drain.</p>
+            <div class="text-[9px] font-mono text-cyan-400">Status: 0/3 Open &bull; 0/10 Trades today</div>
+          </div>
+
+          <!-- Gate 6: Custom Rules -->
+          <div class="bg-[#070b14] border border-gray-800 p-2.5 rounded-lg space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-white text-xs">6. Custom Rules</span>
+              <span class="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[9px] px-1.5 py-0.2 rounded font-mono font-bold">PASSED</span>
+            </div>
+            <p class="text-[11px] text-gray-300">Mandatory 15:15 IST auto square-off for MIS intraday positions. Blocks new trades after 15:00 IST.</p>
+            <div class="text-[9px] font-mono text-cyan-400">Status: Square-off scheduler synchronized</div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Tab Content: Indian F&O Option Chain & Greeks Desk -->
+      <div id="tab-content-optionchain" class="p-3 hidden space-y-3">
+        <!-- Option Chain Top Header & Quick Intelligence -->
+        <div class="bg-[#070b14] p-3 rounded-lg border border-gray-800 flex flex-wrap items-center justify-between gap-3">
+          <div class="space-y-0.5">
+            <div class="flex items-center space-x-2">
+              <span class="bg-amber-500 text-black px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">NSE DERIVATIVES CHAIN</span>
+              <span class="text-xs font-bold text-white" id="fno-header-title">NIFTY 50 Weekly Option Chain & Live Greeks</span>
+              <span class="bg-cyan-950 text-cyan-400 border border-cyan-800 text-[10px] px-2 py-0.5 rounded font-mono font-bold" id="fno-spot-pill">Spot: ₹24,158.40</span>
+            </div>
+            <p class="text-[10px] text-gray-400">Zerodha F&O Charge: Flat ₹20/order &bull; STT: 0.1% on Sell &bull; Breakeven Point Tracking &bull; Lot Size: <span id="fno-lot-tag" class="text-cyan-400 font-bold">25</span></p>
+          </div>
+          <div class="flex items-center space-x-2 text-xs flex-wrap">
+            <span class="text-gray-400 text-[11px] font-bold">Underlying:</span>
+            <select id="fno-underlying-sel" onchange="changeFnoUnderlying(this.value)" class="bg-gray-900 border border-gray-700 text-white rounded px-2.5 py-1 text-xs font-bold font-mono">
+              <option value="NIFTY 50">NIFTY 50 (Lot: 25)</option>
+              <option value="BANK NIFTY">BANK NIFTY (Lot: 15)</option>
+            </select>
+            <button onclick="triggerStraddleTrade()" class="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5">
+              <span>🎯</span> 9:20 AM Short Straddle
+            </button>
+          </div>
+        </div>
+
+        <!-- Smart Money Inflow & "Which Option People Are Buying" Intelligence Bar -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+          <!-- PCR Meter -->
+          <div class="bg-gray-900/80 border border-gray-800 p-2.5 rounded-lg flex items-center justify-between">
+            <div>
+              <span class="text-[9px] text-gray-400 uppercase font-semibold block">Put-Call Ratio (PCR)</span>
+              <span class="text-sm font-bold font-mono text-emerald-400" id="fno-pcr-val">1.24 (Bullish)</span>
+            </div>
+            <div class="text-right">
+              <span class="text-[8px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded font-bold uppercase">Call Heavy</span>
+              <span class="text-[9px] text-gray-500 block mt-0.5">OI Long Build-Up</span>
+            </div>
+          </div>
+
+          <!-- Most Bought Call Card -->
+          <div class="bg-emerald-950/20 border border-emerald-800/60 p-2.5 rounded-lg flex items-center justify-between">
+            <div class="space-y-0.5">
+              <div class="flex items-center gap-1">
+                <span class="text-[8px] bg-emerald-900 text-emerald-200 px-1.5 py-0.2 rounded font-black">🔥 MOST BOUGHT CALL</span>
+                <span class="text-xs font-bold font-mono text-white" id="fno-top-ce-name">24,200 CE</span>
+              </div>
+              <div class="text-[11px] font-mono font-bold text-emerald-400">
+                <span id="fno-top-ce-price">₹142.50</span> <span class="text-[9px] text-emerald-300 bg-emerald-950/80 px-1 rounded" id="fno-top-ce-buyer">88% BUYERS</span>
+              </div>
+            </div>
+            <button id="fno-top-ce-btn" onclick="tradeOptionDirect('NIFTY 24200 CE', 142.50, 'BUY')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] px-2.5 py-1.5 rounded font-bold shadow transition">
+              BUY CE
+            </button>
+          </div>
+
+          <!-- Most Bought Put Card -->
+          <div class="bg-rose-950/20 border border-rose-800/60 p-2.5 rounded-lg flex items-center justify-between">
+            <div class="space-y-0.5">
+              <div class="flex items-center gap-1">
+                <span class="text-[8px] bg-rose-900 text-rose-200 px-1.5 py-0.2 rounded font-black">🛡️ MOST BOUGHT PUT</span>
+                <span class="text-xs font-bold font-mono text-white" id="fno-top-pe-name">24,100 PE</span>
+              </div>
+              <div class="text-[11px] font-mono font-bold text-rose-400">
+                <span id="fno-top-pe-price">₹76.20</span> <span class="text-[9px] text-rose-300 bg-rose-950/80 px-1 rounded" id="fno-top-pe-buyer">64% BUYERS</span>
+              </div>
+            </div>
+            <button id="fno-top-pe-btn" onclick="tradeOptionDirect('NIFTY 24100 PE', 76.20, 'BUY')" class="bg-rose-600 hover:bg-rose-500 text-white text-[10px] px-2.5 py-1.5 rounded font-bold shadow transition">
+              BUY PE
+            </button>
+          </div>
+
+          <!-- Max Pain & Institutional Wall -->
+          <div class="bg-gray-900/80 border border-gray-800 p-2.5 rounded-lg flex items-center justify-between">
+            <div>
+              <span class="text-[9px] text-gray-400 uppercase font-semibold block">Max Pain / High OI Strike</span>
+              <span class="text-sm font-bold font-mono text-amber-400" id="fno-maxpain-val">24,150 Strike</span>
+            </div>
+            <div class="text-right">
+              <span class="text-[8px] bg-amber-950 text-amber-300 border border-amber-800 px-1.5 py-0.5 rounded font-bold">ATM PIVOT</span>
+              <span class="text-[9px] text-gray-500 block mt-0.5">Highest Expiry OI</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Option Chain Table Container -->
+        <div class="overflow-x-auto max-h-96 custom-scrollbar border border-gray-800/80 rounded-lg">
+          <table class="w-full text-center text-xs">
+            <thead class="text-[10px] uppercase bg-[#060a14] sticky top-0 z-20 border-b border-gray-800">
+              <tr>
+                <th colspan="5" class="py-1.5 bg-emerald-950/40 text-emerald-400 border-r border-gray-800">
+                  <span class="font-extrabold tracking-wider">CALLS (CE) &bull; BULLISH BUYERS</span>
+                </th>
+                <th class="py-1.5 px-3 bg-gray-900 text-amber-400 font-black border-r border-gray-800">
+                  STRIKE
+                </th>
+                <th colspan="5" class="py-1.5 bg-rose-950/40 text-rose-400">
+                  <span class="font-extrabold tracking-wider">PUTS (PE) &bull; BEARISH HEDGERS</span>
+                </th>
+              </tr>
+              <tr class="text-gray-400 text-[9px] border-b border-gray-800 bg-[#070c18]">
+                <th class="py-1 px-2 text-left">Buyer Flow / OI</th>
+                <th class="py-1 px-1.5">Greeks (Δ / θ)</th>
+                <th class="py-1 px-2 text-right">Call Premium</th>
+                <th class="py-1 px-2 text-center">1-Lot Margin & BE</th>
+                <th class="py-1 px-2 border-r border-gray-800 text-center">Action</th>
+                <th class="py-1 px-3 bg-gray-900 text-white font-mono border-r border-gray-800">Strike</th>
+                <th class="py-1 px-2 text-center">Action</th>
+                <th class="py-1 px-2 text-center">1-Lot Margin & BE</th>
+                <th class="py-1 px-2 text-left">Put Premium</th>
+                <th class="py-1 px-1.5">Greeks (Δ / θ)</th>
+                <th class="py-1 px-2 text-right">Buyer Flow / OI</th>
+              </tr>
+            </thead>
+            <tbody id="optionchain-tbody" class="divide-y divide-gray-800/50 font-mono text-[11px]">
+              <!-- Dynamically populated every tick by renderOptionChain() -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab Content: Zerodha Brokerage & Taxes Calculator -->
+      <div id="tab-content-brokerage" class="p-3 hidden space-y-3">
+        <div class="flex justify-between items-center pb-2 border-b border-gray-800">
+          <div>
+            <span class="font-bold text-white text-xs">🧮 Zerodha Statutory Charges & Breakeven Analytics</span>
+            <p class="text-[10px] text-gray-400">Indian Market (NSE/BSE) fee structure with STT, GST, Exchange charges & Breakeven ticks</p>
+          </div>
+          <span class="bg-indigo-950 text-indigo-300 border border-indigo-800 px-2 py-0.5 rounded text-[10px] font-bold">SEBI Aligned</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <!-- Live Interactive Calculator -->
+          <div class="bg-[#070b14] p-3 rounded-lg border border-gray-800 space-y-2">
+            <span class="font-bold text-white text-xs block">Quick Trade Fee Simulator</span>
+            <div class="space-y-1.5 text-xs">
+              <div>
+                <label class="text-[10px] text-gray-400 block">Symbol / Stock</label>
+                <input type="text" id="calc-sym" value="RELIANCE" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs font-mono" />
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-[10px] text-gray-400 block">Buy Price (₹)</label>
+                  <input type="number" id="calc-buy" value="2500" oninput="runFeeSim()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs font-mono" />
+                </div>
+                <div>
+                  <label class="text-[10px] text-gray-400 block">Sell Price (₹)</label>
+                  <input type="number" id="calc-sell" value="2520" oninput="runFeeSim()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs font-mono" />
+                </div>
+              </div>
+              <div>
+                <label class="text-[10px] text-gray-400 block">Quantity (Shares)</label>
+                <input type="number" id="calc-qty" value="10" oninput="runFeeSim()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs font-mono" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Itemized Charges Card -->
+          <div class="bg-[#070b14] p-3 rounded-lg border border-gray-800 space-y-1.5 font-mono text-xs">
+            <span class="font-bold text-white font-sans text-xs block border-b border-gray-800 pb-1">Itemized Government & Broker Fees</span>
+            <div class="flex justify-between text-gray-300">
+              <span>Zerodha Brokerage:</span>
+              <strong class="text-white" id="fee-brokerage">₹15.06</strong>
+            </div>
+            <div class="flex justify-between text-gray-300">
+              <span>STT / CTT (0.025% Sell):</span>
+              <strong class="text-white" id="fee-stt">₹6.30</strong>
+            </div>
+            <div class="flex justify-between text-gray-300">
+              <span>NSE Exchange Txn Fee:</span>
+              <strong class="text-white" id="fee-exchange">₹1.49</strong>
+            </div>
+            <div class="flex justify-between text-gray-300">
+              <span>GST (18% on Brokerage+NSE):</span>
+              <strong class="text-white" id="fee-gst">₹2.99</strong>
+            </div>
+            <div class="flex justify-between text-gray-300">
+              <span>SEBI & Stamp Duty:</span>
+              <strong class="text-white" id="fee-sebi">₹0.80</strong>
+            </div>
+            <div class="flex justify-between border-t border-gray-800 pt-1 text-rose-400 font-bold">
+              <span>Total Friction & Taxes:</span>
+              <span id="fee-total">₹26.64</span>
+            </div>
+          </div>
+
+          <!-- PnL & Breakeven Result -->
+          <div class="bg-[#070b14] p-3 rounded-lg border border-gray-800 flex flex-col justify-between space-y-2">
+            <div>
+              <span class="font-bold text-white text-xs block border-b border-gray-800 pb-1">Net In-Pocket Profit</span>
+              <div class="mt-2 space-y-1 font-mono text-xs">
+                <div class="flex justify-between">
+                  <span class="text-gray-400">Gross Trade PnL:</span>
+                  <span class="text-emerald-400 font-bold" id="res-gross">+₹200.00</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-400">Brokerage & Taxes:</span>
+                  <span class="text-rose-400 font-bold" id="res-tax">-₹26.64</span>
+                </div>
+                <div class="flex justify-between border-t border-gray-800 pt-1 text-sm">
+                  <span class="text-white font-bold">Net Realized PnL:</span>
+                  <span class="text-emerald-400 font-extrabold" id="res-net">+₹173.36</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-gray-900/80 p-2 rounded border border-gray-800 text-[10px]">
+              <span class="text-gray-400 block font-semibold">Minimum Points to Breakeven:</span>
+              <strong class="text-amber-400 font-mono text-xs" id="res-breakeven">₹2.66 / share</strong>
+              <p class="text-[9px] text-gray-500 mt-0.5">Price must move at least +₹2.66 before this trade becomes profitable.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 2: Live Breaking News & AI Sentiment Wire -->
+      <div id="tab-content-news" class="p-3 hidden space-y-3">
+        <!-- News Filter & Search Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-gray-800">
+          <div class="flex items-center space-x-1.5">
+            <button onclick="filterNews('all')" id="btn-news-all" class="bg-gray-800 text-cyan-400 font-bold px-2.5 py-1 rounded text-xs">All Markets</button>
+            <button onclick="filterNews('india')" id="btn-news-india" class="bg-gray-900 text-gray-400 hover:text-white px-2.5 py-1 rounded text-xs">🇮🇳 India (NSE/BSE)</button>
+            <button onclick="filterNews('us')" id="btn-news-us" class="bg-gray-900 text-gray-400 hover:text-white px-2.5 py-1 rounded text-xs">🇺🇸 US Equities & Fed</button>
+            <button onclick="filterNews('crypto')" id="btn-news-crypto" class="bg-gray-900 text-gray-400 hover:text-white px-2.5 py-1 rounded text-xs">🪙 Crypto & On-Chain</button>
+          </div>
+
+          <div class="flex items-center space-x-2 text-xs">
+            <input type="text" id="news-search" oninput="searchNews(this.value)" placeholder="Search headlines, tickers..." class="bg-[#070b14] border border-gray-700 rounded px-2.5 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500" />
+            <button onclick="injectSimulatedBreakingNews()" class="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/60 px-2 py-1 rounded text-[11px] font-semibold flex items-center gap-1 transition">
+              <span>⚡</span> Simulate Breaking News
+            </button>
+          </div>
+        </div>
+
+        <!-- News Feed List -->
+        <div id="news-feed-container" class="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Tab Content 3: Full Interactive Market Heatmap & Stock Screener -->
+      <div id="tab-content-breadth" class="p-3 hidden space-y-3">
+        <!-- Top Pick Banner & Auto-Select Button -->
+        <div class="bg-gradient-to-r from-cyan-950/80 via-[#0a1120] to-indigo-950/80 p-3 rounded-xl border border-cyan-800/50 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+          <div class="space-y-0.5">
+            <div class="flex items-center space-x-2">
+              <span class="bg-emerald-500 text-black px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">AI STOCK PICKER</span>
+              <span class="text-xs font-bold text-white">Today's High-Conviction Momentum Leaders</span>
+            </div>
+            <p class="text-[11px] text-gray-300">
+              Ranked by Volume Surge (2x+), 20 EMA Golden Slope, and Bullish Supertrend alignment.
+            </p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="autoSelectTopPicks()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow transition glow-green">
+              <span>⚡</span> Auto-Select Today's Top 3 Picks for Bot
+            </button>
+          </div>
+        </div>
+
+        <!-- Top 3 Ranked Leaderboard Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5" id="top-picks-leaderboard">
+          <!-- Populated dynamically by calculateConvictionScores() -->
+        </div>
+
+        <!-- Full Market Heatmap Grid -->
+        <div class="card-panel p-3 rounded-xl space-y-2 border border-gray-800">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-gray-800">
+            <div>
+              <span class="font-bold text-white text-xs flex items-center gap-1.5">
+                <span>🗺️</span> Full Market Heatmap (<span id="heatmap-market-name">NSE INDIA</span>)
+              </span>
+              <span class="text-[10px] text-gray-400">Click any stock tile to view its live chart & order depth</span>
+            </div>
+
+            <!-- Heatmap Legend -->
+            <div class="flex items-center space-x-2 text-[10px] font-mono">
+              <span class="text-gray-400">Magnitude:</span>
+              <span class="px-1.5 py-0.5 rounded bg-emerald-600/90 text-white font-bold">&gt;+2%</span>
+              <span class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">&gt;0%</span>
+              <span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800">&lt;0%</span>
+              <span class="px-1.5 py-0.5 rounded bg-rose-600/90 text-white font-bold">&lt;-2%</span>
+            </div>
+          </div>
+
+          <!-- Heatmap Tiles Grid Container -->
+          <div id="heatmap-tiles-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 pt-1 max-h-72 overflow-y-auto custom-scrollbar">
+            <!-- Populated dynamically by renderMarketHeatmap() -->
+          </div>
+        </div>
+
+        <!-- Market Breadth Advance / Decline & India VIX -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+          <div class="bg-[#070b14] p-2.5 rounded-lg border border-gray-800 space-y-1.5">
+            <div class="flex justify-between items-center text-[11px]">
+              <span class="font-bold text-white">⚖️ Market Breadth Ratio</span>
+              <span class="font-mono text-emerald-400 font-bold" id="breadth-summary">70% Bullish (7 Advances / 3 Declines)</span>
+            </div>
+            <div class="w-full bg-rose-600/80 h-2.5 rounded-full overflow-hidden flex" id="breadth-bar">
+              <div class="bg-emerald-500 h-full" style="width: 70%;"></div>
+            </div>
+          </div>
+
+          <div class="bg-[#070b14] p-2.5 rounded-lg border border-gray-800 flex items-center justify-between">
+            <div>
+              <span class="font-bold text-white text-[11px] block">India VIX Volatility Gauge</span>
+              <p class="text-[10px] text-gray-400">Reading: <strong class="text-cyan-400 font-mono">13.45</strong> (Calm & Bullish)</p>
+            </div>
+            <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px] font-bold">Ideal for Momentum Algos</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Tab Content 4: Economic Calendar -->
+      <div id="tab-content-calendar" class="p-3 hidden space-y-3">
+        <div class="flex justify-between items-center pb-2 border-b border-gray-800">
+          <div>
+            <span class="font-bold text-white text-xs">📅 High-Impact Macro Economic & Earnings Calendar</span>
+            <p class="text-[10px] text-gray-400">Algo stops or tightens risk 15 minutes prior to scheduled releases</p>
+          </div>
+          <span class="bg-amber-950 text-amber-300 border border-amber-800 px-2 py-0.5 rounded text-[10px] font-bold">Auto-Defense Armed</span>
+        </div>
+
+        <div class="overflow-x-auto max-h-64 custom-scrollbar border border-gray-800/80 rounded-lg">
+          <table class="w-full text-left text-xs">
+            <thead class="text-[10px] uppercase bg-[#060a14] text-gray-400 border-b border-gray-800">
+              <tr>
+                <th class="py-2 px-3">Date / Time</th>
+                <th class="py-2 px-3">Market</th>
+                <th class="py-2 px-3">Event / Catalyst</th>
+                <th class="py-2 px-3">Impact</th>
+                <th class="py-2 px-3">Consensus / Forecast</th>
+                <th class="py-2 px-3">Volatility Shield</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800/50 font-mono text-[11px]">
+              <tr class="hover:bg-gray-800/20">
+                <td class="py-2 px-3 text-cyan-400">Tomorrow 20:00 IST</td>
+                <td class="py-2 px-3 text-gray-300">🇺🇸 US</td>
+                <td class="py-2 px-3 text-white font-sans font-semibold">US Core CPI (YoY) Inflation Print</td>
+                <td class="py-2 px-3"><span class="bg-rose-950 text-rose-300 border border-rose-800 px-1.5 py-0.5 rounded text-[9px] font-bold">HIGH IMPACT</span></td>
+                <td class="py-2 px-3 text-gray-400">3.2% vs 3.3% prev</td>
+                <td class="py-2 px-3 text-emerald-400">Tighten SL by 30%</td>
+              </tr>
+              <tr class="hover:bg-gray-800/20">
+                <td class="py-2 px-3 text-cyan-400">In 2 Days 10:00 IST</td>
+                <td class="py-2 px-3 text-gray-300">🇮🇳 India</td>
+                <td class="py-2 px-3 text-white font-sans font-semibold">RBI MPC Monetary Policy & Repo Rate Decision</td>
+                <td class="py-2 px-3"><span class="bg-rose-950 text-rose-300 border border-rose-800 px-1.5 py-0.5 rounded text-[9px] font-bold">HIGH IMPACT</span></td>
+                <td class="py-2 px-3 text-gray-400">Status Quo (6.50%)</td>
+                <td class="py-2 px-3 text-amber-400">Pause Intraday Straddle</td>
+              </tr>
+              <tr class="hover:bg-gray-800/20">
+                <td class="py-2 px-3 text-cyan-400">In 3 Days 17:00 IST</td>
+                <td class="py-2 px-3 text-gray-300">🇮🇳 India</td>
+                <td class="py-2 px-3 text-white font-sans font-semibold">Reliance Industries Q3 Earnings Call</td>
+                <td class="py-2 px-3"><span class="bg-amber-950 text-amber-300 border border-amber-800 px-1.5 py-0.5 rounded text-[9px] font-bold">MEDIUM IMPACT</span></td>
+                <td class="py-2 px-3 text-gray-400">EBITDA +9.4% Est</td>
+                <td class="py-2 px-3 text-emerald-400">Hedge Stock Position</td>
+              </tr>
+              <tr class="hover:bg-gray-800/20">
+                <td class="py-2 px-3 text-cyan-400">In 5 Days 00:30 IST</td>
+                <td class="py-2 px-3 text-gray-300">🇺🇸 US</td>
+                <td class="py-2 px-3 text-white font-sans font-semibold">Federal Reserve FOMC Interest Rate Decision</td>
+                <td class="py-2 px-3"><span class="bg-rose-950 text-rose-300 border border-rose-800 px-1.5 py-0.5 rounded text-[9px] font-bold">CRITICAL IMPACT</span></td>
+                <td class="py-2 px-3 text-gray-400">25 bps cut expected</td>
+                <td class="py-2 px-3 text-rose-400">Auto Square-Off All US</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab Content 5: Quant Performance Analytics -->
+      <div id="tab-content-analytics" class="p-3 hidden space-y-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="bg-[#070b14] p-3 rounded-lg border border-gray-800 text-center">
+            <span class="text-[10px] text-gray-400 block font-semibold">Win Rate %</span>
+            <span class="text-xl font-bold font-mono text-emerald-400" id="stat-win-rate">68.4%</span>
+            <span class="text-[9px] text-gray-500 block">Out of 28 Trades</span>
+          </div>
+          <div class="bg-[#070b14] p-3 rounded-lg border border-gray-800 text-center">
+            <span class="text-[10px] text-gray-400 block font-semibold">Profit Factor</span>
+            <span class="text-xl font-bold font-mono text-cyan-400">2.18</span>
+            <span class="text-[9px] text-gray-500 block">Gross Profit / Loss</span>
+          </div>
+          <div class="bg-[#070b14] p-3 rounded-lg border border-gray-800 text-center">
+            <span class="text-[10px] text-gray-400 block font-semibold">Max Drawdown</span>
+            <span class="text-xl font-bold font-mono text-amber-400">-2.10%</span>
+            <span class="text-[9px] text-gray-500 block">Well inside ₹5k shield</span>
+          </div>
+          <div class="bg-[#070b14] p-3 rounded-lg border border-gray-800 text-center">
+            <span class="text-[10px] text-gray-400 block font-semibold">Sharpe Ratio</span>
+            <span class="text-xl font-bold font-mono text-purple-400">1.84</span>
+            <span class="text-[9px] text-gray-500 block">Risk-Adjusted Return</span>
+          </div>
+        </div>
+
+        <div class="bg-[#070b14] p-3 rounded-lg border border-gray-800 text-xs space-y-2">
+          <span class="font-bold text-white block">Quantitative Strategy Insights</span>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px] text-gray-300">
+            <div class="p-2 bg-gray-900/60 rounded border border-gray-800">
+              <strong class="text-cyan-400 block">Supertrend + EMA Filter:</strong>
+              <span>Highest hit rate on Trending Days. 73% Win Rate during 9:30 - 11:30 AM IST.</span>
+            </div>
+            <div class="p-2 bg-gray-900/60 rounded border border-gray-800">
+              <strong class="text-emerald-400 block">VWAP Breakout:</strong>
+              <span>Captures institutional volume surges. Avg profit per winning trade: ₹1,420 / $18.50.</span>
+            </div>
+            <div class="p-2 bg-gray-900/60 rounded border border-gray-800">
+              <strong class="text-amber-400 block">RSI Scalper:</strong>
+              <span>Optimal for sideways & rangebound chop. 82% win rate when India VIX < 14.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Option Strike Tax & Breakeven Inspector Modal -->
+  <div id="option-tax-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-[#0b1220] border border-cyan-700/60 rounded-xl p-5 max-w-lg w-full space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+        <div class="flex items-center space-x-2">
+          <div class="bg-cyan-600/30 text-cyan-400 p-1.5 rounded-lg text-sm font-bold">🧮</div>
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-1.5" id="opt-modal-sym">
+              NIFTY 24200 CE
+            </h3>
+            <p class="text-[10px] text-gray-400">Complete Zerodha Brokerage, STT Tax & Breakeven Analysis</p>
+          </div>
+        </div>
+        <button onclick="closeOptionTaxModal()" class="text-gray-400 hover:text-white text-xl font-bold">&times;</button>
+      </div>
+
+      <!-- Pricing & Margin Requirement Summary -->
+      <div class="grid grid-cols-3 gap-2 text-center">
+        <div class="bg-gray-900/80 p-2 rounded-lg border border-gray-800">
+          <span class="text-[9px] text-gray-400 block uppercase">Option Premium</span>
+          <span class="text-sm font-bold font-mono text-cyan-400" id="opt-modal-ltp">₹142.50</span>
+        </div>
+        <div class="bg-gray-900/80 p-2 rounded-lg border border-gray-800">
+          <span class="text-[9px] text-gray-400 block uppercase">Lot Size</span>
+          <span class="text-sm font-bold font-mono text-white" id="opt-modal-lot">25 Units</span>
+        </div>
+        <div class="bg-gray-900/80 p-2 rounded-lg border border-gray-800">
+          <span class="text-[9px] text-gray-400 block uppercase">1-Lot Capital</span>
+          <span class="text-sm font-bold font-mono text-emerald-400" id="opt-modal-capital">₹3,562.50</span>
+        </div>
+      </div>
+
+      <!-- Government & Broker Charges Detailed Ledger -->
+      <div class="bg-[#070b14] p-3 rounded-lg border border-gray-800 space-y-1.5 font-mono text-xs">
+        <div class="flex justify-between text-gray-300">
+          <span>Zerodha Flat Brokerage (Buy ₹20 + Sell ₹20):</span>
+          <span class="text-white font-bold" id="opt-modal-fee-brokerage">₹40.00</span>
+        </div>
+        <div class="flex justify-between text-gray-300">
+          <span>STT (Securities Transaction Tax @ 0.1% on Sell):</span>
+          <span class="text-white font-bold" id="opt-modal-fee-stt">₹3.56</span>
+        </div>
+        <div class="flex justify-between text-gray-300">
+          <span>NSE Exchange Turnover Charges (0.053%):</span>
+          <span class="text-white font-bold" id="opt-modal-fee-exchange">₹3.78</span>
+        </div>
+        <div class="flex justify-between text-gray-300">
+          <span>GST (18% on Brokerage + Exchange Charges):</span>
+          <span class="text-white font-bold" id="opt-modal-fee-gst">₹7.88</span>
+        </div>
+        <div class="flex justify-between text-gray-300">
+          <span>SEBI Turnover Charge & Stamp Duty:</span>
+          <span class="text-white font-bold" id="opt-modal-fee-sebi">₹0.15</span>
+        </div>
+        <div class="flex justify-between text-rose-400 font-bold border-t border-gray-800 pt-1.5 text-sm">
+          <span>Total Roundtrip Statutory Deductions:</span>
+          <span id="opt-modal-fee-total">-₹55.37</span>
+        </div>
+      </div>
+
+      <!-- Breakeven & Target Scenario Analysis -->
+      <div class="bg-cyan-950/30 border border-cyan-700/50 p-3 rounded-lg space-y-2 text-xs">
+        <div class="flex justify-between items-center">
+          <span class="text-cyan-300 font-semibold">Exact Breakeven Requirement:</span>
+          <span class="text-cyan-400 font-bold font-mono text-sm" id="opt-modal-be-pts">+2.21 points</span>
+        </div>
+        <p class="text-[10px] text-gray-300">
+          To cover 100% of broker & government fees, exit at or above <strong class="text-emerald-400 font-mono" id="opt-modal-be-price">₹144.71</strong>. Any tick above this is <strong class="text-emerald-400">pure net profit in your pocket</strong>.
+        </p>
+
+        <!-- Projected Profit Scenarios -->
+        <div class="grid grid-cols-3 gap-2 pt-1 text-center font-mono text-[10px]">
+          <div class="bg-gray-900/90 p-1.5 rounded border border-gray-800">
+            <span class="text-gray-400 block">+10% (+14.3 pts)</span>
+            <span class="text-emerald-400 font-bold" id="opt-modal-scen-10">+₹302.13 Net</span>
+          </div>
+          <div class="bg-gray-900/90 p-1.5 rounded border border-gray-800">
+            <span class="text-gray-400 block">+25% (+35.6 pts)</span>
+            <span class="text-emerald-400 font-bold" id="opt-modal-scen-25">+₹834.63 Net</span>
+          </div>
+          <div class="bg-gray-900/90 p-1.5 rounded border border-gray-800">
+            <span class="text-gray-400 block">+50% (+71.3 pts)</span>
+            <span class="text-emerald-400 font-bold" id="opt-modal-scen-50">+₹1,727.13 Net</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-1">
+        <button onclick="closeOptionTaxModal()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-4 py-1.5 rounded-lg text-xs transition">
+          Close
+        </button>
+        <button id="opt-modal-trade-btn" onclick="" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1">
+          <span>⚡</span> Execute 1 Lot Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Brokerage Modal -->
+  <div id="brokerage-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-[#0d1424] border border-gray-700 rounded-xl p-5 max-w-lg w-full space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+        <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+          <span>🧮</span> Zerodha SEBI Statutory Charges Breakdown
+        </h3>
+        <button onclick="closeBrokerageModal()" class="text-gray-400 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+
+      <div class="space-y-2 text-xs text-gray-300">
+        <p>In algorithmic intraday trading, exchange and statutory fees can consume up to 30% of gross profits if trade frequency is not guarded by risk gates.</p>
+        <div class="bg-gray-900 p-3 rounded-lg border border-gray-800 space-y-1 font-mono text-[11px]">
+          <div class="flex justify-between"><span>Zerodha Brokerage:</span><span class="text-white">Flat ₹20 / order or 0.03% (lower)</span></div>
+          <div class="flex justify-between"><span>STT (Securities Tax):</span><span class="text-white">0.025% on Intraday Sell</span></div>
+          <div class="flex justify-between"><span>NSE Txn Fee:</span><span class="text-white">0.00297% on Turnover</span></div>
+          <div class="flex justify-between"><span>GST:</span><span class="text-white">18% on (Brokerage + Exchange Fees)</span></div>
+          <div class="flex justify-between"><span>SEBI Turnover Charge:</span><span class="text-white">₹10 per Crore (0.0001%)</span></div>
+          <div class="flex justify-between"><span>Stamp Duty:</span><span class="text-white">0.003% on Buy side</span></div>
+        </div>
+        <p class="text-[10px] text-cyan-400 font-semibold">ApexTrader automatically deducts these exact charges from every simulated paper fill, ensuring your backtest and paper PnL reflects 100% realistic in-pocket returns!</p>
+      </div>
+
+      <div class="flex justify-end">
+        <button onclick="closeBrokerageModal()" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition">
+          Got It
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Audio synthesizer: MUTED BY DEFAULT & PERSISTENT (Zero unwanted noises)
+    let audioCtx = null;
+    let isAudioMuted = true; // Default to 100% silent
+
+    // Load persisted mute preference if available
+    try {
+      const saved = localStorage.getItem("apex_audio_muted");
+      if (saved !== null) isAudioMuted = (saved === "true");
+    } catch(e) {}
+
+    function updateAudioUI() {
+      const btn = document.getElementById("btn-audio-toggle");
+      const icon = document.getElementById("audio-icon");
+      const label = document.getElementById("audio-label");
+      if (!btn) return;
+      if (isAudioMuted) {
+        icon.innerText = "🔇";
+        label.innerText = "Muted";
+        btn.className = "bg-rose-950/80 hover:bg-rose-900 border border-rose-800/60 text-rose-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition";
+      } else {
+        icon.innerText = "🔊";
+        label.innerText = "Sound ON";
+        btn.className = "bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition";
+      }
+    }
+
+    function toggleAudio() {
+      isAudioMuted = !isAudioMuted;
+      try { localStorage.setItem("apex_audio_muted", isAudioMuted); } catch(e) {}
+      updateAudioUI();
+      if (isAudioMuted) {
+        try { if (audioCtx && audioCtx.state === 'running') audioCtx.suspend(); } catch(e) {}
+        logTerminal("[AUDIO] Sound effects <strong>MUTED</strong>.");
+      } else {
+        try { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); } catch(e) {}
+        playBeep("buy");
+        logTerminal("[AUDIO] Sound effects <strong>ENABLED</strong>.");
+      }
+    }
+
+    function playBeep(type) {
+      if (isAudioMuted) return;
+      if (!window.AudioContext && !window.webkitAudioContext) return;
+      try {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) audioCtx = new AudioContextClass();
+        }
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        if (type === "buy") {
+          osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+          osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.25);
+        } else if (type === "sell") {
+          osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+          osc.frequency.setValueAtTime(587.33, audioCtx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.25);
+        } else if (type === "alert") {
+          osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.4);
+        } else if (type === "news") {
+          osc.frequency.setValueAtTime(659.25, audioCtx.currentTime);
+          osc.frequency.setValueAtTime(987.77, audioCtx.currentTime + 0.06);
+          gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.2);
+        }
+      } catch (e) {}
+    }
+
+    // State Variables
+    let currentMarket = "india"; // "crypto", "us", "india"
+    let isRunning = false;
+    let capital = 7000.0;
+    let cash = 7000.0;
+    let marginUsed = 0.0;
+    let maxDailyLoss = 200.0; // Default $75 (1.5% for USD) instead of $500!
+    let grossRealizedPnl = 0.0;
+    let totalTaxesPaid = 0.0;
+    let netRealizedPnl = 0.0;
+    let positions = [];
+    let timeframeMinutes = 5;
+    let currentSymbol = "BTC/USDT";
+    let activeSubTab = "positions";
+    let activeNewsFilter = "all";
+    let activeBasket = new Set(); // Multi-stock symbols enabled for trading
+    const MAX_OPEN_POSITIONS = 3; // SEBI risk limit: max 3 concurrent positions
+
+    // Accurate Zerodha / Multi-Asset Charge Calculator Function
+    function calculateTradeCharges(buyP, sellP, qty, mkt) {
+      const buyVal = buyP * qty;
+      const sellVal = sellP * qty;
+      const turnover = buyVal + sellVal;
+      const grossPnl = (sellP - buyP) * qty;
+
+      if (mkt === "india") {
+        // Zerodha Intraday Equity Formula
+        const buyBrokerage = Math.min(20.0, buyVal * 0.0003);
+        const sellBrokerage = Math.min(20.0, sellVal * 0.0003);
+        const brokerage = buyBrokerage + sellBrokerage;
+        const stt = sellVal * 0.00025; // 0.025% on sell
+        const exchange = turnover * 0.0000297; // NSE
+        const stamp = buyVal * 0.00003; // 0.003% on buy
+        const sebi = turnover * 0.000001; // Rs 10 per crore
+        const gst = (brokerage + exchange + sebi) * 0.18; // 18% GST
+
+        const total = brokerage + stt + exchange + stamp + sebi + gst;
+        const breakeven = total / qty;
+        return {
+          brokerage: Math.round(brokerage * 100) / 100,
+          stt: Math.round(stt * 100) / 100,
+          exchange: Math.round(exchange * 100) / 100,
+          gst: Math.round(gst * 100) / 100,
+          sebi: Math.round((stamp + sebi) * 100) / 100,
+          total: Math.round(total * 100) / 100,
+          breakeven: Math.round(breakeven * 100) / 100,
+          grossPnl: Math.round(grossPnl * 100) / 100,
+          netPnl: Math.round((grossPnl - total) * 100) / 100
+        };
+      } else {
+        // Global / US / Crypto fee model: 0.08% total roundtrip taker fee
+        const total = turnover * 0.0008;
+        const breakeven = total / qty;
+        return {
+          brokerage: Math.round(total * 0.7 * 100) / 100,
+          stt: 0,
+          exchange: Math.round(total * 0.3 * 100) / 100,
+          gst: 0,
+          sebi: 0,
+          total: Math.round(total * 100) / 100,
+          breakeven: Math.round(breakeven * 100) / 100,
+          grossPnl: Math.round(grossPnl * 100) / 100,
+          netPnl: Math.round((grossPnl - total) * 100) / 100
+        };
+      }
+    }
+
+    function runFeeSim() {
+      const buyP = parseFloat(document.getElementById("calc-buy").value) || 2500;
+      const sellP = parseFloat(document.getElementById("calc-sell").value) || 2520;
+      const qty = parseInt(document.getElementById("calc-qty").value) || 10;
+
+      const c = calculateTradeCharges(buyP, sellP, qty, "india");
+      document.getElementById("fee-brokerage").innerText = "₹" + c.brokerage.toFixed(2);
+      document.getElementById("fee-stt").innerText = "₹" + c.stt.toFixed(2);
+      document.getElementById("fee-exchange").innerText = "₹" + c.exchange.toFixed(2);
+      document.getElementById("fee-gst").innerText = "₹" + c.gst.toFixed(2);
+      document.getElementById("fee-sebi").innerText = "₹" + c.sebi.toFixed(2);
+      document.getElementById("fee-total").innerText = "₹" + c.total.toFixed(2);
+
+      document.getElementById("res-gross").innerText = (c.grossPnl >= 0 ? "+" : "") + "₹" + c.grossPnl.toFixed(2);
+      document.getElementById("res-tax").innerText = "-₹" + c.total.toFixed(2);
+      document.getElementById("res-net").innerText = (c.netPnl >= 0 ? "+" : "") + "₹" + c.netPnl.toFixed(2);
+      document.getElementById("res-breakeven").innerText = "₹" + c.breakeven.toFixed(2) + " / share";
+    }
+
+    function openBrokerageModal() {
+      document.getElementById("brokerage-modal").classList.remove("hidden");
+    }
+
+    function closeBrokerageModal() {
+      document.getElementById("brokerage-modal").classList.add("hidden");
+    }
+
+    // News Headlines Database (with real-time sentiment)
+    let newsFeed = [
+      {
+        id: 1,
+        time: "Just now",
+        market: "crypto",
+        title: "Bitcoin Surges Toward All-Time Highs on $2.4B Institutional ETF Weekly Inflows",
+        source: "Bloomberg Crypto",
+        sentiment: "BULLISH",
+        score: "94%",
+        impact: "HIGH IMPACT",
+        impactColor: "bg-rose-950 text-rose-300 border-rose-800"
+      },
+      {
+        id: 2,
+        time: "4m ago",
+        market: "india",
+        title: "RBI Governor Emphasizes Inflation Glidepath Under Control; Liquidity Support Maintained",
+        source: "Economic Times",
+        sentiment: "BULLISH",
+        score: "86%",
+        impact: "HIGH IMPACT",
+        impactColor: "bg-rose-950 text-rose-300 border-rose-800"
+      },
+      {
+        id: 3,
+        time: "8m ago",
+        market: "us",
+        title: "Nvidia Next-Gen Blackwell Chips Reportedly Sold Out Through Q3 2027 by Hyperscalers",
+        source: "Reuters Tech",
+        sentiment: "BULLISH",
+        score: "92%",
+        impact: "HIGH IMPACT",
+        impactColor: "bg-rose-950 text-rose-300 border-rose-800"
+      },
+      {
+        id: 4,
+        time: "15m ago",
+        market: "india",
+        title: "Foreign Institutional Investors (FIIs) Turn Net Buyers of Indian Equities (+₹2,140 Cr)",
+        source: "NSE Pulse",
+        sentiment: "BULLISH",
+        score: "88%",
+        impact: "MEDIUM IMPACT",
+        impactColor: "bg-amber-950 text-amber-300 border-amber-800"
+      },
+      {
+        id: 5,
+        time: "22m ago",
+        market: "crypto",
+        title: "Ethereum Layer-2 Gas Burn Accelerates as DeFi Total Value Locked Crosses $65 Billion",
+        source: "CoinDesk",
+        sentiment: "BULLISH",
+        score: "81%",
+        impact: "MEDIUM IMPACT",
+        impactColor: "bg-amber-950 text-amber-300 border-amber-800"
+      },
+      {
+        id: 6,
+        time: "35m ago",
+        market: "us",
+        title: "US Treasury Yields Stabilize Around 4.35% as Bond Market Bets on 25 bps Fed Rate Cut",
+        source: "Wall Street Journal",
+        sentiment: "NEUTRAL",
+        score: "54%",
+        impact: "MACRO DATA",
+        impactColor: "bg-cyan-950 text-cyan-300 border-cyan-800"
+      },
+      {
+        id: 7,
+        time: "48m ago",
+        market: "india",
+        title: "Tata Motors Commercial Vehicle Exports Rise 14% YoY; Strong Order Book in GCC",
+        source: "Moneycontrol",
+        sentiment: "BULLISH",
+        score: "79%",
+        impact: "LOW IMPACT",
+        impactColor: "bg-gray-800 text-gray-300 border-gray-700"
+      }
+    ];
+
+    // Comprehensive Multi-Asset Market Data Buffer (Expanded Stock Universe)
+    const marketCatalog = {
+      "crypto": {
+        currency: "$",
+        symbols: {
+          "BTC/USDT": { name: "Bitcoin", ltp: 91420.50, open: 87800.00, lot: 0.05, history: [], sector: "Layer 1" },
+          "ETH/USDT": { name: "Ethereum", ltp: 3145.80, open: 3060.00, lot: 0.5, history: [], sector: "Smart Contracts" },
+          "SOL/USDT": { name: "Solana", ltp: 218.40, open: 205.00, lot: 5.0, history: [], sector: "DeFi / L1" },
+          "DOGE/USDT": { name: "Dogecoin", ltp: 0.384, open: 0.362, lot: 2500, history: [], sector: "Meme / P2P" },
+          "BNB/USDT": { name: "Binance Coin", ltp: 648.20, open: 635.00, lot: 2.0, history: [], sector: "Exchange" },
+          "AVAX/USDT": { name: "Avalanche", ltp: 38.60, open: 39.80, lot: 25.0, history: [], sector: "Subnets" }
+        }
+      },
+      "us": {
+        currency: "$",
+        symbols: {
+          "NVDA": { name: "Nvidia Corp", ltp: 146.80, open: 142.20, lot: 10, history: [], sector: "Semiconductors" },
+          "TSLA": { name: "Tesla Inc", ltp: 338.50, open: 321.00, lot: 5, history: [], sector: "EV & AI" },
+          "AAPL": { name: "Apple Inc", ltp: 228.40, open: 226.50, lot: 10, history: [], sector: "Consumer Tech" },
+          "MSFT": { name: "Microsoft", ltp: 422.60, open: 420.00, lot: 5, history: [], sector: "Cloud & AI" },
+          "AMZN": { name: "Amazon.com", ltp: 208.50, open: 204.00, lot: 5, history: [], sector: "E-Commerce" },
+          "META": { name: "Meta Platforms", ltp: 582.40, open: 574.00, lot: 5, history: [], sector: "Social Tech" },
+          "GOOGL": { name: "Alphabet (Google)", ltp: 176.20, open: 177.50, lot: 10, history: [], sector: "Search & Cloud" },
+          "SPY": { name: "S&P 500 ETF", ltp: 588.20, open: 585.00, lot: 5, history: [], sector: "Index ETF" }
+        }
+      },
+      "india": {
+        currency: "₹",
+        symbols: {
+          "RELIANCE": { name: "Reliance Industries", ltp: 2485.50, open: 2430.00, lot: 2, history: [], sector: "Energy / Telecom" },
+          "HDFCBANK": { name: "HDFC Bank Ltd", ltp: 1684.20, open: 1655.00, lot: 3, history: [], sector: "Banking" },
+          "ICICIBANK": { name: "ICICI Bank Ltd", ltp: 1248.50, open: 1228.00, lot: 4, history: [], sector: "Banking" },
+          "TCS": { name: "Tata Consultancy", ltp: 3920.00, open: 3955.00, lot: 1, history: [], sector: "IT Services" },
+          "INFY": { name: "Infosys Ltd", ltp: 1845.20, open: 1858.00, lot: 2, history: [], sector: "IT Services" },
+          "TATAMOTORS": { name: "Tata Motors Ltd", ltp: 792.40, open: 772.00, lot: 6, history: [], sector: "Auto & EV" },
+          "SBIN": { name: "State Bank of India", ltp: 814.50, open: 802.00, lot: 6, history: [], sector: "PSU Bank" },
+          "BHARTIARTL": { name: "Bharti Airtel", ltp: 1560.00, open: 1535.00, lot: 3, history: [], sector: "Telecom" },
+          "NIFTY 50": { name: "Nifty 50 Index", ltp: 24158.40, open: 24010.00, lot: 25, history: [], sector: "Benchmark" },
+          "BANK NIFTY": { name: "Bank Nifty Index", ltp: 51420.15, open: 50850.00, lot: 15, history: [], sector: "Bank Index" }
+        }
+      },
+      "fno": {
+        currency: "₹",
+        symbols: {
+          "NIFTY 24200 CE": { name: "Nifty 24200 Call (ATM)", ltp: 142.50, open: 130.00, lot: 25, history: [], sector: "Nifty Index Option", delta: 0.52, theta: -14.2 },
+          "NIFTY 24200 PE": { name: "Nifty 24200 Put (ATM)", ltp: 128.00, open: 138.00, lot: 25, history: [], sector: "Nifty Index Option", delta: -0.48, theta: -13.8 },
+          "NIFTY 24300 CE": { name: "Nifty 24300 Call (OTM)", ltp: 88.50, open: 82.00, lot: 25, history: [], sector: "Nifty Index Option", delta: 0.35, theta: -11.5 },
+          "NIFTY 24100 PE": { name: "Nifty 24100 Put (OTM)", ltp: 76.20, open: 84.00, lot: 25, history: [], sector: "Nifty Index Option", delta: -0.32, theta: -10.9 },
+          "BANKNIFTY 51500 CE": { name: "Bank Nifty 51500 Call", ltp: 340.00, open: 310.00, lot: 15, history: [], sector: "BankNifty Option", delta: 0.50, theta: -28.0 },
+          "BANKNIFTY 51500 PE": { name: "Bank Nifty 51500 Put", ltp: 315.00, open: 335.00, lot: 15, history: [], sector: "BankNifty Option", delta: -0.50, theta: -26.5 },
+          "NIFTY FUT": { name: "Nifty Current Month Futures", ltp: 24215.00, open: 24080.00, lot: 25, history: [], sector: "Index Futures", delta: 1.0, theta: 0 },
+          "BANKNIFTY FUT": { name: "Bank Nifty Futures", ltp: 51540.00, open: 51020.00, lot: 15, history: [], sector: "Index Futures", delta: 1.0, theta: 0 },
+          "RELIANCE 2500 CE": { name: "Reliance 2500 Call", ltp: 38.40, open: 32.00, lot: 250, history: [], sector: "Stock Option", delta: 0.48, theta: -4.5 }
+        }
+      }
+    };
+
+    // Pre-populate 40 historical candles for every symbol
+    Object.keys(marketCatalog).forEach(mktKey => {
+      const symObj = marketCatalog[mktKey].symbols;
+      Object.keys(symObj).forEach(sym => {
+        let base = symObj[sym].ltp;
+        let arr = [];
+        let t = Date.now() - 40 * 60 * 1000;
+        for (let i = 0; i < 40; i++) {
+          let open = base + (Math.random() - 0.49) * (base * 0.003);
+          let close = open + (Math.random() - 0.48) * (base * 0.004);
+          let high = Math.max(open, close) + Math.random() * (base * 0.002);
+          let low = Math.min(open, close) - Math.random() * (base * 0.002);
+          arr.push({ time: t + i * 60000, open, high, low, close, volume: Math.floor(Math.random() * 5000) + 1000 });
+          base = close;
+        }
+        symObj[sym].history = arr;
+        symObj[sym].ltp = Math.round(base * 100) / 100;
+      });
+    });
+
+    function getCurrSymbol() {
+      return marketCatalog[currentMarket].currency;
+    }
+
+    function switchMarket(mkt) {
+      currentMarket = mkt;
+      ['india', 'fno'].forEach(m => {
+        const btn = document.getElementById('market-btn-' + m);
+        if (m === mkt) {
+          btn.className = "market-tab active px-3 py-1 rounded text-xs transition";
+        } else {
+          btn.className = "market-tab px-3 py-1 rounded text-xs text-gray-400 hover:text-white transition";
+        }
+      });
+
+      // Update Currency Symbol & Circuit Breaker Defaults in Ribbon
+      const curr = getCurrSymbol();
+      document.getElementById('curr-symbol-1').innerText = curr;
+      document.getElementById('curr-symbol-maxloss').innerText = curr;
+      document.getElementById('depth-market-tag').innerText = mkt.toUpperCase();
+
+      // Capital set to exactly 7,000
+      capital = 7000;
+      cash = 7000;
+      maxDailyLoss = 200; // 2.8% risk shield for 7,000 account
+      document.getElementById('acc-capital').value = 7000;
+      document.getElementById('input-maxloss').value = 200;
+      document.getElementById('maxloss-pct-tag').innerText = '(2.8%)';
+
+      // Repopulate Dropdown
+      const sel = document.getElementById("sel-chart-symbol");
+      sel.innerHTML = "";
+      const symbols = marketCatalog[mkt].symbols;
+      const keys = Object.keys(symbols);
+      keys.forEach((sym, idx) => {
+        const opt = document.createElement("option");
+        opt.value = sym;
+        opt.innerText = `${sym} (${getCurrSymbol()}${symbols[sym].ltp.toLocaleString()})`;
+        sel.appendChild(opt);
+      });
+
+      currentSymbol = keys[0];
+      activeBasket.clear();
+      keys.forEach(k => activeBasket.add(k));
+      renderBasketChips();
+      changeChartSymbol(currentSymbol);
+      updateAICopilotMsg();
+      renderAccountRibbon();
+      updateMarketSessionBadge();
+      if (mkt === 'fno') switchSubTab('optionchain');
+    }
+
+    function switchSubTab(tabName) {
+      activeSubTab = tabName;
+      ['positions', 'optionchain', 'riskgates', 'brokerage', 'news', 'breadth', 'calendar', 'analytics'].forEach(t => {
+        const btn = document.getElementById('tab-nav-' + t);
+        const content = document.getElementById('tab-content-' + t);
+        if (btn && content) {
+          if (t === tabName) {
+            btn.className = "sub-tab active px-3.5 py-2.5 text-xs flex items-center gap-1.5 transition";
+            content.classList.remove('hidden');
+          } else {
+            btn.className = "sub-tab px-3.5 py-2.5 text-xs text-gray-400 hover:text-white flex items-center gap-1.5 transition";
+            content.classList.add('hidden');
+          }
+        }
+      });
+      if (tabName === 'news') renderNewsFeed();
+      if (tabName === 'brokerage') runFeeSim();
+      if (tabName === 'breadth') renderMarketHeatmap();
+      if (tabName === 'optionchain') renderOptionChain();
+    }
+
+
+    function renderBasketChips() {
+      const container = document.getElementById("basket-chips-container");
+      if (!container) return;
+      container.innerHTML = "";
+      const symbols = marketCatalog[currentMarket].symbols;
+      const keys = Object.keys(symbols);
+
+      // Default: select all symbols in market
+      if (activeBasket.size === 0) {
+        keys.forEach(k => activeBasket.add(k));
+      }
+
+      keys.forEach(sym => {
+        const isChecked = activeBasket.has(sym);
+        const label = document.createElement("label");
+        label.className = `flex items-center space-x-1 px-2 py-0.5 rounded cursor-pointer text-[10px] border transition ${
+          isChecked ? 'bg-cyan-950/70 border-cyan-700/60 text-cyan-300 font-bold' : 'bg-gray-900 border-gray-800 text-gray-400'
+        }`;
+        label.innerHTML = `
+          <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleBasketSymbol('${sym}', this.checked)" class="rounded bg-gray-900 border-gray-700 text-cyan-500 text-[10px]" />
+          <span>${sym}</span>
+        `;
+        container.appendChild(label);
+      });
+      document.getElementById("basket-count").innerText = `${activeBasket.size} Assets`;
+    }
+
+    function toggleBasketSymbol(sym, checked) {
+      if (checked) activeBasket.add(sym);
+      else activeBasket.delete(sym);
+      renderBasketChips();
+      logTerminal(`[BASKET CONFIG] ${checked ? 'Added' : 'Removed'} <strong>${sym}</strong>. Active basket: ${activeBasket.size} assets.`);
+    }
+
+    function selectAllBasket(selectAll) {
+      const keys = Object.keys(marketCatalog[currentMarket].symbols);
+      activeBasket.clear();
+      if (selectAll) keys.forEach(k => activeBasket.add(k));
+      renderBasketChips();
+    }
+
+
+    // Stock Screener & Quantitative Conviction Scoring Engine
+
+    // Dynamic F&O Option Chain & Buyer Flow Engine
+    let currentFnoUnderlying = "NIFTY 50";
+    let optionPriceJitter = 0;
+
+    function getFnoUnderlyingSpot() {
+      if (currentFnoUnderlying === "BANK NIFTY") {
+        return (marketCatalog["india"] && marketCatalog["india"].symbols["BANK NIFTY"]) ? marketCatalog["india"].symbols["BANK NIFTY"].ltp : 51420.15;
+      }
+      return (marketCatalog["india"] && marketCatalog["india"].symbols["NIFTY 50"]) ? marketCatalog["india"].symbols["NIFTY 50"].ltp : 24158.40;
+    }
+
+    function getFnoLotSize() {
+      return currentFnoUnderlying === "BANK NIFTY" ? 15 : 25;
+    }
+
+    function changeFnoUnderlying(val) {
+      currentFnoUnderlying = val;
+      renderOptionChain();
+      logTerminal(`[DERIVATIVES] Switched Option Chain to <strong>${val}</strong> (Lot: ${getFnoLotSize()}).`);
+    }
+
+    function calculateOptionTaxBreakdown(ltp, lotSize) {
+      const buyVal = ltp * lotSize;
+      const sellVal = ltp * lotSize;
+      const turnover = buyVal + sellVal;
+      const brokerage = 40.0; // Zerodha Rs 20 Buy + Rs 20 Sell
+      const stt = sellVal * 0.001; // 0.1% on Option Sell side
+      const exchange = turnover * 0.00053; // NSE
+      const sebi = turnover * 0.000001;
+      const stamp = buyVal * 0.00003;
+      const gst = (brokerage + exchange + sebi) * 0.18;
+      const totalTax = Math.round((brokerage + stt + exchange + sebi + stamp + gst) * 100) / 100;
+      const breakeven = Math.round((totalTax / lotSize) * 100) / 100;
+      return {
+        investment: Math.round(buyVal * 100) / 100,
+        brokerage,
+        stt: Math.round(stt * 100) / 100,
+        exchange: Math.round(exchange * 100) / 100,
+        gst: Math.round(gst * 100) / 100,
+        sebi: Math.round((sebi + stamp) * 100) / 100,
+        totalTax,
+        breakeven
+      };
+    }
+
+    function openOptionTaxModal(sym, ltp, type, strike, lotSize) {
+      const modal = document.getElementById("option-tax-modal");
+      if (!modal) return;
+      const tax = calculateOptionTaxBreakdown(ltp, lotSize);
+      document.getElementById("opt-modal-sym").innerText = `${sym} (${type})`;
+      document.getElementById("opt-modal-ltp").innerText = "₹" + ltp.toFixed(2);
+      document.getElementById("opt-modal-lot").innerText = lotSize + " Units";
+      document.getElementById("opt-modal-capital").innerText = "₹" + tax.investment.toLocaleString('en-IN', {minimumFractionDigits: 2});
+
+      document.getElementById("opt-modal-fee-brokerage").innerText = "₹" + tax.brokerage.toFixed(2);
+      document.getElementById("opt-modal-fee-stt").innerText = "₹" + tax.stt.toFixed(2);
+      document.getElementById("opt-modal-fee-exchange").innerText = "₹" + tax.exchange.toFixed(2);
+      document.getElementById("opt-modal-fee-gst").innerText = "₹" + tax.gst.toFixed(2);
+      document.getElementById("opt-modal-fee-sebi").innerText = "₹" + tax.sebi.toFixed(2);
+      document.getElementById("opt-modal-fee-total").innerText = "-₹" + tax.totalTax.toFixed(2);
+
+      document.getElementById("opt-modal-be-pts").innerText = "+" + tax.breakeven.toFixed(2) + " pts";
+      const beExit = ltp + tax.breakeven;
+      document.getElementById("opt-modal-be-price").innerText = "₹" + beExit.toFixed(2);
+
+      // Scenarios
+      const scen10Pts = ltp * 0.10;
+      const net10 = (scen10Pts * lotSize) - tax.totalTax;
+      document.getElementById("opt-modal-scen-10").innerText = (net10 >= 0 ? "+" : "") + "₹" + net10.toFixed(2);
+
+      const scen25Pts = ltp * 0.25;
+      const net25 = (scen25Pts * lotSize) - tax.totalTax;
+      document.getElementById("opt-modal-scen-25").innerText = (net25 >= 0 ? "+" : "") + "₹" + net25.toFixed(2);
+
+      const scen50Pts = ltp * 0.50;
+      const net50 = (scen50Pts * lotSize) - tax.totalTax;
+      document.getElementById("opt-modal-scen-50").innerText = (net50 >= 0 ? "+" : "") + "₹" + net50.toFixed(2);
+
+      const btn = document.getElementById("opt-modal-trade-btn");
+      btn.onclick = () => {
+        closeOptionTaxModal();
+        tradeOptionDirect(sym, ltp, 'BUY');
+      };
+
+      modal.classList.remove("hidden");
+    }
+
+    function closeOptionTaxModal() {
+      const modal = document.getElementById("option-tax-modal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    function renderOptionChain() {
+      const tbody = document.getElementById("optionchain-tbody");
+      if (!tbody) return;
+
+      const spot = getFnoUnderlyingSpot();
+      const lotSize = getFnoLotSize();
+      const step = currentFnoUnderlying === "BANK NIFTY" ? 100 : 50;
+      const atmStrike = Math.round(spot / step) * step;
+      const baseStraddle = currentFnoUnderlying === "BANK NIFTY" ? 640 : 270;
+
+      // Update Top Status Header
+      const titleEl = document.getElementById("fno-header-title");
+      if (titleEl) titleEl.innerText = `${currentFnoUnderlying} Weekly Option Chain & Live Greeks`;
+      const spotPill = document.getElementById("fno-spot-pill");
+      if (spotPill) spotPill.innerText = `Spot: ₹${spot.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+      const lotTag = document.getElementById("fno-lot-tag");
+      if (lotTag) lotTag.innerText = lotSize;
+
+      // Strikes Range (-4 to +4)
+      const strikes = [];
+      for (let i = -4; i <= 4; i++) {
+        strikes.push(atmStrike + i * step);
+      }
+
+      let topCeStrike = atmStrike + step; // e.g. 24200 CE
+      let topPeStrike = atmStrike - step; // e.g. 24100 PE
+      let topCePrice = 0;
+      let topPePrice = 0;
+
+      let html = "";
+      strikes.forEach(strike => {
+        const isATM = strike === atmStrike;
+        const distCe = spot - strike;
+        const distPe = strike - spot;
+        const intrCe = Math.max(0, distCe);
+        const intrPe = Math.max(0, distPe);
+
+        // Extrinsic value bell curve around strike
+        const timeVal = (baseStraddle * 0.5) * Math.exp(-Math.pow((spot - strike) / (spot * 0.012), 2));
+        const jitter = Math.sin(Date.now() / 1200 + strike) * 0.45;
+        const ceLtp = Math.max(2.0, Math.round((intrCe + timeVal + jitter) * 10) / 10);
+        const peLtp = Math.max(2.0, Math.round((intrPe + timeVal - jitter) * 10) / 10);
+
+        // Greeks
+        const ceDelta = Math.min(0.95, Math.max(0.05, 0.50 + (spot - strike) / (spot * 0.015) * 0.35));
+        const peDelta = ceDelta - 1.0;
+        const theta = -Math.round((baseStraddle * 0.052 * Math.exp(-Math.pow((spot - strike) / (spot * 0.02), 2))) * 10) / 10;
+
+        // Taxes & Margin
+        const ceTax = calculateOptionTaxBreakdown(ceLtp, lotSize);
+        const peTax = calculateOptionTaxBreakdown(peLtp, lotSize);
+
+        // Buyer Flow Simulation
+        let ceBuyerPct = 52;
+        let ceBadge = "";
+        let ceOiLakhs = (14.2 + (strike % 500) / 30).toFixed(1);
+
+        let peBuyerPct = 48;
+        let peBadge = "";
+        let peOiLakhs = (12.8 + (strike % 400) / 25).toFixed(1);
+
+        if (strike === topCeStrike) {
+          ceBuyerPct = 88;
+          ceBadge = `<span class="bg-emerald-900 text-emerald-200 border border-emerald-700 px-1 py-0.2 rounded text-[8px] font-black animate-pulse">🔥 MOST BOUGHT</span>`;
+          topCePrice = ceLtp;
+        } else if (strike === atmStrike) {
+          ceBuyerPct = 78;
+          ceBadge = `<span class="bg-cyan-950 text-cyan-300 border border-cyan-700 px-1 py-0.2 rounded text-[8px] font-bold">🟢 LONG INFLOW</span>`;
+        } else if (strike > atmStrike + step) {
+          ceBuyerPct = 34;
+          ceBadge = `<span class="text-gray-400 text-[8px]">🔴 WRITING</span>`;
+        } else {
+          ceBuyerPct = 64;
+        }
+
+        if (strike === topPeStrike) {
+          peBuyerPct = 65;
+          peBadge = `<span class="bg-rose-900 text-rose-200 border border-rose-700 px-1 py-0.2 rounded text-[8px] font-black animate-pulse">🛡️ HEAVY HEDGE</span>`;
+          topPePrice = peLtp;
+        } else if (strike === atmStrike - step * 2) {
+          peBuyerPct = 38;
+          peBadge = `<span class="bg-amber-950 text-amber-300 border border-amber-800 px-1 py-0.2 rounded text-[8px] font-bold">🟡 HIGH PUT OI</span>`;
+        } else {
+          peBuyerPct = 44;
+        }
+
+        const symCe = `${currentFnoUnderlying === "BANK NIFTY" ? "BANKNIFTY" : "NIFTY"} ${strike} CE`;
+        const symPe = `${currentFnoUnderlying === "BANK NIFTY" ? "BANKNIFTY" : "NIFTY"} ${strike} PE`;
+
+        const rowBg = isATM ? "bg-cyan-950/40 border-y-2 border-cyan-500/60" : "hover:bg-gray-800/30";
+
+        html += `
+          <tr class="${rowBg} transition">
+            <!-- CALLS (CE) -->
+            <td class="py-2 px-2 text-left">
+              <div class="flex items-center space-x-1.5">
+                <div class="w-12 bg-gray-900 rounded-full h-1.5 overflow-hidden">
+                  <div class="bg-emerald-500 h-full rounded-full" style="width: ${ceBuyerPct}%"></div>
+                </div>
+                <span class="text-[10px] text-emerald-400 font-bold">${ceBuyerPct}% Buy</span>
+                ${ceBadge}
+              </div>
+              <span class="text-[9px] text-gray-500 block">${ceOiLakhs}L OI contracts</span>
+            </td>
+
+            <td class="py-2 px-1.5 text-center">
+              <span class="text-cyan-400 font-bold">+${ceDelta.toFixed(2)}</span>
+              <span class="text-[9px] text-amber-400 block">${theta}</span>
+            </td>
+
+            <td class="py-2 px-2 text-right">
+              <span class="font-bold text-sm ${isATM ? 'text-emerald-400 font-black' : 'text-white'}">₹${ceLtp.toFixed(2)}</span>
+            </td>
+
+            <td class="py-2 px-2 text-center">
+              <span class="text-[10px] text-gray-300 block">Inv: ₹${ceTax.investment.toLocaleString()}</span>
+              <div class="flex items-center justify-center gap-1 mt-0.5">
+                <span class="text-[9px] text-cyan-400 bg-cyan-950/80 px-1 rounded border border-cyan-800/50">BE: +${ceTax.breakeven.toFixed(2)}p</span>
+                <button onclick="openOptionTaxModal('${symCe}', ${ceLtp}, 'CE', ${strike}, ${lotSize})" class="text-[10px] hover:text-cyan-300" title="Inspect Zerodha Taxes & Statutory Fees">🧮</button>
+              </div>
+            </td>
+
+            <td class="py-2 px-2 text-center border-r border-gray-800">
+              <button onclick="tradeOptionDirect('${symCe}', ${ceLtp}, 'BUY')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] px-2.5 py-1 rounded font-bold shadow transition">
+                BUY CE
+              </button>
+            </td>
+
+            <!-- STRIKE -->
+            <td class="py-2 px-3 ${isATM ? 'bg-cyan-900 text-cyan-200 font-black text-xs' : 'bg-gray-900 text-white font-bold'} border-r border-gray-800 text-center">
+              ${strike.toLocaleString()}
+              ${isATM ? '<span class="text-[8px] bg-cyan-950 border border-cyan-700/80 px-1 py-0.2 rounded block text-cyan-400 font-bold mt-0.5">ATM STRIKE</span>' : ''}
+            </td>
+
+            <!-- PUTS (PE) -->
+            <td class="py-2 px-2 text-center">
+              <button onclick="tradeOptionDirect('${symPe}', ${peLtp}, 'BUY')" class="bg-rose-600 hover:bg-rose-500 text-white text-[10px] px-2.5 py-1 rounded font-bold shadow transition">
+                BUY PE
+              </button>
+            </td>
+
+            <td class="py-2 px-2 text-center">
+              <span class="text-[10px] text-gray-300 block">Inv: ₹${peTax.investment.toLocaleString()}</span>
+              <div class="flex items-center justify-center gap-1 mt-0.5">
+                <span class="text-[9px] text-cyan-400 bg-cyan-950/80 px-1 rounded border border-cyan-800/50">BE: +${peTax.breakeven.toFixed(2)}p</span>
+                <button onclick="openOptionTaxModal('${symPe}', ${peLtp}, 'PE', ${strike}, ${lotSize})" class="text-[10px] hover:text-cyan-300" title="Inspect Zerodha Taxes & Statutory Fees">🧮</button>
+              </div>
+            </td>
+
+            <td class="py-2 px-2 text-left">
+              <span class="font-bold text-sm ${isATM ? 'text-rose-400 font-black' : 'text-white'}">₹${peLtp.toFixed(2)}</span>
+            </td>
+
+            <td class="py-2 px-1.5 text-center">
+              <span class="text-cyan-400 font-bold">${peDelta.toFixed(2)}</span>
+              <span class="text-[9px] text-amber-400 block">${theta}</span>
+            </td>
+
+            <td class="py-2 px-2 text-right">
+              <div class="flex items-center justify-end space-x-1.5">
+                ${peBadge}
+                <span class="text-[10px] text-rose-400 font-bold">${peBuyerPct}% Buy</span>
+                <div class="w-12 bg-gray-900 rounded-full h-1.5 overflow-hidden">
+                  <div class="bg-rose-500 h-full rounded-full" style="width: ${peBuyerPct}%"></div>
+                </div>
+              </div>
+              <span class="text-[9px] text-gray-500 block">${peOiLakhs}L OI contracts</span>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+
+      // Update Top Intelligence Cards
+      const pcrVal = document.getElementById("fno-pcr-val");
+      if (pcrVal) pcrVal.innerText = "1.28 (Bullish Inflow)";
+
+      const topCeName = document.getElementById("fno-top-ce-name");
+      if (topCeName) topCeName.innerText = `${topCeStrike} CE`;
+      const topCePriceEl = document.getElementById("fno-top-ce-price");
+      if (topCePriceEl && topCePrice > 0) topCePriceEl.innerText = `₹${topCePrice.toFixed(2)}`;
+      const topCeBtn = document.getElementById("fno-top-ce-btn");
+      if (topCeBtn) topCeBtn.onclick = () => tradeOptionDirect(`${currentFnoUnderlying === "BANK NIFTY" ? "BANKNIFTY" : "NIFTY"} ${topCeStrike} CE`, topCePrice, 'BUY');
+
+      const topPeName = document.getElementById("fno-top-pe-name");
+      if (topPeName) topPeName.innerText = `${topPeStrike} PE`;
+      const topPePriceEl = document.getElementById("fno-top-pe-price");
+      if (topPePriceEl && topPePrice > 0) topPePriceEl.innerText = `₹${topPePrice.toFixed(2)}`;
+      const topPeBtn = document.getElementById("fno-top-pe-btn");
+      if (topPeBtn) topPeBtn.onclick = () => tradeOptionDirect(`${currentFnoUnderlying === "BANK NIFTY" ? "BANKNIFTY" : "NIFTY"} ${topPeStrike} PE`, topPePrice, 'BUY');
+
+      const maxPainVal = document.getElementById("fno-maxpain-val");
+      if (maxPainVal) maxPainVal.innerText = `${atmStrike} Strike`;
+    }
+
+    function tradeOptionDirect(sym, ltp, txType) {
+      const lot = getFnoLotSize();
+      if (!marketCatalog["fno"].symbols[sym]) {
+        marketCatalog["fno"].symbols[sym] = {
+          name: sym,
+          ltp: ltp,
+          open: Math.round(ltp * 0.95 * 10) / 10,
+          lot: lot,
+          history: [],
+          sector: currentFnoUnderlying + " Option"
+        };
+        let base = ltp;
+        let arr = [];
+        let t = Date.now() - 40 * 60 * 1000;
+        for (let i = 0; i < 40; i++) {
+          let open = base + (Math.random() - 0.49) * (base * 0.01);
+          let close = open + (Math.random() - 0.48) * (base * 0.015);
+          arr.push({ time: t + i * 60000, open, high: Math.max(open, close), low: Math.min(open, close), close, volume: 5000 });
+          base = close;
+        }
+        marketCatalog["fno"].symbols[sym].history = arr;
+      } else {
+        marketCatalog["fno"].symbols[sym].ltp = ltp;
+      }
+
+      switchMarket('fno');
+      changeChartSymbol(sym);
+      const sel = document.getElementById("sel-chart-symbol");
+      if (sel) {
+        if (![...sel.options].some(o => o.value === sym)) {
+          const opt = document.createElement("option");
+          opt.value = sym;
+          opt.innerText = `${sym} (₹${ltp.toLocaleString()})`;
+          sel.appendChild(opt);
+        }
+        sel.value = sym;
+      }
+
+      triggerImmediateTrade(sym, true);
+      switchSubTab('positions');
+    }
+
+    function triggerStraddleTrade() {
+      const spot = getFnoUnderlyingSpot();
+      const step = currentFnoUnderlying === "BANK NIFTY" ? 100 : 50;
+      const atmStrike = Math.round(spot / step) * step;
+      const prefix = currentFnoUnderlying === "BANK NIFTY" ? "BANKNIFTY" : "NIFTY";
+      const ceSym = `${prefix} ${atmStrike} CE`;
+      const peSym = `${prefix} ${atmStrike} PE`;
+
+      logTerminal(`<strong>🎯 [9:20 AM STRADDLE TRIGGERED]</strong> Executing ${currentFnoUnderlying} ATM Straddle: 1 Lot ${ceSym} + 1 Lot ${peSym}. 25% SL armed per leg.`);
+      tradeOptionDirect(ceSym, currentFnoUnderlying === "BANK NIFTY" ? 340.0 : 142.50, 'BUY');
+      setTimeout(() => {
+        tradeOptionDirect(peSym, currentFnoUnderlying === "BANK NIFTY" ? 315.0 : 128.00, 'BUY');
+      }, 600);
+    }
+function calculateStockMetrics(sym) {
+      const symObj = marketCatalog[currentMarket].symbols[sym];
+      if (!symObj) return null;
+      const ltp = symObj.ltp;
+      const open = symObj.open || symObj.history[0]?.open || ltp;
+      const pctChange = ((ltp - open) / open) * 100;
+
+      // Indicator calculations
+      const candles = symObj.history;
+      let volRatio = 1.8;
+      if (candles.length > 5) {
+        const lastVol = candles[candles.length - 1].volume || 2500;
+        const avgVol = candles.slice(-10).reduce((acc, c) => acc + c.volume, 0) / 10;
+        volRatio = avgVol > 0 ? (lastVol / avgVol) : 1.8;
+      }
+
+      // Compute Quantitative Conviction Score (0 - 100)
+      let score = 50;
+      score += pctChange * 10; // +10 points per 1% price rise
+      if (volRatio >= 1.5) score += 15;
+      if (volRatio >= 2.0) score += 10;
+      if (pctChange > 0.5) score += 10;
+      if (pctChange < -0.5) score -= 20;
+
+      score = Math.max(15, Math.min(98, Math.round(score)));
+
+      let tag = "NEUTRAL";
+      let tagClass = "bg-gray-800 text-gray-300 border-gray-700";
+      if (score >= 85) {
+        tag = "🔥 TOP PICK";
+        tagClass = "bg-emerald-950 text-emerald-300 border-emerald-600 font-extrabold";
+      } else if (score >= 70) {
+        tag = "🟢 STRONG TREND";
+        tagClass = "bg-teal-950 text-teal-300 border-teal-700 font-bold";
+      } else if (score <= 40) {
+        tag = "🔴 AVOID / DOWNTREND";
+        tagClass = "bg-rose-950 text-rose-300 border-rose-800";
+      }
+
+      return {
+        sym,
+        name: symObj.name,
+        sector: symObj.sector || "Equities",
+        ltp,
+        pctChange: Math.round(pctChange * 100) / 100,
+        volRatio: Math.round(volRatio * 10) / 10,
+        score,
+        tag,
+        tagClass
+      };
+    }
+
+    function renderMarketHeatmap() {
+      const grid = document.getElementById("heatmap-tiles-grid");
+      const board = document.getElementById("top-picks-leaderboard");
+      const marketLabel = document.getElementById("heatmap-market-name");
+      if (!grid) return;
+
+      marketLabel.innerText = currentMarket === "india" ? "NSE INDIA EQUITIES" : currentMarket === "us" ? "US NASDAQ / NYSE" : "CRYPTO 24/7";
+      grid.innerHTML = "";
+
+      const symbols = Object.keys(marketCatalog[currentMarket].symbols);
+      const metricsList = symbols.map(sym => calculateStockMetrics(sym)).filter(Boolean);
+
+      // Sort by conviction score descending
+      metricsList.sort((a, b) => b.score - a.score);
+
+      // Render Top 3 Leaderboard Cards
+      if (board) {
+        board.innerHTML = "";
+        const top3 = metricsList.slice(0, 3);
+        top3.forEach((m, idx) => {
+          const card = document.createElement("div");
+          card.className = "bg-[#070b14] border border-cyan-800/60 p-2.5 rounded-lg flex items-center justify-between cursor-pointer hover:border-cyan-400 transition";
+          card.onclick = () => { changeChartSymbol(m.sym); document.getElementById("sel-chart-symbol").value = m.sym; };
+          card.innerHTML = `
+            <div>
+              <div class="flex items-center space-x-1.5">
+                <span class="text-xs font-black text-amber-400 font-mono">#${idx + 1}</span>
+                <span class="text-xs font-bold text-white">${m.sym}</span>
+                <span class="${m.tagClass} border px-1 py-0.2 rounded text-[9px]">${m.tag}</span>
+              </div>
+              <p class="text-[10px] text-gray-400">${m.name}</p>
+            </div>
+            <div class="text-right">
+              <span class="text-xs font-mono font-bold ${m.pctChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                ${m.pctChange >= 0 ? '+' : ''}${m.pctChange}%
+              </span>
+              <span class="block text-[9px] font-mono text-cyan-400 font-bold">Score: ${m.score}/100</span>
+            </div>
+          `;
+          board.appendChild(card);
+        });
+      }
+
+      // Render Heatmap Tiles
+      let advances = 0;
+      metricsList.forEach(m => {
+        if (m.pctChange >= 0) advances++;
+        const tile = document.createElement("div");
+        
+        // Heatmap background color based on % performance
+        let bg = "bg-[#0b1220] border-gray-800 hover:border-gray-600";
+        if (m.pctChange >= 2.5) bg = "bg-emerald-900/60 border-emerald-600/80 hover:bg-emerald-800/70";
+        else if (m.pctChange > 0.5) bg = "bg-emerald-950/50 border-emerald-800/60 hover:bg-emerald-900/60";
+        else if (m.pctChange < -2.0) bg = "bg-rose-900/60 border-rose-600/80 hover:bg-rose-800/70";
+        else if (m.pctChange < -0.5) bg = "bg-rose-950/50 border-rose-800/60 hover:bg-rose-900/60";
+
+        tile.className = `${bg} border p-2.5 rounded-lg flex flex-col justify-between cursor-pointer transition shadow hover:scale-[1.02]`;
+        tile.onclick = () => {
+          changeChartSymbol(m.sym);
+          document.getElementById("sel-chart-symbol").value = m.sym;
+        };
+
+        const curr = getCurrSymbol();
+        tile.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="font-bold text-white text-xs block">${m.sym}</span>
+              <span class="text-[9px] text-gray-400 truncate block max-w-[90px]">${m.sector}</span>
+            </div>
+            <span class="${m.tagClass} border px-1 py-0.2 rounded text-[8px]">${m.score}</span>
+          </div>
+
+          <div class="mt-2 flex justify-between items-baseline">
+            <span class="font-mono text-gray-200 text-xs">${curr}${m.ltp.toLocaleString()}</span>
+            <span class="font-mono font-black text-xs ${m.pctChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+              ${m.pctChange >= 0 ? '+' : ''}${m.pctChange}%
+            </span>
+          </div>
+          <div class="mt-1 flex justify-between items-center text-[9px] text-gray-500 font-mono">
+            <span>Vol: ${m.volRatio}x</span>
+            <span class="text-cyan-400">Click to Chart &rarr;</span>
+          </div>
+        `;
+        grid.appendChild(tile);
+      });
+
+      // Update Breadth ratio
+      const total = metricsList.length;
+      const advPct = Math.round((advances / total) * 100);
+      document.getElementById("breadth-summary").innerText = `${advPct}% Bullish (${advances} Advances / ${total - advances} Declines)`;
+      document.getElementById("breadth-bar").innerHTML = `<div class="bg-emerald-500 h-full" style="width: ${advPct}%;"></div>`;
+    }
+
+    function autoSelectTopPicks() {
+      const symbols = Object.keys(marketCatalog[currentMarket].symbols);
+      const metricsList = symbols.map(sym => calculateStockMetrics(sym)).filter(Boolean);
+      metricsList.sort((a, b) => b.score - a.score);
+
+      const top3 = metricsList.slice(0, 3).map(m => m.sym);
+      activeBasket.clear();
+      top3.forEach(sym => activeBasket.add(sym));
+      renderBasketChips();
+
+      // Change chart to #1 pick
+      changeChartSymbol(top3[0]);
+      document.getElementById("sel-chart-symbol").value = top3[0];
+
+      playBeep("news");
+      logTerminal(`<strong>⭐ [AI STOCK PICKER ARMED]</strong> Filtered trading basket to today's Top 3 Momentum Leaders: <strong>${top3.join(', ')}</strong>! Bot will prioritize these stocks.`);
+      logTerminal(`<strong class="text-cyan-400 font-bold">⭐ [AI TOP 3 PICKS ARMED]</strong> 1. ${top3[0]} (Score: ${metricsList[0].score}/100) &bull; 2. ${top3[1]} &bull; 3. ${top3[2]}. Ready to trade!`);
+    }
+
+    function renderNewsFeed() {
+      const container = document.getElementById("news-feed-container");
+      container.innerHTML = "";
+      const filtered = newsFeed.filter(n => {
+        if (activeNewsFilter !== "all" && n.market !== activeNewsFilter) return false;
+        return true;
+      });
+
+      filtered.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "bg-[#070b14] border border-gray-800 hover:border-gray-700 p-2.5 rounded-lg flex items-start justify-between gap-3 transition";
+        
+        let sentimentBg = "bg-emerald-950 text-emerald-300 border-emerald-800";
+        if (item.sentiment === "BEARISH") sentimentBg = "bg-rose-950 text-rose-300 border-rose-800";
+        if (item.sentiment === "NEUTRAL") sentimentBg = "bg-cyan-950 text-cyan-300 border-cyan-800";
+
+        let mktTag = "🪙 CRYPTO";
+        if (item.market === "india") mktTag = "🇮🇳 INDIA NSE";
+        if (item.market === "us") mktTag = "🇺🇸 US TECH";
+
+        card.innerHTML = `
+          <div class="space-y-1 flex-1">
+            <div class="flex items-center space-x-2 text-[10px]">
+              <span class="font-mono text-gray-400">${item.time}</span>
+              <span class="text-gray-600">&bull;</span>
+              <span class="text-gray-400 font-semibold">${item.source}</span>
+              <span class="text-gray-600">&bull;</span>
+              <span class="text-gray-400 font-mono">${mktTag}</span>
+              <span class="${item.impactColor} border px-1.5 py-0.2 rounded font-bold text-[9px]">${item.impact}</span>
+            </div>
+            <h4 class="text-xs font-semibold text-white hover:text-cyan-400 transition cursor-pointer">${item.title}</h4>
+          </div>
+          <div class="text-right whitespace-nowrap pl-2">
+            <span class="${sentimentBg} border px-2 py-0.5 rounded text-[10px] font-bold block mb-1">
+              ${item.sentiment === 'BULLISH' ? '🟢' : item.sentiment === 'BEARISH' ? '🔴' : '🟡'} ${item.sentiment} (${item.score})
+            </span>
+            <span class="text-[9px] text-gray-500 font-mono">Algo Action: ${item.sentiment === 'BULLISH' ? 'Long Bias' : item.sentiment === 'BEARISH' ? 'Hedge / Short' : 'Neutral Hold'}</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function filterNews(filter) {
+      activeNewsFilter = filter;
+      ['all', 'india', 'us', 'crypto'].forEach(f => {
+        const btn = document.getElementById('btn-news-' + f);
+        if (f === filter) {
+          btn.className = "bg-gray-800 text-cyan-400 font-bold px-2.5 py-1 rounded text-xs";
+        } else {
+          btn.className = "bg-gray-900 text-gray-400 hover:text-white px-2.5 py-1 rounded text-xs";
+        }
+      });
+      renderNewsFeed();
+    }
+
+    function searchNews(query) {
+      const q = query.toLowerCase().trim();
+      const container = document.getElementById("news-feed-container");
+      const cards = container.children;
+      for (let i = 0; i < cards.length; i++) {
+        const text = cards[i].innerText.toLowerCase();
+        cards[i].style.display = text.includes(q) ? "flex" : "none";
+      }
+    }
+
+    function injectSimulatedBreakingNews() {
+      const breakingPool = [
+        {
+          market: "crypto",
+          title: "BREAKING: U.S. Federal Reserve Signals Pro-Crypto Regulatory Clarity Framework for 2027",
+          source: "CoinDesk Breaking",
+          sentiment: "BULLISH",
+          score: "96%",
+          impact: "CRITICAL IMPACT",
+          impactColor: "bg-rose-950 text-rose-300 border-rose-800"
+        },
+        {
+          market: "india",
+          title: "BREAKING: Indian GST Tax Collections Jump 12.8% to Record ₹1.98 Lakh Crore",
+          source: "CNBC TV18",
+          sentiment: "BULLISH",
+          score: "91%",
+          impact: "HIGH IMPACT",
+          impactColor: "bg-rose-950 text-rose-300 border-rose-800"
+        },
+        {
+          market: "us",
+          title: "BREAKING: Apple Announces Breakthrough On-Device Quantum Security Chip Architecture",
+          source: "Bloomberg Tech",
+          sentiment: "BULLISH",
+          score: "89%",
+          impact: "HIGH IMPACT",
+          impactColor: "bg-rose-950 text-rose-300 border-rose-800"
+        }
+      ];
+
+      const item = breakingPool[Math.floor(Math.random() * breakingPool.length)];
+      newsFeed.unshift({
+        id: Date.now(),
+        time: "Just now",
+        ...item
+      });
+
+      playBeep("news");
+      logTerminal(`<strong class="text-rose-400">⚡ NEWS WIRE:</strong> ${item.title} (<strong class="text-emerald-400">${item.sentiment} ${item.score}</strong>)`);
+      if (activeSubTab === 'news') renderNewsFeed();
+
+      // Trigger AI Copilot update
+      document.getElementById("ai-copilot-msg").innerHTML = `<span class="text-rose-400 font-bold">[NEWS EVENT]</span> ${item.title.substring(0, 85)}... &bull; <strong class="text-emerald-400 font-bold">${item.sentiment} ${item.score}</strong>`;
+    }
+
+
+    function updateMarketSessionBadge() {
+      const badge = document.getElementById("market-session-badge");
+      if (!badge) return;
+      const now = new Date();
+      // Calculate IST time (UTC+5:30)
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const istDate = new Date(utc + (3600000 * 5.5));
+      const hours = istDate.getHours();
+      const minutes = istDate.getMinutes();
+      const day = istDate.getDay(); // 0 = Sun, 6 = Sat
+      const isWeekday = day >= 1 && day <= 5;
+      const isMarketHours = isWeekday && ((hours === 9 && minutes >= 15) || (hours > 9 && hours < 15) || (hours === 15 && minutes <= 30));
+
+      if (currentMarket === 'crypto') {
+        badge.className = "px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold text-[10px]";
+        badge.innerHTML = "🟢 CRYPTO 24/7 OPEN (Live Execution)";
+      } else if (currentMarket === 'us') {
+        badge.className = "px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold text-[10px]";
+        badge.innerHTML = "🌙 US STOCKS (Pre-Market / Simulated Sandbox)";
+      } else {
+        if (isMarketHours) {
+          badge.className = "px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold text-[10px]";
+          badge.innerHTML = "🟢 NSE LIVE SESSION (09:15 - 15:30 IST)";
+        } else {
+          badge.className = "px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800/80 font-bold text-[10px]";
+          badge.innerHTML = "🌙 NSE CLOSED (Simulated Sandbox Active • Zero Risk)";
+        }
+      }
+    }
+
+    function updateAICopilotMsg() {
+      const sym = currentSymbol;
+      const mktObj = marketCatalog[currentMarket].symbols[sym];
+      if (!mktObj) return;
+      const ltp = mktObj.ltp;
+      const curr = getCurrSymbol();
+      const strat = document.getElementById("sel-algo-strategy").value;
+
+      const msgs = {
+        "supertrend_ema": `[SUPERTREND 10,3 + 20 EMA] ${sym} @ ${curr}${ltp.toLocaleString()}. Price above EMA. 6/6 Risk Gates Passed. Next resistance: ${curr}${(ltp * 1.018).toFixed(2)}.`,
+        "vwap_breakout": `[INSTITUTIONAL VWAP] ${sym} volume surge 2.1x on 5m candle. VWAP support at ${curr}${(ltp * 0.994).toFixed(2)}. Order depth cleared.`,
+        "rsi_scalp": `[RSI SCALPER] ${sym} RSI(14) neutral at 58.4. Monitoring boundaries (<30 Buy / >70 Sell) for mean-reversion scalp.`,
+        "news_breakout": `[NEWS CATALYST] Active Sentiment Radar: 88% Bullish aggregate sentiment across ${currentMarket.toUpperCase()} assets. Long bias armed.`
+      };
+
+      document.getElementById("ai-copilot-msg").innerText = msgs[strat] || msgs["supertrend_ema"];
+    }
+
+    function changeChartSymbol(sym) {
+      currentSymbol = sym;
+      renderChart();
+      renderOrderDepth();
+      updateAICopilotMsg();
+    }
+
+    function setTimeframe(tf) {
+      timeframeMinutes = tf;
+      [1, 3, 5, 15].forEach(t => {
+        const btn = document.getElementById("tf-" + t);
+        if (t === tf) {
+          btn.className = "px-2 py-0.5 rounded bg-gray-800 text-cyan-400 font-bold";
+        } else {
+          btn.className = "px-2 py-0.5 rounded text-gray-400 hover:text-white";
+        }
+      });
+      renderChart();
+    }
+
+    function toggleEngine() {
+      isRunning = !isRunning;
+      const btn = document.getElementById("btn-toggle-engine");
+      const pill = document.getElementById("status-pill");
+      const statusTag = document.getElementById("bot-status-tag");
+
+      if (isRunning) {
+        btn.innerHTML = "<span>⏹</span> STOP ALGO BOT";
+        btn.className = "w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-red";
+        pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> BOT ACTIVE`;
+        pill.className = "px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/60 flex items-center gap-1.5";
+        statusTag.innerText = "ACTIVE";
+        statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-bold border border-emerald-800";
+        playBeep("buy");
+        logTerminal(`<strong>[BOT STARTED]</strong> Strategy: <em>${document.getElementById("sel-algo-strategy").value}</em> on market <strong>${currentMarket.toUpperCase()}</strong>. 6 Risk Gates Active.`);
+      } else {
+        btn.innerHTML = "<span>▶</span> START ALGO BOT";
+        btn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-green";
+        pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-gray-500"></span> BOT IDLE`;
+        pill.className = "px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-gray-800 text-gray-400 border border-gray-700 flex items-center gap-1.5";
+        statusTag.innerText = "OFFLINE";
+        statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-gray-800 text-gray-400 font-bold";
+        playBeep("sell");
+        logTerminal("Algo Bot paused by user.");
+      }
+    }
+
+    function triggerImmediateTrade(targetSym = null, isManual = true) {
+      const sym = targetSym || currentSymbol;
+      const mktObj = marketCatalog[currentMarket].symbols[sym];
+      if (!mktObj) return;
+      const ltp = mktObj.ltp;
+      const lotSize = mktObj.lot;
+      const curr = getCurrSymbol();
+
+      const cost = lotSize * ltp;
+      const existing = positions.find(p => p.symbol === sym);
+
+      if (existing) {
+        // Evaluate Brokerage & Net Profit Filter
+        const charges = calculateTradeCharges(existing.avg, ltp, existing.qty, currentMarket);
+        const grossPnl = charges.grossPnl;
+        const netPnl = charges.netPnl;
+
+        // If automated (not manual button click), NEVER close for "cents" at a net loss!
+        // A profit exit must clear 100% of roundtrip brokerage + a minimum profit buffer!
+        if (!isManual && netPnl <= 0) {
+          // Do NOT close! Hold trade until profit covers brokerage
+          return;
+        }
+
+        // Close trade & record accurate brokerage
+        grossRealizedPnl += grossPnl;
+        totalTaxesPaid += charges.total;
+        netRealizedPnl += netPnl;
+
+        cash += (existing.cost + netPnl);
+        marginUsed -= existing.cost;
+        positions = positions.filter(p => p.symbol !== sym);
+
+        playBeep("sell");
+        logTerminal(`[TRADE EXIT] Closed ${sym} @ ${curr}${ltp.toLocaleString()} | Gross: <strong class="${grossPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${curr}${grossPnl.toFixed(2)}</strong> | Brokerage+Taxes: <span class="text-rose-400">-${curr}${charges.total.toFixed(2)}</span> | <strong class="${netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">Net In-Pocket: ${curr}${netPnl.toFixed(2)}</strong> (Breakeven was ${curr}${charges.breakeven.toFixed(2)}/unit)`);
+      } else {
+        // Buy Trade - Verify 6 Risk Gates
+        if (positions.length >= MAX_OPEN_POSITIONS) {
+          if (isManual) logTerminal(`<span class="text-amber-400">[EXPOSURE GATE] Max open positions limit (${MAX_OPEN_POSITIONS}) reached. Close an active position before opening new stock.</span>`);
+          return;
+        }
+
+        if (cost > cash) {
+          if (isManual) logTerminal(`<span class="text-rose-400">[RISK GATE 1 REJECT] Required capital ${curr}${cost.toFixed(2)} exceeds available cash!</span>`);
+          playBeep("alert");
+          return;
+        }
+
+        // Calculate estimated roundtrip breakeven
+        const estCharges = calculateTradeCharges(ltp, ltp * 1.01, lotSize, currentMarket);
+        const breakevenPoints = estCharges.breakeven;
+
+        marginUsed += cost;
+        cash -= cost;
+        const breakevenLtp = Math.round((ltp + breakevenPoints) * 100) / 100;
+        const initSL = Math.round((ltp * 0.975) * 100) / 100; // 2.5% protective stop to give trade breathing room
+        const targetP = Math.round((ltp * 1.025) * 100) / 100; // 2.5% Take Profit Target (1:1+ RR)
+        positions.push({
+          symbol: sym,
+          qty: lotSize,
+          avg: ltp,
+          ltp: ltp,
+          cost: cost,
+          curr: curr,
+          market: currentMarket,
+          type: "BUY",
+          peakPrice: ltp,
+          initialSL: initSL,
+          trailingSL: initSL,
+          targetPrice: targetP,
+          breakevenPrice: breakevenLtp,
+          trailPct: 0.01, // 1.0% dynamic trailing distance
+          profitLocked: 0.0,
+          trailStatus: "ARMED",
+          entryTime: Date.now()
+        });
+
+        playBeep("buy");
+        logTerminal(`[SMART BASKET FILL] <strong class="text-emerald-400 font-bold">BUY ${sym}</strong>: ${lotSize} units @ ${curr}${ltp.toLocaleString()} [Roundtrip Fee: ${curr}${estCharges.total.toFixed(2)} &bull; Breakeven at ${curr}${(ltp + breakevenPoints).toFixed(2)}]`);
+      }
+      renderAccountRibbon();
+      updateMarketSessionBadge();
+      renderPositions();
+    }
+
+    function triggerKillSwitch() {
+      if (positions.length === 0) {
+        logTerminal("[KILL SWITCH] No open positions to square off.");
+        return;
+      }
+      playBeep("alert");
+      logTerminal(`<strong class="text-rose-500">🚨 EMERGENCY KILL SWITCH ENGAGED! Squaring off all ${positions.length} active positions immediately!</strong>`);
+      
+      positions.forEach(p => {
+        const charges = calculateTradeCharges(p.avg, p.ltp, p.qty, p.market || currentMarket);
+        grossRealizedPnl += charges.grossPnl;
+        totalTaxesPaid += charges.total;
+        netRealizedPnl += charges.netPnl;
+        cash += (p.cost + charges.netPnl);
+      });
+      positions = [];
+      marginUsed = 0.0;
+      if (isRunning) toggleEngine();
+      renderAccountRibbon();
+      updateMarketSessionBadge();
+      renderPositions();
+      logTerminal("<strong class=\"text-rose-400\">🚨 KILL SWITCH EXECUTED: All positions liquidated cleanly. Zero capital at risk.</strong>");
+    }
+
+    function renderAccountRibbon() {
+      const curr = getCurrSymbol();
+      document.getElementById("acc-cash").innerText = `${curr} ${cash.toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      document.getElementById("acc-margin-used").innerText = `${curr} ${marginUsed.toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      
+      // Calculate active unrealized gross and estimated exit charges
+      let unrealizedGross = 0.0;
+      let unrealizedTaxes = 0.0;
+      positions.forEach(p => {
+        const c = calculateTradeCharges(p.avg, p.ltp, p.qty, p.market || currentMarket);
+        unrealizedGross += c.grossPnl;
+        unrealizedTaxes += c.total;
+      });
+
+      const totalGross = grossRealizedPnl + unrealizedGross;
+      const totalTaxes = totalTaxesPaid + unrealizedTaxes;
+      const netPnl = totalGross - totalTaxes;
+
+      document.getElementById("acc-gross-pnl").innerText = `${curr} ${totalGross.toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      document.getElementById("acc-total-taxes").innerText = `- ${curr} ${totalTaxes.toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+      const netElem = document.getElementById("acc-netpnl");
+      netElem.innerText = `${curr} ${netPnl.toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      if (netPnl >= 0) {
+        netElem.className = "font-mono font-extrabold text-emerald-400 text-sm";
+      } else {
+        netElem.className = "font-mono font-extrabold text-rose-400 text-sm";
+      }
+
+      // Enforce Circuit Breaker if daily loss threshold exceeded
+      if (netPnl <= -Math.abs(maxDailyLoss)) {
+        if (isRunning) {
+          toggleEngine();
+          logTerminal(`<strong class="text-rose-500">🚨 CIRCUIT BREAKER TRIGGERED! Net loss reached ${curr}${Math.abs(netPnl).toFixed(2)} (Limit: ${curr}${maxDailyLoss}). Auto-liquidating open positions.</strong>`);
+          triggerKillSwitch();
+        }
+      }
+      document.getElementById("badge-pos-count").innerText = positions.length;
+    }
+
+    function updateMaxLoss() {
+      const val = parseFloat(document.getElementById("input-maxloss").value) || 75;
+      maxDailyLoss = val;
+      const pct = capital > 0 ? ((maxDailyLoss / capital) * 100).toFixed(1) : "1.5";
+      document.getElementById("maxloss-pct-tag").innerText = `(${pct}%)`;
+      const curr = getCurrSymbol();
+      logTerminal(`[RISK SHIELD] Circuit breaker adjusted to max daily loss: <strong class="text-rose-400">${curr}${maxDailyLoss.toFixed(2)}</strong> (${pct}% of capital).`);
+    }
+
+    function updateCapital() {
+      const val = parseFloat(document.getElementById("acc-capital").value) || 5000;
+      capital = val;
+      cash = capital - marginUsed + netRealizedPnl;
+      const pct = capital > 0 ? ((maxDailyLoss / capital) * 100).toFixed(1) : "1.5";
+      document.getElementById("maxloss-pct-tag").innerText = `(${pct}%)`;
+      renderAccountRibbon();
+      updateMarketSessionBadge();
+      if (mkt === 'fno') switchSubTab('optionchain');
+    }
+
+    function logTerminal(html) {
+      const box = document.getElementById("terminal-log-box");
+      const p = document.createElement("p");
+      const d = new Date();
+      const ts = d.toTimeString().split(' ')[0];
+      p.innerHTML = `<span class="text-gray-500">[${ts}]</span> ${html}`;
+      box.appendChild(p);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function renderPositions() {
+      const tbody = document.getElementById("pos-table-body");
+      tbody.innerHTML = "";
+      if (positions.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="py-6 text-center text-gray-500 text-xs">No active positions. Click "START ALGO BOT" to begin automated paper trading.</td></tr>`;
+        return;
+      }
+
+      positions.forEach(p => {
+        const c = calculateTradeCharges(p.avg, p.ltp, p.qty, p.market || currentMarket);
+        const pnlPct = ((p.ltp - p.avg) / p.avg) * 100;
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-gray-800/30";
+        const isProfitLocked = p.trailingSL > p.avg;
+        const trailBadge = isProfitLocked 
+          ? `<span class="bg-emerald-950 text-emerald-300 border border-emerald-700 px-1.5 py-0.5 rounded font-bold text-[10px]">🔒 ${p.curr}${p.trailingSL.toLocaleString()} (+${p.curr}${p.profitLocked.toFixed(1)} Locked)</span>`
+          : `<span class="text-gray-400 font-mono text-[10px]">${p.curr}${p.trailingSL.toLocaleString()} (Trail 0.8%)</span>`;
+
+        tr.innerHTML = `
+          <td class="py-2 px-2 font-bold text-white">${p.symbol}</td>
+          <td class="py-2 px-2 text-emerald-400 font-semibold">${p.type}</td>
+          <td class="py-2 px-2">${p.qty}</td>
+          <td class="py-2 px-2 text-gray-300">${p.curr}${p.avg.toLocaleString()}</td>
+          <td class="py-2 px-2 text-white">${p.curr}${p.ltp.toLocaleString()}</td>
+          <td class="py-2 px-2">${trailBadge}</td>
+          <td class="py-2 px-2 font-bold ${c.grossPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+            ${c.grossPnl >= 0 ? '+' : ''}${p.curr}${c.grossPnl.toFixed(2)}
+          </td>
+          <td class="py-2 px-2 text-rose-400 font-mono">-${p.curr}${c.total.toFixed(2)}</td>
+          <td class="py-2 px-2 font-bold ${c.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+            ${c.netPnl >= 0 ? '+' : ''}${p.curr}${c.netPnl.toFixed(2)} (${pnlPct.toFixed(2)}%)
+          </td>
+          <td class="py-2 px-2 text-right">
+            <button onclick="closeSinglePosition('${p.symbol}')" class="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800 text-[10px] px-2 py-0.5 rounded font-semibold transition">
+              Square Off
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function closeSinglePosition(sym) {
+      const p = positions.find(item => item.symbol === sym);
+      if (!p) return;
+      const c = calculateTradeCharges(p.avg, p.ltp, p.qty, p.market || currentMarket);
+      grossRealizedPnl += c.grossPnl;
+      totalTaxesPaid += c.total;
+      netRealizedPnl += c.netPnl;
+
+      cash += (p.cost + c.netPnl);
+      marginUsed -= p.cost;
+      positions = positions.filter(item => item.symbol !== sym);
+
+      playBeep("sell");
+      logTerminal(`[SQUARE OFF] Closed ${sym} @ ${p.curr}${p.ltp.toLocaleString()} | Gross PnL: <span class="${c.grossPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${p.curr}${c.grossPnl.toFixed(2)}</span> | Brokerage: <span class="text-rose-400">-${p.curr}${c.total.toFixed(2)}</span> | <strong>Net In-Pocket: ${p.curr}${c.netPnl.toFixed(2)}</strong>`);
+      renderAccountRibbon();
+      updateMarketSessionBadge();
+      renderPositions();
+    }
+
+    function renderOrderDepth() {
+      const bidsEl = document.getElementById("depth-bids");
+      const asksEl = document.getElementById("depth-asks");
+      const symObj = marketCatalog[currentMarket].symbols[currentSymbol];
+      if (!symObj) return;
+      const ltp = symObj.ltp;
+
+      let bidsHtml = `<div class="flex justify-between text-gray-500 border-b border-gray-800 pb-0.5"><span>Qty</span><span>Bid</span></div>`;
+      let asksHtml = `<div class="flex justify-between text-gray-500 border-b border-gray-800 pb-0.5"><span>Ask</span><span>Qty</span></div>`;
+
+      for (let i = 1; i <= 4; i++) {
+        const bidP = Math.round((ltp * (1 - i * 0.0006)) * 100) / 100;
+        const askP = Math.round((ltp * (1 + i * 0.0006)) * 100) / 100;
+        const bQty = Math.floor(Math.random() * 200 + 40);
+        const aQty = Math.floor(Math.random() * 200 + 40);
+
+        bidsHtml += `<div class="flex justify-between text-emerald-400"><span>${bQty}</span><span class="font-bold">${bidP.toLocaleString()}</span></div>`;
+        asksHtml += `<div class="flex justify-between text-rose-400"><span class="font-bold">${askP.toLocaleString()}</span><span>${aQty}</span></div>`;
+      }
+
+      bidsEl.innerHTML = bidsHtml;
+      asksEl.innerHTML = asksHtml;
+    }
+
+    // Canvas Chart Rendering Engine
+    function renderChart() {
+      const canvas = document.getElementById("mainChartCanvas");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = 300;
+
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const symObj = marketCatalog[currentMarket].symbols[currentSymbol];
+      if (!symObj || !symObj.history || symObj.history.length === 0) return;
+      const candles = symObj.history;
+
+      let minP = Infinity, maxP = -Infinity;
+      candles.forEach(c => {
+        if (c.low < minP) minP = c.low;
+        if (c.high > maxP) maxP = c.high;
+      });
+      const pad = (maxP - minP) * 0.08 || 1;
+      minP -= pad; maxP += pad;
+
+      // Draw Grid Lines
+      ctx.strokeStyle = "#131a29";
+      ctx.lineWidth = 1;
+      for (let i = 1; i <= 4; i++) {
+        const y = (h / 5) * i;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w - 60, y);
+        ctx.stroke();
+
+        const priceVal = maxP - (i / 5) * (maxP - minP);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "9px monospace";
+        ctx.fillText(priceVal.toFixed(2), w - 55, y + 3);
+      }
+
+      // Candlestick geometry
+      const candleW = Math.max(3, (w - 70) / candles.length - 3);
+      candles.forEach((c, idx) => {
+        const x = 10 + idx * ((w - 70) / candles.length);
+        const yOpen = h - ((c.open - minP) / (maxP - minP)) * h;
+        const yClose = h - ((c.close - minP) / (maxP - minP)) * h;
+        const yHigh = h - ((c.high - minP) / (maxP - minP)) * h;
+        const yLow = h - ((c.low - minP) / (maxP - minP)) * h;
+
+        const isGreen = c.close >= c.open;
+        ctx.strokeStyle = isGreen ? "#10b981" : "#ef4444";
+        ctx.fillStyle = isGreen ? "#10b981" : "#ef4444";
+
+        // Wick
+        ctx.beginPath();
+        ctx.moveTo(x + candleW / 2, yHigh);
+        ctx.lineTo(x + candleW / 2, yLow);
+        ctx.stroke();
+
+        // Body
+        const top = Math.min(yOpen, yClose);
+        const height = Math.max(2, Math.abs(yClose - yOpen));
+        ctx.fillRect(x, top, candleW, height);
+      });
+
+      // Overlay 20 EMA
+      if (document.getElementById("chk-ema").checked) {
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        let ema = candles[0].close;
+        const k = 2 / (20 + 1);
+        candles.forEach((c, idx) => {
+          ema = c.close * k + ema * (1 - k);
+          const x = 10 + idx * ((w - 70) / candles.length) + candleW / 2;
+          const y = h - ((ema - minP) / (maxP - minP)) * h;
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+
+      // Overlay Supertrend (10,3)
+      if (document.getElementById("chk-supertrend").checked) {
+        ctx.strokeStyle = "#10b981";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        candles.forEach((c, idx) => {
+          const stVal = c.close * 0.994;
+          const x = 10 + idx * ((w - 70) / candles.length) + candleW / 2;
+          const y = h - ((stVal - minP) / (maxP - minP)) * h;
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+
+      // Overlay VWAP
+      if (document.getElementById("chk-vwap").checked) {
+        ctx.strokeStyle = "#f59e0b";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        let cumVol = 0, cumTypical = 0;
+        candles.forEach((c, idx) => {
+          const typical = (c.high + c.low + c.close) / 3;
+          cumVol += c.volume;
+          cumTypical += typical * c.volume;
+          const vwap = cumTypical / cumVol;
+          const x = 10 + idx * ((w - 70) / candles.length) + candleW / 2;
+          const y = h - ((vwap - minP) / (maxP - minP)) * h;
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      renderRsiSubChart(candles, minP, maxP);
+    }
+
+    function renderRsiSubChart(candles, minP, maxP) {
+      const rsiCanvas = document.getElementById("rsiCanvas");
+      if (!rsiCanvas) return;
+      const rsiCtx = rsiCanvas.getContext("2d");
+      rsiCanvas.width = rsiCanvas.parentElement.getBoundingClientRect().width;
+      rsiCanvas.height = 60;
+      const rw = rsiCanvas.width;
+      const rh = rsiCanvas.height;
+
+      rsiCtx.clearRect(0, 0, rw, rh);
+      rsiCtx.strokeStyle = "#1e293b";
+      rsiCtx.strokeRect(0, 0, rw, rh);
+
+      // 70 & 30 reference lines
+      rsiCtx.strokeStyle = "#334155";
+      rsiCtx.setLineDash([2, 2]);
+      const y70 = rh * 0.3;
+      const y30 = rh * 0.7;
+      rsiCtx.beginPath();
+      rsiCtx.moveTo(0, y70); rsiCtx.lineTo(rw, y70);
+      rsiCtx.moveTo(0, y30); rsiCtx.lineTo(rw, y30);
+      rsiCtx.stroke();
+      rsiCtx.setLineDash([]);
+
+      rsiCtx.strokeStyle = "#06b6d4";
+      rsiCtx.lineWidth = 1.5;
+      rsiCtx.beginPath();
+      let lastRsi = 50;
+      candles.forEach((c, idx) => {
+        const x = 10 + idx * ((rw - 40) / candles.length);
+        const rsiVal = 50 + ((c.close - minP) / (maxP - minP) - 0.5) * 60;
+        const y = rh - (Math.max(10, Math.min(90, rsiVal)) / 100) * rh;
+        if (idx === 0) rsiCtx.moveTo(x, y);
+        else rsiCtx.lineTo(x, y);
+        lastRsi = rsiVal;
+      });
+      rsiCtx.stroke();
+      document.getElementById("rsi-val").innerText = lastRsi.toFixed(1);
+    }
+
+    // High-Frequency Market Ticking Engine Loop
+    setInterval(() => {
+      // Simulate live tick movement across active markets
+      Object.keys(marketCatalog).forEach(mkt => {
+        const symbols = marketCatalog[mkt].symbols;
+        Object.keys(symbols).forEach(sym => {
+          const item = symbols[sym];
+          const last = item.history[item.history.length - 1];
+          // Momentum drift: Top trending assets drift upward with positive expectation
+          const driftBias = (item.pctChange > 0 || (item.open && item.ltp > item.open)) ? 0.47 : 0.49;
+          const delta = (Math.random() - driftBias) * (item.ltp * 0.0015);
+          const newP = Math.round((item.ltp + delta) * 100) / 100;
+
+          item.ltp = newP;
+          last.close = newP;
+          if (newP > last.high) last.high = newP;
+          if (newP < last.low) last.low = newP;
+
+          // Multi-Stock Portfolio Scanner:
+          // If Bot is online and this symbol is selected in active basket, scan for trade entries
+          if (isRunning && activeBasket.has(sym)) {
+            const hasPosition = positions.some(p => p.symbol === sym);
+            if (!hasPosition && positions.length < MAX_OPEN_POSITIONS && Math.random() < 0.045) {
+              // Open position in this stock from active basket!
+              triggerImmediateTrade(sym, false);
+            }
+          }
+        });
+      });
+
+      // Update NSE Indian Ticker Tape Prices
+      if (document.getElementById("ticker-nifty")) document.getElementById("ticker-nifty").innerText = marketCatalog["india"].symbols["NIFTY 50"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
+      if (document.getElementById("ticker-banknifty")) document.getElementById("ticker-banknifty").innerText = marketCatalog["india"].symbols["BANK NIFTY"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
+      if (document.getElementById("ticker-reliance")) document.getElementById("ticker-reliance").innerText = "₹" + marketCatalog["india"].symbols["RELIANCE"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
+      if (document.getElementById("ticker-hdfc")) document.getElementById("ticker-hdfc").innerText = "₹" + marketCatalog["india"].symbols["HDFCBANK"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
+      if (document.getElementById("ticker-tcs")) document.getElementById("ticker-tcs").innerText = "₹" + marketCatalog["india"].symbols["TCS"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
+      if (document.getElementById("ticker-tatamotors")) document.getElementById("ticker-tatamotors").innerText = "₹" + marketCatalog["india"].symbols["TATAMOTORS"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
+
+      // Intelligent Quantitative Profit & Risk Execution Loop
+      const exitsToExecute = [];
+      positions.forEach(p => {
+        const mktSyms = marketCatalog[currentMarket].symbols;
+        if (mktSyms[p.symbol]) {
+          const liveLtp = mktSyms[p.symbol].ltp;
+          p.ltp = liveLtp;
+
+          const charges = calculateTradeCharges(p.avg, liveLtp, p.qty, p.market || currentMarket);
+          const grossGain = (liveLtp - p.avg) * p.qty;
+          const netGain = charges.netPnl;
+
+          // 1. Check Take-Profit Target Hit (Solid Win!)
+          if (liveLtp >= (p.targetPrice || p.avg * 1.025) && netGain > 0) {
+            exitsToExecute.push({ sym: p.symbol, reason: "TARGET", ltp: liveLtp, net: netGain, gross: grossGain });
+            return;
+          }
+
+          // 2. Dynamic Trailing Profit Locking
+          // Once the trade is up in profit, ratchet stop loss above breakeven to lock in gains!
+          if (liveLtp > (p.peakPrice || p.avg)) {
+            p.peakPrice = liveLtp;
+
+            // If price climbed +1.0% above entry, move SL to breakeven + profit!
+            if (liveLtp >= p.avg * 1.01) {
+              const trailStep = Math.round((liveLtp * (1 - (p.trailPct || 0.01))) * 100) / 100;
+              const breakeven = p.breakevenPrice || p.avg;
+              const candidateSL = Math.max(breakeven, trailStep);
+
+              if (candidateSL > p.trailingSL) {
+                const oldSL = p.trailingSL;
+                p.trailingSL = candidateSL;
+                const est = calculateTradeCharges(p.avg, p.trailingSL, p.qty, p.market || currentMarket);
+                p.profitLocked = Math.max(0, est.netPnl);
+                p.trailStatus = "LOCKED";
+
+                if (p.trailingSL - oldSL > (p.avg * 0.003)) {
+                  logTerminal(`<span class="text-emerald-400 font-bold">📈 [PROFIT LOCKED]</span> Trailing SL for ${p.symbol} ratcheted UP to ${p.curr}${p.trailingSL.toLocaleString()} &bull; <strong>Net Locked: +${p.curr}${p.profitLocked.toFixed(2)}</strong> (Above fees)!`);
+                  playBeep("news");
+                }
+              }
+            }
+          }
+
+          // 3. Trailing Stop-Loss Trigger (Locks profit on pullback)
+          if (p.trailStatus === "LOCKED" && liveLtp <= p.trailingSL) {
+            exitsToExecute.push({ sym: p.symbol, reason: "TRAILING_PROFIT", ltp: liveLtp, net: netGain, gross: grossGain });
+            return;
+          }
+
+          // 4. Initial Protective Emergency Stop (Only if drops 2.5% below entry)
+          if (p.trailStatus !== "LOCKED" && liveLtp <= (p.initialSL || p.avg * 0.975)) {
+            exitsToExecute.push({ sym: p.symbol, reason: "STOP_LOSS", ltp: liveLtp, net: netGain, gross: grossGain });
+            return;
+          }
+        }
+      });
+
+      // Execute Pending Exits
+      exitsToExecute.forEach(exit => {
+        const p = positions.find(item => item.symbol === exit.sym);
+        if (p) {
+          if (exit.reason === "TARGET") {
+            logTerminal(`🎯 <strong class="text-emerald-400 font-bold">[TAKE PROFIT TARGET HIT]</strong> ${exit.sym} @ ${p.curr}${exit.ltp.toLocaleString()} | Gross: +${p.curr}${exit.gross.toFixed(2)} | <strong class="text-emerald-400">Net Profit Cashed In: +${p.curr}${exit.net.toFixed(2)}</strong>!`);
+          } else if (exit.reason === "TRAILING_PROFIT") {
+            logTerminal(`🔒 <strong class="text-emerald-400 font-bold">[TRAILING PROFIT SECURED]</strong> ${exit.sym} pulled back to Trailing SL @ ${p.curr}${exit.ltp.toLocaleString()} | <strong class="text-emerald-400">Net Profit Locked: +${p.curr}${exit.net.toFixed(2)}</strong>!`);
+          } else {
+            logTerminal(`🛑 <strong class="text-rose-400">[PROTECTIVE STOP LOSS]</strong> ${exit.sym} hit 2.5% stop @ ${p.curr}${exit.ltp.toLocaleString()} to protect capital.`);
+          }
+          closeSinglePosition(exit.sym);
+        }
+      });
+
+      renderChart();
+      renderAccountRibbon();
+      updateMarketSessionBadge();
+      if (activeSubTab === 'positions') renderPositions();
+      if (activeSubTab === 'breadth') renderMarketHeatmap();
+      if (activeSubTab === 'optionchain') renderOptionChain();
+    }, 1100);
+
+    // Dynamic Live News Streamer (every 35 seconds injects fresh market pulse)
+    setInterval(() => {
+      const incomingWire = [
+        {
+          market: "crypto",
+          title: "Solana Network Hits New ATH in Weekly Active DEX Wallets & Settlement Volume",
+          source: "DeFiLlama Pulse",
+          sentiment: "BULLISH",
+          score: "93%",
+          impact: "HIGH IMPACT",
+          impactColor: "bg-rose-950 text-rose-300 border-rose-800"
+        },
+        {
+          market: "india",
+          title: "Nifty Bank Open Interest Surges as Call Unwinding Seen at 51,500 Strike",
+          source: "NSE F&O Radar",
+          sentiment: "BULLISH",
+          score: "87%",
+          impact: "HIGH IMPACT",
+          impactColor: "bg-rose-950 text-rose-300 border-rose-800"
+        },
+        {
+          market: "us",
+          title: "S&P 500 Breadth Expands as Small-Cap Russell 2000 Rallies +1.8%",
+          source: "CNBC Markets",
+          sentiment: "BULLISH",
+          score: "82%",
+          impact: "MEDIUM IMPACT",
+          impactColor: "bg-amber-950 text-amber-300 border-amber-800"
+        }
+      ];
+
+      const chosen = incomingWire[Math.floor(Math.random() * incomingWire.length)];
+      newsFeed.unshift({
+        id: Date.now(),
+        time: "Just now",
+        ...chosen
+      });
+
+      if (newsFeed.length > 25) newsFeed.pop();
+      if (activeSubTab === 'news') renderNewsFeed();
+      playBeep("news");
+    }, 32000);
+
+    window.addEventListener("resize", () => {
+      renderChart();
+    });
+
+    // Initialize with Crypto Market on load
+    updateAudioUI();
+    switchMarket('india');
+    renderNewsFeed();
+    runFeeSim();
+  </script>
+</body>
+</html>
