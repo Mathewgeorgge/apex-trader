@@ -1359,11 +1359,33 @@
       }
     }
 
+    function updateKiteUI() {
+      const statusEl = document.getElementById("kite-connection-status");
+      const label = document.getElementById("kite-status-label");
+      const btn = document.getElementById("btn-zerodha-connect");
+
+      const isConnected = Boolean(zerodhaConfig && (zerodhaConfig.connected || (zerodhaConfig.apiKey && zerodhaConfig.accessToken)));
+      if (isConnected) {
+        const uid = zerodhaConfig.userId || 'RXD245';
+        if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> Kite Live Connected (${uid})`;
+        if (label) label.innerText = `🟢 Kite Online (${uid})`;
+        if (btn) {
+          btn.className = "bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-300 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition";
+        }
+      } else {
+        if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> Standby / Not Logged In`;
+        if (label) label.innerText = "Kite Connect";
+        if (btn) {
+          btn.className = "bg-amber-950/80 hover:bg-amber-900 border border-amber-700/80 text-amber-300 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition";
+        }
+      }
+    }
+
     function toggleTradingMode() {
       if (tradingMode === "PAPER") {
         if (!zerodhaConfig.apiKey || !zerodhaConfig.accessToken) {
           openZerodhaModal();
-          logTerminal(`⚠️ <strong class="text-amber-400">[ZERODHA REQUIRED]</strong> Please enter your Kite API Key and Access Token to activate REAL mode.`);
+          logTerminal(`⚠️ <strong class="text-amber-400">[ZERODHA REQUIRED]</strong> Please complete 1-Click Kite Login or enter your Kite API Key and Access Token to activate REAL mode.`);
           return;
         }
         tradingMode = "REAL";
@@ -1379,10 +1401,16 @@
     function openZerodhaModal() {
       const modal = document.getElementById("zerodha-modal");
       if (!modal) return;
-      document.getElementById("kite-input-api-key").value = zerodhaConfig.apiKey || "";
+      const key = zerodhaConfig.apiKey || "d03b3y9f6btyeun5";
+      document.getElementById("kite-input-api-key").value = key;
       document.getElementById("kite-input-access-token").value = zerodhaConfig.accessToken || "";
-      document.getElementById("kite-input-user-id").value = zerodhaConfig.userId || "";
+      document.getElementById("kite-input-user-id").value = zerodhaConfig.userId || "RXD245";
+      const loginBtn = document.getElementById("kite-login-btn-direct");
+      if (loginBtn) {
+        loginBtn.href = `https://kite.zerodha.com/connect/login?v=3&api_key=${encodeURIComponent(key)}`;
+      }
       updateTradingModeUI();
+      updateKiteUI();
       modal.classList.remove("hidden");
     }
 
@@ -1392,26 +1420,19 @@
     }
 
     function saveZerodhaConfig() {
-      zerodhaConfig.apiKey = document.getElementById("kite-input-api-key").value.trim();
+      zerodhaConfig.apiKey = document.getElementById("kite-input-api-key").value.trim() || "d03b3y9f6btyeun5";
       zerodhaConfig.accessToken = document.getElementById("kite-input-access-token").value.trim();
-      zerodhaConfig.userId = document.getElementById("kite-input-user-id").value.trim();
+      zerodhaConfig.userId = document.getElementById("kite-input-user-id").value.trim() || "RXD245";
       zerodhaConfig.connected = Boolean(zerodhaConfig.apiKey && zerodhaConfig.accessToken);
 
       try {
         localStorage.setItem("apex_zerodha_config", JSON.stringify(zerodhaConfig));
       } catch(e) {}
 
-      const statusEl = document.getElementById("kite-connection-status");
-      const label = document.getElementById("kite-status-label");
+      updateKiteUI();
       if (zerodhaConfig.connected) {
-        if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> Kite Live Connected (${zerodhaConfig.userId || 'Active'})`;
-        if (label) label.innerText = "Kite Online";
-        logTerminal(`🪁 <strong class="text-emerald-400 font-bold">[ZERODHA KITE CONNECTED]</strong> API credentials saved. Ready to pull live ticks!`);
-      } else {
-        if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> Standby / Simulator`;
-        if (label) label.innerText = "Kite Connect";
+        logTerminal(`🪁 <strong class="text-emerald-400 font-bold">[ZERODHA KITE CONNECTED]</strong> API session active for <strong>${zerodhaConfig.userId}</strong>. Live Kite gateway armed!`);
       }
-
       closeZerodhaModal();
     }
 
@@ -2553,12 +2574,8 @@ function calculateStockMetrics(sym) {
             localStorage.setItem("apex_zerodha_config", JSON.stringify(zerodhaConfig));
           } catch(e) {}
 
-          const statusEl = document.getElementById("kite-connection-status");
-          const label = document.getElementById("kite-status-label");
-          if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> Kite Live Connected (${zerodhaConfig.userId || 'RXD245'})`;
-          if (label) label.innerText = "Kite Online";
-
-          logTerminal(`🪁 <strong class="text-emerald-400 font-bold">[ZERODHA KITE AUTHENTICATED]</strong> Morning 2FA login verified! Request token: <code>${reqToken.substring(0, 8)}...</code> captured. Live Kite gateway armed!`);
+          updateKiteUI();
+          logTerminal(`🪁 <strong class="text-emerald-400 font-bold">[ZERODHA KITE AUTHENTICATED]</strong> Morning 2FA login verified! Client: <strong>${zerodhaConfig.userId || 'RXD245'}</strong>. Request token captured. Live Kite gateway armed!`);
           playBeep("buy");
 
           // Clean URL parameters cleanly so token doesn't sit in browser address bar
@@ -3647,6 +3664,8 @@ function calculateStockMetrics(sym) {
     // Initialize application & handle Kite 2FA login redirect
     updateAudioUI();
     handleKiteRedirect();
+    updateTradingModeUI();
+    updateKiteUI();
     if (!loadSessionState()) {
       populateMarketSymbols('india', 'NIFTY 50');
     }
