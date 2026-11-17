@@ -1334,14 +1334,24 @@
       "india": {
         currency: "₹",
         symbols: {
-          "RELIANCE": { name: "Reliance Industries", ltp: 2485.50, open: 2430.00, lot: 2, history: [], sector: "Energy / Telecom" },
+          "RELIANCE": { name: "Reliance Industries", ltp: 2485.50, open: 2430.00, lot: 2, history: [], sector: "Energy & Oil" },
           "HDFCBANK": { name: "HDFC Bank Ltd", ltp: 1684.20, open: 1655.00, lot: 3, history: [], sector: "Banking" },
           "ICICIBANK": { name: "ICICI Bank Ltd", ltp: 1248.50, open: 1228.00, lot: 4, history: [], sector: "Banking" },
+          "SBIN": { name: "State Bank of India", ltp: 814.50, open: 802.00, lot: 6, history: [], sector: "PSU Bank" },
+          "KOTAKBANK": { name: "Kotak Mahindra Bank", ltp: 1762.00, open: 1748.00, lot: 3, history: [], sector: "Banking" },
+          "AXISBANK": { name: "Axis Bank Ltd", ltp: 1145.80, open: 1152.00, lot: 4, history: [], sector: "Banking" },
           "TCS": { name: "Tata Consultancy", ltp: 3920.00, open: 3955.00, lot: 1, history: [], sector: "IT Services" },
           "INFY": { name: "Infosys Ltd", ltp: 1845.20, open: 1858.00, lot: 2, history: [], sector: "IT Services" },
+          "WIPRO": { name: "Wipro Ltd", ltp: 542.10, open: 535.00, lot: 8, history: [], sector: "IT Services" },
           "TATAMOTORS": { name: "Tata Motors Ltd", ltp: 792.40, open: 772.00, lot: 6, history: [], sector: "Auto & EV" },
-          "SBIN": { name: "State Bank of India", ltp: 814.50, open: 802.00, lot: 6, history: [], sector: "PSU Bank" },
+          "M&M": { name: "Mahindra & Mahindra", ltp: 2890.00, open: 2840.00, lot: 1, history: [], sector: "Auto & EV" },
+          "MARUTI": { name: "Maruti Suzuki", ltp: 11250.00, open: 11180.00, lot: 1, history: [], sector: "Auto" },
           "BHARTIARTL": { name: "Bharti Airtel", ltp: 1560.00, open: 1535.00, lot: 3, history: [], sector: "Telecom" },
+          "ITC": { name: "ITC Ltd", ltp: 472.50, open: 468.00, lot: 10, history: [], sector: "FMCG" },
+          "HINDUNILVR": { name: "Hindustan Unilever", ltp: 2380.00, open: 2405.00, lot: 2, history: [], sector: "FMCG" },
+          "TATASTEEL": { name: "Tata Steel Ltd", ltp: 148.60, open: 146.20, lot: 30, history: [], sector: "Metals" },
+          "LT": { name: "Larsen & Toubro", ltp: 3580.00, open: 3540.00, lot: 1, history: [], sector: "Infra & Cap Goods" },
+          "SUNPHARMA": { name: "Sun Pharma", ltp: 1810.00, open: 1795.00, lot: 2, history: [], sector: "Pharma" },
           "NIFTY 50": { name: "Nifty 50 Index", ltp: 24158.40, open: 24010.00, lot: 25, history: [], sector: "Benchmark" },
           "BANK NIFTY": { name: "Bank Nifty Index", ltp: 51420.15, open: 50850.00, lot: 15, history: [], sector: "Bank Index" }
         }
@@ -1902,23 +1912,76 @@ function calculateStockMetrics(sym) {
       const marketLabel = document.getElementById("heatmap-market-name");
       if (!grid) return;
 
-      marketLabel.innerText = currentMarket === "india" ? "NSE INDIA EQUITIES" : currentMarket === "us" ? "US NASDAQ / NYSE" : "CRYPTO 24/7";
-      grid.innerHTML = "";
+      if (marketLabel) marketLabel.innerText = "NSE INDIA SECTOR HEATMAP";
 
-      const symbols = Object.keys(marketCatalog[currentMarket].symbols);
-      const metricsList = symbols.map(sym => calculateStockMetrics(sym)).filter(Boolean);
+      // Always pull Indian stocks universe for the heatmap
+      const targetMkt = (marketCatalog["india"] && Object.keys(marketCatalog["india"].symbols).length > 0) ? "india" : currentMarket;
+      const symbols = Object.keys(marketCatalog[targetMkt].symbols);
+
+      const metricsList = symbols.map(sym => {
+        const symObj = marketCatalog[targetMkt].symbols[sym];
+        if (!symObj) return null;
+        const ltp = symObj.ltp;
+        const open = symObj.open || symObj.history[0]?.open || ltp;
+        const pctChange = ((ltp - open) / open) * 100;
+
+        const candles = symObj.history;
+        let volRatio = 1.8;
+        if (candles && candles.length > 5) {
+          const lastVol = candles[candles.length - 1].volume || 2500;
+          const avgVol = candles.slice(-10).reduce((acc, c) => acc + c.volume, 0) / 10;
+          volRatio = avgVol > 0 ? (lastVol / avgVol) : 1.8;
+        }
+
+        let score = 50;
+        score += pctChange * 12;
+        if (volRatio >= 1.5) score += 15;
+        if (volRatio >= 2.0) score += 10;
+        if (pctChange > 0.5) score += 10;
+        if (pctChange < -0.5) score -= 20;
+        score = Math.max(15, Math.min(98, Math.round(score)));
+
+        let tag = "NEUTRAL";
+        let tagClass = "bg-gray-800 text-gray-300 border-gray-700";
+        if (score >= 85) {
+          tag = "🔥 TOP PICK";
+          tagClass = "bg-emerald-950 text-emerald-300 border-emerald-600 font-extrabold";
+        } else if (score >= 70) {
+          tag = "🟢 STRONG TREND";
+          tagClass = "bg-teal-950 text-teal-300 border-teal-700 font-bold";
+        } else if (score <= 40) {
+          tag = "🔴 DOWNTREND";
+          tagClass = "bg-rose-950 text-rose-300 border-rose-800";
+        }
+
+        return {
+          sym,
+          name: symObj.name,
+          sector: symObj.sector || "Equities",
+          ltp,
+          pctChange: Math.round(pctChange * 100) / 100,
+          volRatio: Math.round(volRatio * 10) / 10,
+          score,
+          tag,
+          tagClass
+        };
+      }).filter(Boolean);
 
       // Sort by conviction score descending
       metricsList.sort((a, b) => b.score - a.score);
 
-      // Render Top 3 Leaderboard Cards
+      // Render Top 3 Ranked Leaderboard Cards
       if (board) {
         board.innerHTML = "";
         const top3 = metricsList.slice(0, 3);
         top3.forEach((m, idx) => {
           const card = document.createElement("div");
-          card.className = "bg-[#070b14] border border-cyan-800/60 p-2.5 rounded-lg flex items-center justify-between cursor-pointer hover:border-cyan-400 transition";
-          card.onclick = () => { changeChartSymbol(m.sym); document.getElementById("sel-chart-symbol").value = m.sym; };
+          card.className = "bg-[#070b14] border border-cyan-800/60 p-2.5 rounded-lg flex items-center justify-between cursor-pointer hover:border-cyan-400 transition shadow hover:scale-[1.01]";
+          card.onclick = () => { 
+            switchMarket('india');
+            changeChartSymbol(m.sym); 
+            document.getElementById("sel-chart-symbol").value = m.sym; 
+          };
           card.innerHTML = `
             <div>
               <div class="flex items-center space-x-1.5">
@@ -1926,67 +1989,88 @@ function calculateStockMetrics(sym) {
                 <span class="text-xs font-bold text-white">${m.sym}</span>
                 <span class="${m.tagClass} border px-1 py-0.2 rounded text-[9px]">${m.tag}</span>
               </div>
-              <p class="text-[10px] text-gray-400">${m.name}</p>
+              <p class="text-[10px] text-gray-400">${m.name} &bull; <span class="text-cyan-400">${m.sector}</span></p>
             </div>
             <div class="text-right">
               <span class="text-xs font-mono font-bold ${m.pctChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
                 ${m.pctChange >= 0 ? '+' : ''}${m.pctChange}%
               </span>
-              <span class="block text-[9px] font-mono text-cyan-400 font-bold">Score: ${m.score}/100</span>
+              <span class="block text-[9px] font-mono text-cyan-400 font-bold">Conviction: ${m.score}/100</span>
             </div>
           `;
           board.appendChild(card);
         });
       }
 
-      // Render Heatmap Tiles
+      // Render Heatmap Tiles with live dynamic colors
+      grid.innerHTML = "";
       let advances = 0;
       metricsList.forEach(m => {
         if (m.pctChange >= 0) advances++;
         const tile = document.createElement("div");
         
-        // Heatmap background color based on % performance
-        let bg = "bg-[#0b1220] border-gray-800 hover:border-gray-600";
-        if (m.pctChange >= 2.5) bg = "bg-emerald-900/60 border-emerald-600/80 hover:bg-emerald-800/70";
-        else if (m.pctChange > 0.5) bg = "bg-emerald-950/50 border-emerald-800/60 hover:bg-emerald-900/60";
-        else if (m.pctChange < -2.0) bg = "bg-rose-900/60 border-rose-600/80 hover:bg-rose-800/70";
-        else if (m.pctChange < -0.5) bg = "bg-rose-950/50 border-rose-800/60 hover:bg-rose-900/60";
+        // Dynamic Heatmap Gradient based on real-time % performance
+        let bgStyle = "background-color: #0b1220; border-color: #1e293b;";
+        let pctColor = "text-gray-300";
+        if (m.pctChange >= 2.0) {
+          bgStyle = "background: linear-gradient(135deg, rgba(6, 78, 59, 0.9), rgba(4, 120, 87, 0.7)); border-color: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);";
+          pctColor = "text-emerald-300 font-black";
+        } else if (m.pctChange >= 0.7) {
+          bgStyle = "background: rgba(6, 78, 59, 0.5); border-color: rgba(16, 185, 129, 0.4);";
+          pctColor = "text-emerald-400 font-bold";
+        } else if (m.pctChange > 0.0) {
+          bgStyle = "background: rgba(6, 78, 59, 0.25); border-color: rgba(16, 185, 129, 0.2);";
+          pctColor = "text-emerald-400";
+        } else if (m.pctChange <= -2.0) {
+          bgStyle = "background: linear-gradient(135deg, rgba(136, 19, 55, 0.9), rgba(190, 18, 60, 0.7)); border-color: #f43f5e; box-shadow: 0 0 12px rgba(244, 63, 94, 0.2);";
+          pctColor = "text-rose-300 font-black";
+        } else if (m.pctChange <= -0.7) {
+          bgStyle = "background: rgba(136, 19, 55, 0.5); border-color: rgba(244, 63, 94, 0.4);";
+          pctColor = "text-rose-400 font-bold";
+        } else {
+          bgStyle = "background: rgba(136, 19, 55, 0.25); border-color: rgba(244, 63, 94, 0.2);";
+          pctColor = "text-rose-400";
+        }
 
-        tile.className = `${bg} border p-2.5 rounded-lg flex flex-col justify-between cursor-pointer transition shadow hover:scale-[1.02]`;
+        tile.style = bgStyle;
+        tile.className = "border p-2.5 rounded-lg flex flex-col justify-between cursor-pointer transition-all duration-300 shadow hover:scale-[1.03]";
         tile.onclick = () => {
+          switchMarket('india');
           changeChartSymbol(m.sym);
           document.getElementById("sel-chart-symbol").value = m.sym;
         };
 
-        const curr = getCurrSymbol();
         tile.innerHTML = `
           <div class="flex justify-between items-start">
             <div>
-              <span class="font-bold text-white text-xs block">${m.sym}</span>
-              <span class="text-[9px] text-gray-400 truncate block max-w-[90px]">${m.sector}</span>
+              <span class="font-black text-white text-xs block">${m.sym}</span>
+              <span class="text-[9px] text-gray-300 truncate block max-w-[100px]">${m.sector}</span>
             </div>
-            <span class="${m.tagClass} border px-1 py-0.2 rounded text-[8px]">${m.score}</span>
+            <span class="${m.tagClass} border px-1 py-0.2 rounded text-[8px] font-mono font-bold">${m.score}</span>
           </div>
 
           <div class="mt-2 flex justify-between items-baseline">
-            <span class="font-mono text-gray-200 text-xs">${curr}${m.ltp.toLocaleString()}</span>
-            <span class="font-mono font-black text-xs ${m.pctChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
-              ${m.pctChange >= 0 ? '+' : ''}${m.pctChange}%
+            <span class="font-mono text-white font-bold text-xs">₹${m.ltp.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+            <span class="font-mono text-xs ${pctColor}">
+              ${m.pctChange >= 0 ? '+' : ''}${m.pctChange.toFixed(2)}%
             </span>
           </div>
-          <div class="mt-1 flex justify-between items-center text-[9px] text-gray-500 font-mono">
+          <div class="mt-1 flex justify-between items-center text-[9px] text-gray-400 font-mono">
             <span>Vol: ${m.volRatio}x</span>
-            <span class="text-cyan-400">Click to Chart &rarr;</span>
+            <span class="text-cyan-400 text-[8px] font-bold">Chart &rarr;</span>
           </div>
         `;
         grid.appendChild(tile);
       });
 
-      // Update Breadth ratio
+      // Update Market Breadth Advance/Decline Ratio
       const total = metricsList.length;
       const advPct = Math.round((advances / total) * 100);
-      document.getElementById("breadth-summary").innerText = `${advPct}% Bullish (${advances} Advances / ${total - advances} Declines)`;
-      document.getElementById("breadth-bar").innerHTML = `<div class="bg-emerald-500 h-full" style="width: ${advPct}%;"></div>`;
+      const decPct = 100 - advPct;
+      const summaryEl = document.getElementById("breadth-summary");
+      if (summaryEl) summaryEl.innerText = `${advPct}% Bullish (${advances} Advances / ${total - advances} Declines)`;
+      const barEl = document.getElementById("breadth-bar");
+      if (barEl) barEl.innerHTML = `<div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${advPct}%;"></div>`;
     }
 
     function autoSelectTopPicks() {
