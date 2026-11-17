@@ -1753,7 +1753,9 @@
           }
         }
 
+        item.barCounter = (item.barCounter || 0) + 1;
         const newCandle = {
+          barIndex: item.barCounter,
           time: customTime !== null ? customTime : Date.now(),
           open: last.close,
           high: last.close,
@@ -1762,27 +1764,69 @@
           volume: Math.floor(120 + Math.random() * 140)
         };
         item.history.push(newCandle);
-        if (item.history.length > 55) {
+        if (item.history.length > 480) {
           item.history.shift();
         }
       }
     }
 
-    // Pre-populate 55 authentic historical candles using the EXACT SAME GARCH + Markov tick engine
+    // True Multi-Timeframe OHLCV Aggregator (1m, 3m, 5m, 15m)
+    // Buckets by stable monotonic barIndex so shift() never shifts higher-TF boundaries!
+    function getAggregatedCandles(baseCandles, tfMinutes, maxVisible = 55) {
+      if (!baseCandles || baseCandles.length === 0) return [];
+      const tf = Math.max(1, parseInt(tfMinutes, 10) || 1);
+      if (tf === 1) {
+        return baseCandles.slice(-maxVisible);
+      }
+
+      const aggregated = [];
+      let currentBucket = -1;
+      let aggBar = null;
+
+      for (let i = 0; i < baseCandles.length; i++) {
+        const c = baseCandles[i];
+        const idx = (c.barIndex !== undefined) ? c.barIndex : i;
+        const bucket = Math.floor(idx / tf);
+        if (bucket !== currentBucket) {
+          if (aggBar) aggregated.push(aggBar);
+          currentBucket = bucket;
+          aggBar = {
+            time: c.time,
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+            volume: c.volume || 0
+          };
+        } else {
+          if (c.high > aggBar.high) aggBar.high = c.high;
+          if (c.low < aggBar.low) aggBar.low = c.low;
+          aggBar.close = c.close;
+          aggBar.volume += (c.volume || 0);
+        }
+      }
+      if (aggBar) aggregated.push(aggBar);
+      return aggregated.slice(-maxVisible);
+    }
+
+    const TICKS_PER_1M_CANDLE = 10;
+
+    // Pre-populate full intraday 1-minute history (450 bars for NSE Equities/F&O -> supports true 1m, 3m, 5m, 15m charts!)
     Object.keys(marketCatalog).forEach(mktKey => {
       const symObj = marketCatalog[mktKey].symbols;
+      const histCandles = (mktKey === "india" || mktKey === "fno") ? 450 : 90;
       Object.keys(symObj).forEach(sym => {
         const item = symObj[sym];
         const targetAnchor = item.ltp;
         initSymbolState(item, mktKey, sym);
+        item.barCounter = 0;
 
-        const histCandles = 55;
-        const ticksPerHistCandle = 12;
         const startT = Date.now() - histCandles * 60 * 1000;
-        const startP = roundToExchangeTick(targetAnchor * (1 + (Math.random() - 0.5) * (item.isOption ? 0.04 : 0.008)), mktKey);
+        const startP = roundToExchangeTick(targetAnchor * (1 + (Math.random() - 0.5) * (item.isOption ? 0.05 : 0.012)), mktKey);
         item.ltp = startP;
         item.boxCenter = startP;
         item.history = [{
+          barIndex: 0,
           time: startT,
           open: startP,
           high: startP,
@@ -1793,8 +1837,8 @@
 
         for (let c = 0; c < histCandles - 1; c++) {
           const candleTs = startT + (c + 1) * 60000;
-          for (let tk = 0; tk < ticksPerHistCandle; tk++) {
-            stepSymbolMicrostructure(item, mktKey, ticksPerHistCandle, candleTs);
+          for (let tk = 0; tk < TICKS_PER_1M_CANDLE; tk++) {
+            stepSymbolMicrostructure(item, mktKey, TICKS_PER_1M_CANDLE, candleTs);
           }
         }
         // Set realistic intraday open from start of session & keep anchor near current live market level
@@ -3185,7 +3229,8 @@ function calculateStockMetrics(sym) {
 
       const symObj = marketCatalog[currentMarket].symbols[currentSymbol];
       if (!symObj || !symObj.history || symObj.history.length === 0) return;
-      const candles = symObj.history;
+      const candles = getAggregatedCandles(symObj.history, timeframeMinutes, 55);
+      if (candles.length === 0) return;
 
       let minP = Infinity, maxP = -Infinity, maxVol = 1;
       candles.forEach(c => {
@@ -3218,14 +3263,26 @@ function calculateStockMetrics(sym) {
         ctx.fillText(priceVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}), chartPlotW + 6, y + 3);
       }
 
-      // Draw Time Grid Lines
+      // Draw Time Grid Lines & Timeframe-Accurate Timestamps
       const timeSteps = 5;
       for (let i = 1; i <= timeSteps; i++) {
         const x = (chartPlotW / (timeSteps + 1)) * i;
+        ctx.strokeStyle = "#131a29";
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, chartPlotH);
         ctx.stroke();
+
+        const cIdx = Math.min(candles.length - 1, Math.floor((i / (timeSteps + 1)) * candles.length));
+        if (candles[cIdx] && candles[cIdx].time) {
+          const dt = new Date(candles[cIdx].time);
+          const hh = String(dt.getHours()).padStart(2, '0');
+          const mm = String(dt.getMinutes()).padStart(2, '0');
+          ctx.fillStyle = "#64748b";
+          ctx.font = "9px monospace";
+          ctx.textAlign = "center";
+          ctx.fillText(`${hh}:${mm}`, x, chartPlotH + 14);
+        }
       }
 
       // Draw Volume Histogram (bottom 18% of chart)
@@ -3404,6 +3461,7 @@ function calculateStockMetrics(sym) {
       ctx.textAlign = "left";
       const headerTitle = `${currentSymbol} • ${timeframeMinutes}m • ${currentMarket.toUpperCase()}`;
       ctx.fillText(headerTitle, 10, 16);
+      const headerTitleWidth = ctx.measureText(headerTitle).width;
 
       // Live Institutional Market Microstructure Regime Badge (GARCH + Markov Chain)
       const symData = (marketCatalog[currentMarket] && marketCatalog[currentMarket].symbols) ? marketCatalog[currentMarket].symbols[currentSymbol] : null;
@@ -3432,7 +3490,7 @@ function calculateStockMetrics(sym) {
       }
       ctx.font = "bold 9px monospace";
       ctx.fillStyle = regimeColor;
-      ctx.fillText(`[ ${regimeTag} ]`, 10 + ctx.measureText(headerTitle + "  ").width, 15.5);
+      ctx.fillText(`[ ${regimeTag} ]`, 20 + headerTitleWidth, 15.5);
 
       ctx.font = "10px monospace";
       const oStr = `O: ${lastCandle.open.toFixed(2)}`;
@@ -3536,15 +3594,14 @@ function calculateStockMetrics(sym) {
       if (rsiEl) rsiEl.innerText = lastRsi.toFixed(1);
     }
 
-    // High-Frequency Market Ticking Engine Loop (Unified GARCH + Markov Engine)
+    // High-Frequency Market Ticking Engine Loop (Unified Base 1m Tape -> Multi-TF Aggregated in renderChart)
     setInterval(() => {
-      const targetTicks = (timeframeMinutes === 1) ? 12 : (timeframeMinutes === 3) ? 20 : (timeframeMinutes === 5) ? 30 : 48;
       Object.keys(marketCatalog).forEach(mkt => {
         const symbols = marketCatalog[mkt].symbols;
         Object.keys(symbols).forEach(sym => {
           const item = symbols[sym];
           if (!item.history || item.history.length === 0) return;
-          stepSymbolMicrostructure(item, mkt, targetTicks, null);
+          stepSymbolMicrostructure(item, mkt, TICKS_PER_1M_CANDLE, null);
         });
       });
 
