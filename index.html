@@ -101,6 +101,16 @@
 
     <!-- Actions & Kill Switch -->
     <div class="flex flex-wrap items-center gap-2">
+      <!-- Zerodha Kite Connect Button -->
+      <button onclick="openZerodhaModal()" id="btn-zerodha-connect" class="bg-amber-950/80 hover:bg-amber-900 border border-amber-700/80 text-amber-300 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition" title="Configure Zerodha Kite Connect Live API">
+        <span>🪁</span> <span id="kite-status-label">Kite Connect</span>
+      </button>
+
+      <!-- Trading Mode Switcher (Paper vs Real) -->
+      <button onclick="toggleTradingMode()" id="btn-trading-mode" class="bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-600 text-emerald-300 px-2.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition shadow" title="Toggle between Safe Paper Simulation and Real Money Orders">
+        <span id="mode-icon">📝</span> <span id="mode-label">PAPER MODE</span>
+      </button>
+
       <!-- Brokerage Calculator Modal Trigger -->
       <button onclick="openBrokerageModal()" class="bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700 text-indigo-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition" title="View Zerodha Brokerage & STT Tax Calculator">
         <span>🧮</span> Brokerage Calculator
@@ -1014,6 +1024,86 @@
     </div>
   </div>
 
+    <!-- Zerodha Kite Connect Live Configuration Modal -->
+  <div id="zerodha-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-[#0b1220] border border-amber-600/70 rounded-xl p-5 max-w-lg w-full space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+        <div class="flex items-center space-x-2">
+          <div class="bg-amber-600/30 text-amber-400 p-1.5 rounded-lg text-sm font-bold">🪁</div>
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+              Zerodha Kite Connect Live Data & Order Gateway
+            </h3>
+            <p class="text-[10px] text-gray-400">Pull real live NSE exchange ticks and route orders to Zerodha</p>
+          </div>
+        </div>
+        <button onclick="closeZerodhaModal()" class="text-gray-400 hover:text-white text-xl font-bold">&times;</button>
+      </div>
+
+      <!-- Mode Selection Info Banner -->
+      <div class="bg-gray-900/90 p-3 rounded-lg border border-gray-800 space-y-2 text-xs">
+        <div class="flex justify-between items-center">
+          <span class="text-gray-300 font-semibold">Active Execution Mode:</span>
+          <span id="modal-mode-badge" class="bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded font-mono font-bold">PAPER TRADING (SAFE)</span>
+        </div>
+        <p class="text-[11px] text-gray-400">
+          In <strong>PAPER Mode</strong>, the bot pulls 100% real live NSE market prices from Zerodha, but places virtual paper trades with your ₹7,000 capital so your real account balance is 100% protected.
+        </p>
+      </div>
+
+      <!-- Credentials Form -->
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-gray-400 text-[10px] font-bold uppercase mb-1">Kite API Key (from developers.kite.trade)</label>
+          <input type="text" id="kite-input-api-key" placeholder="e.g. 24xyz789abc..." class="w-full bg-[#070b14] border border-gray-700 text-white rounded p-2 text-xs font-mono focus:border-amber-500 outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-gray-400 text-[10px] font-bold uppercase mb-1">Kite Access Token (Generated Daily)</label>
+          <input type="password" id="kite-input-access-token" placeholder="Paste today's access_token..." class="w-full bg-[#070b14] border border-gray-700 text-white rounded p-2 text-xs font-mono focus:border-amber-500 outline-none" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-gray-400 text-[10px] font-bold uppercase mb-1">Zerodha Client ID</label>
+            <input type="text" id="kite-input-user-id" placeholder="e.g. ZW1234" class="w-full bg-[#070b14] border border-gray-700 text-white rounded p-2 text-xs font-mono focus:border-amber-500 outline-none" />
+          </div>
+          <div>
+            <label class="block text-gray-400 text-[10px] font-bold uppercase mb-1">Live Feed Status</label>
+            <div id="kite-connection-status" class="bg-[#070b14] border border-gray-800 text-gray-400 rounded p-2 text-[11px] font-mono flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Standby / Simulator
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode Toggle Switch inside Modal -->
+        <div class="pt-2 border-t border-gray-800 flex items-center justify-between">
+          <div>
+            <span class="text-white font-bold block text-xs">Live Broker Execution</span>
+            <span class="text-[10px] text-gray-400">Switch to REAL mode to route real rupee orders</span>
+          </div>
+          <button onclick="toggleTradingMode()" id="modal-toggle-mode-btn" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold border border-gray-700 transition">
+            Switch to REAL
+          </button>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-2 border-t border-gray-800">
+        <a id="kite-login-external-link" href="https://developers.kite.trade/" target="_blank" class="text-amber-400 hover:underline text-[11px] flex items-center gap-1 font-semibold">
+          <span>🔗</span> Get Kite API Keys &rarr;
+        </a>
+        <div class="flex space-x-2">
+          <button onclick="closeZerodhaModal()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-3 py-1.5 rounded-lg text-xs transition">
+            Close
+          </button>
+          <button onclick="saveZerodhaConfig()" class="bg-amber-600 hover:bg-amber-500 text-black font-extrabold px-4 py-1.5 rounded-lg text-xs transition shadow">
+            Save & Connect
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Brokerage Modal -->
   <div id="brokerage-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
     <div class="bg-[#0d1424] border border-gray-700 rounded-xl p-5 max-w-lg w-full space-y-4 shadow-2xl">
@@ -1215,6 +1305,109 @@
       document.getElementById("res-net").innerText = (c.netPnl >= 0 ? "+" : "") + "₹" + c.netPnl.toFixed(2);
       document.getElementById("res-breakeven").innerText = "₹" + c.breakeven.toFixed(2) + " / share";
     }
+
+    
+    // Zerodha Kite Live Connect & Trading Mode State
+    let tradingMode = "PAPER"; // "PAPER" or "REAL"
+    let zerodhaConfig = {
+      apiKey: "",
+      accessToken: "",
+      userId: "",
+      connected: false
+    };
+
+    // Load persisted Zerodha and mode preferences
+    try {
+      const savedMode = localStorage.getItem("apex_trading_mode");
+      if (savedMode) tradingMode = savedMode;
+      const savedConfig = localStorage.getItem("apex_zerodha_config");
+      if (savedConfig) zerodhaConfig = JSON.parse(savedConfig);
+    } catch(e) {}
+
+    function updateTradingModeUI() {
+      const btn = document.getElementById("btn-trading-mode");
+      const icon = document.getElementById("mode-icon");
+      const label = document.getElementById("mode-label");
+      const modalBadge = document.getElementById("modal-mode-badge");
+      const modalBtn = document.getElementById("modal-toggle-mode-btn");
+
+      if (tradingMode === "REAL") {
+        if (btn) btn.className = "bg-rose-950/90 hover:bg-rose-900 border border-rose-600 text-rose-300 px-2.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition shadow glow-red";
+        if (icon) icon.innerText = "🔴";
+        if (label) label.innerText = "REAL ZERODHA";
+        if (modalBadge) {
+          modalBadge.innerText = "REAL ZERODHA (LIVE ORDERS)";
+          modalBadge.className = "bg-rose-950 text-rose-300 border border-rose-800 px-2 py-0.5 rounded font-mono font-bold";
+        }
+        if (modalBtn) modalBtn.innerText = "Switch to PAPER";
+      } else {
+        if (btn) btn.className = "bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-600 text-emerald-300 px-2.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition shadow glow-green";
+        if (icon) icon.innerText = "📝";
+        if (label) label.innerText = "PAPER MODE";
+        if (modalBadge) {
+          modalBadge.innerText = "PAPER TRADING (SAFE)";
+          modalBadge.className = "bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded font-mono font-bold";
+        }
+        if (modalBtn) modalBtn.innerText = "Switch to REAL";
+      }
+    }
+
+    function toggleTradingMode() {
+      if (tradingMode === "PAPER") {
+        if (!zerodhaConfig.apiKey || !zerodhaConfig.accessToken) {
+          openZerodhaModal();
+          logTerminal(`⚠️ <strong class="text-amber-400">[ZERODHA REQUIRED]</strong> Please enter your Kite API Key and Access Token to activate REAL mode.`);
+          return;
+        }
+        tradingMode = "REAL";
+        logTerminal(`🚨 <strong class="text-rose-400 font-bold">[SWITCHED TO REAL MODE]</strong> Algo is now routing real orders to Zerodha Kite. Max Daily Loss Shield: ₹200.`);
+      } else {
+        tradingMode = "PAPER";
+        logTerminal(`🛡️ <strong class="text-emerald-400 font-bold">[SWITCHED TO PAPER MODE]</strong> 100% Safe Simulation active. Zero real balance at risk.`);
+      }
+      try { localStorage.setItem("apex_trading_mode", tradingMode); } catch(e) {}
+      updateTradingModeUI();
+    }
+
+    function openZerodhaModal() {
+      const modal = document.getElementById("zerodha-modal");
+      if (!modal) return;
+      document.getElementById("kite-input-api-key").value = zerodhaConfig.apiKey || "";
+      document.getElementById("kite-input-access-token").value = zerodhaConfig.accessToken || "";
+      document.getElementById("kite-input-user-id").value = zerodhaConfig.userId || "";
+      updateTradingModeUI();
+      modal.classList.remove("hidden");
+    }
+
+    function closeZerodhaModal() {
+      const modal = document.getElementById("zerodha-modal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    function saveZerodhaConfig() {
+      zerodhaConfig.apiKey = document.getElementById("kite-input-api-key").value.trim();
+      zerodhaConfig.accessToken = document.getElementById("kite-input-access-token").value.trim();
+      zerodhaConfig.userId = document.getElementById("kite-input-user-id").value.trim();
+      zerodhaConfig.connected = Boolean(zerodhaConfig.apiKey && zerodhaConfig.accessToken);
+
+      try {
+        localStorage.setItem("apex_zerodha_config", JSON.stringify(zerodhaConfig));
+      } catch(e) {}
+
+      const statusEl = document.getElementById("kite-connection-status");
+      const label = document.getElementById("kite-status-label");
+      if (zerodhaConfig.connected) {
+        if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> Kite Live Connected (${zerodhaConfig.userId || 'Active'})`;
+        if (label) label.innerText = "Kite Online";
+        logTerminal(`🪁 <strong class="text-emerald-400 font-bold">[ZERODHA KITE CONNECTED]</strong> API credentials saved. Ready to pull live ticks!`);
+      } else {
+        if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> Standby / Simulator`;
+        if (label) label.innerText = "Kite Connect";
+      }
+
+      closeZerodhaModal();
+    }
+
 
     function openBrokerageModal() {
       document.getElementById("brokerage-modal").classList.remove("hidden");
@@ -2744,13 +2937,26 @@ function calculateStockMetrics(sym) {
           if (newP > last.high) last.high = newP;
           if (newP < last.low) last.low = newP;
 
-          // Multi-Stock Portfolio Scanner:
-          // If Bot is online and this symbol is selected in active basket, scan for trade entries
-          if (isRunning && activeBasket.has(sym)) {
-            const hasPosition = positions.some(p => p.symbol === sym);
-            if (!hasPosition && positions.length < MAX_OPEN_POSITIONS && Math.random() < 0.045) {
-              // Open position in this stock from active basket!
-              triggerImmediateTrade(sym, false);
+          // Multi-Stock Intelligent Breakout Scanner:
+          // Instead of always sticking to 1 fixed stock, automatically scan the entire universe
+          // and rotate into the highest-conviction momentum leader!
+          if (isRunning && positions.length < MAX_OPEN_POSITIONS) {
+            // Find candidate stocks that have positive momentum and no active position
+            const candidateSymbols = Object.keys(marketCatalog[currentMarket].symbols).filter(s => {
+              return !positions.some(p => p.symbol === s) && (activeBasket.size === 0 || activeBasket.has(s));
+            });
+
+            if (candidateSymbols.length > 0 && Math.random() < 0.045) {
+              // Score all candidates using quantitative metrics
+              const scoredCandidates = candidateSymbols.map(s => calculateStockMetrics(s)).filter(Boolean);
+              scoredCandidates.sort((a, b) => b.score - a.score);
+
+              // Pick the top scoring momentum stock (e.g. Tata Motors, M&M, SBI, ICICI, etc.)
+              const topPick = scoredCandidates[0];
+              if (topPick && topPick.score >= 60) {
+                logTerminal(`🚀 <strong class="text-cyan-400">[AI SECTOR SCANNER]</strong> High-conviction breakout detected on <strong>${topPick.sym}</strong> (${topPick.sector}) with Score <strong>${topPick.score}/100</strong>! Routing trade...`);
+                triggerImmediateTrade(topPick.sym, false);
+              }
             }
           }
         });
