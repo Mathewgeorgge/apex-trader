@@ -1242,6 +1242,8 @@
     let activeNewsFilter = "all";
     let activeBasket = new Set(); // Multi-stock symbols enabled for trading
     const MAX_OPEN_POSITIONS = 3; // SEBI risk limit: max 3 concurrent positions
+    let autoEntryCooldownUntil = 0; // Cooldown timestamp to prevent frantic auto-reopening
+    const recentlyExitedSymbols = {}; // Cooldown map per symbol
 
     // Accurate Zerodha / Multi-Asset Charge Calculator Function
     function calculateTradeCharges(buyP, sellP, qty, mkt) {
@@ -2798,6 +2800,7 @@ function calculateStockMetrics(sym) {
       });
       positions = [];
       marginUsed = 0.0;
+      autoEntryCooldownUntil = Date.now() + 5 * 60 * 1000;
       if (isRunning) toggleEngine();
       renderAccountRibbon();
       updateMarketSessionBadge();
@@ -2928,9 +2931,20 @@ function calculateStockMetrics(sym) {
       cash += (p.cost + c.netPnl);
       marginUsed -= p.cost;
       positions = positions.filter(item => item.symbol !== sym);
+      recentlyExitedSymbols[sym] = Date.now() + 5 * 60 * 1000; // 5 min cooldown for this stock
+      autoEntryCooldownUntil = Date.now() + 60 * 1000; // 60s global auto-entry pause
 
       playBeep("sell");
-      logTerminal(`[SQUARE OFF] Closed ${sym} @ ${p.curr}${p.ltp.toLocaleString()} | Gross PnL: <span class="${c.grossPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${p.curr}${c.grossPnl.toFixed(2)}</span> | Brokerage: <span class="text-rose-400">-${p.curr}${c.total.toFixed(2)}</span> | <strong>Net In-Pocket: ${p.curr}${c.netPnl.toFixed(2)}</strong>`);
+      logTerminal(`[SQUARE OFF] Closed <strong>${sym}</strong> @ ${p.curr}${p.ltp.toLocaleString()} | Gross PnL: <span class="${c.grossPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${p.curr}${c.grossPnl.toFixed(2)}</span> | Brokerage: <span class="text-rose-400">-${p.curr}${c.total.toFixed(2)}</span> | <strong>Net In-Pocket: ${p.curr}${c.netPnl.toFixed(2)}</strong>`);
+
+      if (positions.length === 0 && isRunning) {
+        // If user manually closed all positions, pause Algo Bot so no new positions open behind their back
+        toggleEngine();
+        logTerminal(`<span class="text-amber-400 font-bold">⏸ [BOT PAUSED] All open positions squared off. Algo Bot set to IDLE. Click "START ALGO BOT" to resume autopilot.</span>`);
+      } else if (isRunning) {
+        logTerminal(`<span class="text-cyan-400">⏳ [COOLDOWN ACTIVE] ${sym} squared off. Auto-entry paused for 60 seconds. (Click "STOP ALGO BOT" to disable completely).</span>`);
+      }
+
       renderAccountRibbon();
       updateMarketSessionBadge();
       renderPositions();
@@ -3465,29 +3479,6 @@ function calculateStockMetrics(sym) {
               item.history.shift(); // Keep clean scrolling window of 46 candles
             }
           }
-
-          // Multi-Stock Intelligent Breakout Scanner:
-          // Instead of always sticking to 1 fixed stock, automatically scan the entire universe
-          // and rotate into the highest-conviction momentum leader!
-          if (isRunning && positions.length < MAX_OPEN_POSITIONS) {
-            // Find candidate stocks that have positive momentum and no active position
-            const candidateSymbols = Object.keys(marketCatalog[currentMarket].symbols).filter(s => {
-              return !positions.some(p => p.symbol === s) && (activeBasket.size === 0 || activeBasket.has(s));
-            });
-
-            if (candidateSymbols.length > 0 && Math.random() < 0.045) {
-              // Score all candidates using quantitative metrics
-              const scoredCandidates = candidateSymbols.map(s => calculateStockMetrics(s)).filter(Boolean);
-              scoredCandidates.sort((a, b) => b.score - a.score);
-
-              // Pick the top scoring momentum stock (e.g. Tata Motors, M&M, SBI, ICICI, etc.)
-              const topPick = scoredCandidates[0];
-              if (topPick && topPick.score >= 60) {
-                logTerminal(`🚀 <strong class="text-cyan-400">[AI SECTOR SCANNER]</strong> High-conviction breakout detected on <strong>${topPick.sym}</strong> (${topPick.sector}) with Score <strong>${topPick.score}/100</strong>! Routing trade...`);
-                triggerImmediateTrade(topPick.sym, false);
-              }
-            }
-          }
         });
       });
 
@@ -3498,6 +3489,30 @@ function calculateStockMetrics(sym) {
       if (document.getElementById("ticker-hdfc")) document.getElementById("ticker-hdfc").innerText = "₹" + marketCatalog["india"].symbols["HDFCBANK"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
       if (document.getElementById("ticker-tcs")) document.getElementById("ticker-tcs").innerText = "₹" + marketCatalog["india"].symbols["TCS"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
       if (document.getElementById("ticker-tatamotors")) document.getElementById("ticker-tatamotors").innerText = "₹" + marketCatalog["india"].symbols["TATAMOTORS"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
+
+      // Multi-Stock Intelligent Breakout Scanner:
+      // Evaluates ONCE per cycle (outside market loops), respecting active user cooldowns
+      if (isRunning && positions.length < MAX_OPEN_POSITIONS && Date.now() >= autoEntryCooldownUntil) {
+        const now = Date.now();
+        const candidateSymbols = Object.keys(marketCatalog[currentMarket].symbols).filter(s => {
+          const isPositionOpen = positions.some(p => p.symbol === s);
+          const isCoolingDown = (recentlyExitedSymbols[s] && recentlyExitedSymbols[s] > now);
+          const isInBasket = (activeBasket.size === 0 || activeBasket.has(s));
+          return !isPositionOpen && !isCoolingDown && isInBasket;
+        });
+
+        // Paced breakout scan: ~8% chance per second (~once every 12s) to avoid frantic re-entries
+        if (candidateSymbols.length > 0 && Math.random() < 0.08) {
+          const scoredCandidates = candidateSymbols.map(s => calculateStockMetrics(s)).filter(Boolean);
+          scoredCandidates.sort((a, b) => b.score - a.score);
+
+          const topPick = scoredCandidates[0];
+          if (topPick && topPick.score >= 60) {
+            logTerminal(`🚀 <strong class="text-cyan-400">[AI SECTOR SCANNER]</strong> High-conviction breakout detected on <strong>${topPick.sym}</strong> (${topPick.sector}) with Score <strong>${topPick.score}/100</strong>! Routing trade...`);
+            triggerImmediateTrade(topPick.sym, false);
+          }
+        }
+      }
 
       // Intelligent Quantitative Profit & Risk Execution Loop
       const exitsToExecute = [];
