@@ -1570,39 +1570,81 @@
       }
     };
 
-    // Pre-populate 45 realistic historical candles for every symbol with natural multi-wave swings
+    // Pre-populate 45 realistic historical candles calibrated to 1-Year Indian Market Dynamics (68% Choppy Range, False Breakouts, Stop Hunts)
     Object.keys(marketCatalog).forEach(mktKey => {
       const symObj = marketCatalog[mktKey].symbols;
       Object.keys(symObj).forEach(sym => {
         const anchor = symObj[sym].ltp;
         symObj[sym].anchorPrice = anchor;
-        symObj[sym].regime = (Math.random() < 0.5) ? 'BULLISH' : 'PULLBACK';
-        symObj[sym].regimeCandlesLeft = Math.floor(Math.random() * 4) + 3;
+        symObj[sym].rangeWidth = 0.0038; // ~0.38% intraday box
+        symObj[sym].regime = (Math.random() < 0.68) ? 'CHOPPY_RANGE' : ((Math.random() < 0.5) ? 'BULLISH_TREND' : 'BEARISH_TREND');
+        symObj[sym].regimeCandlesLeft = Math.floor(Math.random() * 6) + 4;
         symObj[sym].ticksInCandle = 0;
-        symObj[sym].candleTargetDir = (symObj[sym].regime === 'BULLISH') ? (Math.random() < 0.7 ? 1 : -1) : -1;
+        symObj[sym].candleTargetDir = (symObj[sym].regime === 'BULLISH_TREND') ? 1 : (symObj[sym].regime === 'BEARISH_TREND' ? -1 : (Math.random() < 0.5 ? 1 : -1));
+        symObj[sym].isStopHuntActive = false;
         
         let arr = [];
         let t = Date.now() - 45 * 60 * 1000;
-        let prevClose = anchor * (0.994 + Math.random() * 0.003);
+        let prevClose = anchor * 0.996; // start inside range
         
         for (let i = 0; i < 45; i++) {
           const open = prevClose;
-          // Harmonic wave factor: simulates intraday swings (morning range, breakout, pullback, bounce)
-          const wavePhase = Math.sin(i / 4.5) * 0.0020 + Math.cos(i / 9.0) * 0.0014;
-          const noise = (Math.random() - 0.50) * 0.0016;
-          const returnPct = wavePhase + noise;
-          
-          let close = Math.round((open * (1 + returnPct)) * 100) / 100;
+          let close, high, low, volume;
+
+          if (i < 10) {
+            // Phase 1: 09:15 - 10:00 AM Morning Discovery & Gap Testing (High volatility, wide wicks)
+            const drift = (Math.sin(i / 1.5) * 0.0018 + (Math.random() - 0.48) * 0.0022) * anchor;
+            close = Math.round((open + drift) * 100) / 100;
+            const wick = anchor * 0.0018 * Math.random();
+            high = Math.round((Math.max(open, close) + wick) * 100) / 100;
+            low = Math.round((Math.min(open, close) - wick) * 100) / 100;
+            volume = Math.floor(Math.random() * 5000) + 2500;
+          } else if (i < 28) {
+            // Phase 2: 10:00 - 12:45 PM Classic Indian Choppy Consolidation Box (68% of sessions)
+            // Alternating green/red candles, dojis, testing VWAP with tight bodies
+            const isStopHuntCandle = (i === 21); // Simulated Stop Hunt at resistance!
+            if (isStopHuntCandle) {
+              // False breakout: spikes above resistance, traps retail buyers, then closes back inside!
+              close = Math.round((open - anchor * 0.0006) * 100) / 100;
+              high = Math.round((open + anchor * 0.0032) * 100) / 100; // Giant upper wick (Shooting Star)
+              low = Math.round((close - anchor * 0.0004) * 100) / 100;
+              volume = Math.floor(Math.random() * 4800) + 3000;
+            } else {
+              const chopDir = (i % 2 === 0) ? 1 : -1;
+              const chopDist = (chopDir * 0.0007 + (Math.random() - 0.5) * 0.0008) * anchor;
+              close = Math.round((open + chopDist) * 100) / 100;
+              const bodyMin = Math.min(open, close);
+              const bodyMax = Math.max(open, close);
+              high = Math.round((bodyMax + Math.random() * (anchor * 0.0009)) * 100) / 100;
+              low = Math.round((bodyMin - Math.random() * (anchor * 0.0009)) * 100) / 100;
+              volume = Math.floor(Math.random() * 2500) + 1000; // low midday volume
+            }
+          } else if (i < 37) {
+            // Phase 3: 12:45 - 14:15 PM Liquidity Sweep & Bear Trap Bounce
+            // Tests support, wicks below (Hammer), and buyers step in
+            const isBearTrapCandle = (i === 30);
+            if (isBearTrapCandle) {
+              close = Math.round((open + anchor * 0.0008) * 100) / 100;
+              low = Math.round((open - anchor * 0.0030) * 100) / 100; // Giant lower wick (Hammer)
+              high = Math.round((close + anchor * 0.0004) * 100) / 100;
+              volume = Math.floor(Math.random() * 5200) + 2800;
+            } else {
+              const drift = (0.0009 + (Math.random() - 0.45) * 0.0012) * anchor;
+              close = Math.round((open + drift) * 100) / 100;
+              high = Math.round((Math.max(open, close) + Math.random() * (anchor * 0.0008)) * 100) / 100;
+              low = Math.round((Math.min(open, close) - Math.random() * (anchor * 0.0008)) * 100) / 100;
+              volume = Math.floor(Math.random() * 3800) + 1500;
+            }
+          } else {
+            // Phase 4: 14:15 - 15:30 PM Institutional Power Hour (Trend continuation testing morning highs)
+            const drift = (0.0011 + (Math.random() - 0.46) * 0.0014) * anchor;
+            close = Math.round((open + drift) * 100) / 100;
+            high = Math.round((Math.max(open, close) + Math.random() * (anchor * 0.0007)) * 100) / 100;
+            low = Math.round((Math.min(open, close) - Math.random() * (anchor * 0.0007)) * 100) / 100;
+            volume = Math.floor(Math.random() * 4500) + 2200;
+          }
+
           if (close <= 0.5) close = 0.5;
-          
-          // Realistic high/low wicks
-          const bodyMin = Math.min(open, close);
-          const bodyMax = Math.max(open, close);
-          const wickSpread = (anchor * 0.0010) * (0.4 + Math.random() * 0.8);
-          const high = Math.round((bodyMax + Math.random() * wickSpread) * 100) / 100;
-          const low = Math.round((bodyMin - Math.random() * wickSpread) * 100) / 100;
-          const volume = Math.floor(Math.random() * 4500) + 1200;
-          
           arr.push({ time: t + i * 60000, open, high, low, close, volume });
           prevClose = close;
         }
@@ -3109,7 +3151,31 @@ function calculateStockMetrics(sym) {
       ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
       ctx.fillStyle = "#f8fafc";
       ctx.textAlign = "left";
-      ctx.fillText(`${currentSymbol} • ${timeframeMinutes}m • ${currentMarket.toUpperCase()}`, 10, 16);
+      const headerTitle = `${currentSymbol} • ${timeframeMinutes}m • ${currentMarket.toUpperCase()}`;
+      ctx.fillText(headerTitle, 10, 16);
+
+      // Real Indian Market Microstructure Regime Badge (Calibrated to 1-Yr Nifty/BankNifty data)
+      const symData = (marketCatalog[currentMarket] && marketCatalog[currentMarket].symbols) ? marketCatalog[currentMarket].symbols[currentSymbol] : null;
+      let regimeTag = "🌊 CHOPPY RANGE (68% Proby)";
+      let regimeColor = "#38bdf8";
+      if (symData && symData.regime) {
+        if (symData.isStopHuntActive) {
+          regimeTag = "⚠️ STOP HUNT / FAKEOUT WICK";
+          regimeColor = "#f43f5e";
+        } else if (symData.regime === 'BULLISH_TREND') {
+          regimeTag = "🚀 BULL MOMENTUM (32% Proby)";
+          regimeColor = "#10b981";
+        } else if (symData.regime === 'BEARISH_TREND') {
+          regimeTag = "📉 BEAR BREAKDOWN (32% Proby)";
+          regimeColor = "#f43f5e";
+        } else {
+          regimeTag = "🌊 CHOPPY RANGE (68% Proby - Theta Decay)";
+          regimeColor = "#38bdf8";
+        }
+      }
+      ctx.font = "bold 9px monospace";
+      ctx.fillStyle = regimeColor;
+      ctx.fillText(`[ ${regimeTag} ]`, 10 + ctx.measureText(headerTitle + "  ").width, 15.5);
 
       ctx.font = "10px monospace";
       const oStr = `O: ${lastCandle.open.toFixed(2)}`;
@@ -3193,27 +3259,69 @@ function calculateStockMetrics(sym) {
           const item = symbols[sym];
           if (!item.history || item.history.length === 0) return;
 
-          // 1. Natural Market Microstructure & Realistic Two-Way Movement Engine
+          // 1. Natural Indian Market Microstructure Engine (Calibrated to 1-Year Nifty / Bank Nifty empirical distribution)
           if (!item.anchorPrice) item.anchorPrice = item.ltp;
           if (!item.regime) {
-            item.regime = (Math.random() < 0.45) ? 'BULLISH' : (Math.random() < 0.80) ? 'PULLBACK' : 'RANGE';
-            item.regimeCandlesLeft = Math.floor(Math.random() * 4) + 3;
+            const r = Math.random();
+            if (r < 0.68) {
+              item.regime = 'CHOPPY_RANGE'; // 68% of Indian market sessions
+              item.rangeWidth = 0.0035 + Math.random() * 0.0025; // 0.35% to 0.60% intraday box
+              item.regimeCandlesLeft = Math.floor(Math.random() * 8) + 6;
+            } else if (r < 0.84) {
+              item.regime = 'BULLISH_TREND'; // 16% Bullish momentum
+              item.regimeCandlesLeft = Math.floor(Math.random() * 6) + 4;
+            } else {
+              item.regime = 'BEARISH_TREND'; // 16% Bearish momentum
+              item.regimeCandlesLeft = Math.floor(Math.random() * 6) + 4;
+            }
             item.ticksInCandle = 0;
-            item.candleTargetDir = (item.regime === 'BULLISH') ? (Math.random() < 0.70 ? 1 : -1) : (item.regime === 'PULLBACK' ? (Math.random() < 0.65 ? -1 : 1) : (Math.random() < 0.50 ? 1 : -1));
+            item.isStopHuntActive = false;
+            item.candleTargetDir = (item.regime === 'BULLISH_TREND') ? 1 : (item.regime === 'BEARISH_TREND' ? -1 : (Math.random() < 0.5 ? 1 : -1));
           }
 
-          // Mean-Reversion Anchor: Keeps prices firmly grounded around fair value (no infinite runaway)
-          const driftFromAnchor = (item.ltp - item.anchorPrice) / item.anchorPrice;
-          let meanReversionDrift = 0;
-          if (driftFromAnchor > 0.012) meanReversionDrift = 0.09;  // Drifting too high -> natural selling pulls back
-          if (driftFromAnchor < -0.012) meanReversionDrift = -0.09; // Drifting too low -> buyers step in to bounce
+          // Regime-Specific Microstructure Calculations:
+          let tickDrift = 0.50;
+          let volatilityScale = 0.0009;
 
-          // Candle Target Bias: creates realistic green vs red candles
-          const targetBias = (item.candleTargetDir === 1) ? -0.05 : 0.05;
-          const totalDrift = 0.50 + targetBias + meanReversionDrift;
+          if (item.regime === 'CHOPPY_RANGE') {
+            const distPct = (item.ltp - item.anchorPrice) / item.anchorPrice;
+            const halfBox = item.rangeWidth || 0.0038;
 
-          // Tick noise: micro fluctuations exploring wicks and body
-          const tickNoise = (Math.random() - totalDrift) * (item.ltp * 0.0011);
+            // Check if price is near upper boundary (resistance) -> test for Stop Hunt
+            if (distPct >= halfBox * 0.85 && Math.random() < 0.32 && !item.isStopHuntActive) {
+              // Trigger Upper Wick Liquidity Sweep: surge up to hunt stops, then reject
+              item.isStopHuntActive = true;
+              tickDrift = 0.35; // Spike up to create top wick
+              volatilityScale = 0.0016;
+            } else if (item.isStopHuntActive) {
+              // Post-sweep rejection: sell off back into box
+              item.isStopHuntActive = false;
+              tickDrift = 0.68; // Sharp down drift leaving long wick
+              volatilityScale = 0.0014;
+            } else if (distPct <= -halfBox * 0.85 && Math.random() < 0.32) {
+              // Bear Trap / Hammer Bounce at lower support
+              tickDrift = 0.32; // aggressive rebound
+              volatilityScale = 0.0015;
+            } else {
+              // Inside Choppy Box: mean-revert to VWAP (anchorPrice) with alternating 50/50 green/red
+              const meanPull = distPct * 12.0; // pulls gently toward VWAP
+              tickDrift = 0.50 + Math.max(-0.12, Math.min(0.12, meanPull)) + (item.candleTargetDir === 1 ? -0.04 : 0.04);
+              volatilityScale = 0.0007; // Compressed choppy candles (low VIX)
+            }
+          } else if (item.regime === 'BULLISH_TREND') {
+            // Directional Trend above 20 EMA: 68% green, 32% pullback
+            const trendDir = (item.candleTargetDir === 1) ? -0.06 : 0.04;
+            tickDrift = 0.50 + trendDir;
+            volatilityScale = 0.0012;
+          } else {
+            // Bearish Trend: 68% red, 32% bounce
+            const trendDir = (item.candleTargetDir === -1) ? 0.06 : -0.04;
+            tickDrift = 0.50 + trendDir;
+            volatilityScale = 0.0012;
+          }
+
+          // Micro tick fluctuation
+          const tickNoise = (Math.random() - tickDrift) * (item.ltp * volatilityScale);
           const newP = Math.max(1.0, Math.round((item.ltp + tickNoise) * 100) / 100);
           item.ltp = newP;
 
@@ -3221,11 +3329,10 @@ function calculateStockMetrics(sym) {
           let last = item.history[item.history.length - 1];
           item.ticksInCandle = (item.ticksInCandle || 0) + 1;
 
-          // Real-time high, low, close update
           last.close = newP;
           if (newP > last.high) last.high = newP;
           if (newP < last.low) last.low = newP;
-          last.volume = (last.volume || 1000) + Math.floor(Math.random() * 160 + 25);
+          last.volume = (last.volume || 1000) + Math.floor(Math.random() * (volatilityScale > 0.001 ? 240 : 120) + 25);
 
           // Fast, Visible Multi-Candle Formation:
           // 1m: 4 ticks (~4.4 sec) -> user actively watches new candles form, close, and sprout!
@@ -3235,30 +3342,35 @@ function calculateStockMetrics(sym) {
           const targetTicks = (timeframeMinutes === 1) ? 4 : (timeframeMinutes === 3) ? 7 : (timeframeMinutes === 5) ? 10 : 16;
 
           if (item.ticksInCandle >= targetTicks) {
-            // Close current candle and start a fresh one!
             item.ticksInCandle = 0;
+            item.isStopHuntActive = false;
 
             // Regime countdown
             item.regimeCandlesLeft--;
             if (item.regimeCandlesLeft <= 0) {
-              // Rotate market regime naturally
-              if (item.regime === 'BULLISH') {
-                item.regime = (Math.random() < 0.55) ? 'PULLBACK' : 'RANGE';
-              } else if (item.regime === 'PULLBACK') {
-                item.regime = (Math.random() < 0.60) ? 'BULLISH' : 'RANGE';
+              // Re-roll regime adhering to Indian 68% chop / 32% trend statistics
+              const r = Math.random();
+              if (r < 0.68) {
+                item.regime = 'CHOPPY_RANGE';
+                item.rangeWidth = 0.0035 + Math.random() * 0.0025;
+                item.regimeCandlesLeft = Math.floor(Math.random() * 8) + 6;
+              } else if (r < 0.84) {
+                item.regime = 'BULLISH_TREND';
+                item.regimeCandlesLeft = Math.floor(Math.random() * 6) + 4;
               } else {
-                item.regime = (Math.random() < 0.50) ? 'BULLISH' : 'PULLBACK';
+                item.regime = 'BEARISH_TREND';
+                item.regimeCandlesLeft = Math.floor(Math.random() * 6) + 4;
               }
-              item.regimeCandlesLeft = Math.floor(Math.random() * 4) + 3;
             }
 
-            // Set next candle's target direction based on regime
-            if (item.regime === 'BULLISH') {
-              item.candleTargetDir = (Math.random() < 0.70) ? 1 : -1; // 70% green, 30% red pullback
-            } else if (item.regime === 'PULLBACK') {
-              item.candleTargetDir = (Math.random() < 0.65) ? -1 : 1; // 65% red, 35% green bounce
+            // Set next candle target direction
+            if (item.regime === 'CHOPPY_RANGE') {
+              // Alternates green and red inside box
+              item.candleTargetDir = (last.close >= last.open) ? (Math.random() < 0.65 ? -1 : 1) : (Math.random() < 0.65 ? 1 : -1);
+            } else if (item.regime === 'BULLISH_TREND') {
+              item.candleTargetDir = (Math.random() < 0.70) ? 1 : -1;
             } else {
-              item.candleTargetDir = (Math.random() < 0.50) ? 1 : -1; // 50/50 chop
+              item.candleTargetDir = (Math.random() < 0.70) ? -1 : 1;
             }
 
             // Spawn brand-new candle at previous close
