@@ -208,7 +208,7 @@
         <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-gray-800/80 text-xs">
           <div class="flex items-center space-x-2">
             <span class="text-gray-400 text-[10px] font-bold">ASSET:</span>
-            <select id="sel-chart-symbol" onchange="changeChartSymbol(this.value)" class="bg-[#070b14] border border-gray-700 text-white font-bold rounded px-2.5 py-1 text-xs font-mono">
+            <select id="sel-chart-symbol" onchange="changeChartSymbol(this.value)" class="bg-[#070b14] border border-gray-700 text-white font-bold rounded px-2.5 py-1 text-xs font-mono min-w-[170px] max-w-[220px] shrink-0">
               <!-- Dynamically populated -->
             </select>
 
@@ -228,7 +228,7 @@
               <span class="text-blue-400 font-semibold">20 EMA</span>
             </label>
             <label class="flex items-center space-x-1 cursor-pointer">
-              <input type="checkbox" id="chk-supertrend" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-emerald-500" />
+              <input type="checkbox" id="chk-supertrend" onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-emerald-500" />
               <span class="text-emerald-400 font-semibold">Supertrend(10,3)</span>
             </label>
             <label class="flex items-center space-x-1 cursor-pointer">
@@ -325,7 +325,7 @@
         <!-- Level 2 Order Depth -->
         <div class="card-panel p-3 rounded-xl space-y-2">
           <div class="flex justify-between items-center text-[10px]">
-            <span class="font-bold text-gray-300">Level 2 Depth (<span id="depth-market-tag">CRYPTO</span>)</span>
+            <span class="font-bold text-gray-300">Level 2 Depth (<span id="depth-market-tag">NSE INDIA</span>)</span>
             <span class="text-gray-500 font-mono">Live Bids/Asks</span>
           </div>
           
@@ -1570,86 +1570,46 @@
       }
     };
 
-    // Pre-populate 45 realistic historical candles calibrated to 1-Year Indian Market Dynamics (68% Choppy Range, False Breakouts, Stop Hunts)
+    // Pre-populate 45 natural, organic historical candles with realistic multi-swing waves
     Object.keys(marketCatalog).forEach(mktKey => {
       const symObj = marketCatalog[mktKey].symbols;
       Object.keys(symObj).forEach(sym => {
         const anchor = symObj[sym].ltp;
         symObj[sym].anchorPrice = anchor;
-        symObj[sym].rangeWidth = 0.0038; // ~0.38% intraday box
-        symObj[sym].regime = (Math.random() < 0.68) ? 'CHOPPY_RANGE' : ((Math.random() < 0.5) ? 'BULLISH_TREND' : 'BEARISH_TREND');
+        symObj[sym].rangeWidth = 0.0040;
+        symObj[sym].regime = (Math.random() < 0.65) ? 'CHOPPY_RANGE' : 'BULLISH_TREND';
         symObj[sym].regimeCandlesLeft = Math.floor(Math.random() * 6) + 4;
         symObj[sym].ticksInCandle = 0;
-        symObj[sym].candleTargetDir = (symObj[sym].regime === 'BULLISH_TREND') ? 1 : (symObj[sym].regime === 'BEARISH_TREND' ? -1 : (Math.random() < 0.5 ? 1 : -1));
+        symObj[sym].candleTargetDir = (symObj[sym].regime === 'BULLISH_TREND') ? 1 : (Math.random() < 0.5 ? 1 : -1);
         symObj[sym].isStopHuntActive = false;
-        
+
         let arr = [];
         let t = Date.now() - 45 * 60 * 1000;
-        let prevClose = anchor * 0.996; // start inside range
         
+        // Multi-frequency harmonic wave generates natural peaks, valleys, pullbacks, and rallies
+        let currentP = anchor * 0.996;
         for (let i = 0; i < 45; i++) {
-          const open = prevClose;
-          let close, high, low, volume;
-
-          if (i < 10) {
-            // Phase 1: 09:15 - 10:00 AM Morning Discovery & Gap Testing (High volatility, wide wicks)
-            const drift = (Math.sin(i / 1.5) * 0.0018 + (Math.random() - 0.48) * 0.0022) * anchor;
-            close = Math.round((open + drift) * 100) / 100;
-            const wick = anchor * 0.0018 * Math.random();
-            high = Math.round((Math.max(open, close) + wick) * 100) / 100;
-            low = Math.round((Math.min(open, close) - wick) * 100) / 100;
-            volume = Math.floor(Math.random() * 5000) + 2500;
-          } else if (i < 28) {
-            // Phase 2: 10:00 - 12:45 PM Classic Indian Choppy Consolidation Box (68% of sessions)
-            // Alternating green/red candles, dojis, testing VWAP with tight bodies
-            const isStopHuntCandle = (i === 21); // Simulated Stop Hunt at resistance!
-            if (isStopHuntCandle) {
-              // False breakout: spikes above resistance, traps retail buyers, then closes back inside!
-              close = Math.round((open - anchor * 0.0006) * 100) / 100;
-              high = Math.round((open + anchor * 0.0032) * 100) / 100; // Giant upper wick (Shooting Star)
-              low = Math.round((close - anchor * 0.0004) * 100) / 100;
-              volume = Math.floor(Math.random() * 4800) + 3000;
-            } else {
-              const chopDir = (i % 2 === 0) ? 1 : -1;
-              const chopDist = (chopDir * 0.0007 + (Math.random() - 0.5) * 0.0008) * anchor;
-              close = Math.round((open + chopDist) * 100) / 100;
-              const bodyMin = Math.min(open, close);
-              const bodyMax = Math.max(open, close);
-              high = Math.round((bodyMax + Math.random() * (anchor * 0.0009)) * 100) / 100;
-              low = Math.round((bodyMin - Math.random() * (anchor * 0.0009)) * 100) / 100;
-              volume = Math.floor(Math.random() * 2500) + 1000; // low midday volume
-            }
-          } else if (i < 37) {
-            // Phase 3: 12:45 - 14:15 PM Liquidity Sweep & Bear Trap Bounce
-            // Tests support, wicks below (Hammer), and buyers step in
-            const isBearTrapCandle = (i === 30);
-            if (isBearTrapCandle) {
-              close = Math.round((open + anchor * 0.0008) * 100) / 100;
-              low = Math.round((open - anchor * 0.0030) * 100) / 100; // Giant lower wick (Hammer)
-              high = Math.round((close + anchor * 0.0004) * 100) / 100;
-              volume = Math.floor(Math.random() * 5200) + 2800;
-            } else {
-              const drift = (0.0009 + (Math.random() - 0.45) * 0.0012) * anchor;
-              close = Math.round((open + drift) * 100) / 100;
-              high = Math.round((Math.max(open, close) + Math.random() * (anchor * 0.0008)) * 100) / 100;
-              low = Math.round((Math.min(open, close) - Math.random() * (anchor * 0.0008)) * 100) / 100;
-              volume = Math.floor(Math.random() * 3800) + 1500;
-            }
-          } else {
-            // Phase 4: 14:15 - 15:30 PM Institutional Power Hour (Trend continuation testing morning highs)
-            const drift = (0.0011 + (Math.random() - 0.46) * 0.0014) * anchor;
-            close = Math.round((open + drift) * 100) / 100;
-            high = Math.round((Math.max(open, close) + Math.random() * (anchor * 0.0007)) * 100) / 100;
-            low = Math.round((Math.min(open, close) - Math.random() * (anchor * 0.0007)) * 100) / 100;
-            volume = Math.floor(Math.random() * 4500) + 2200;
-          }
-
+          const open = currentP;
+          // Harmonic wave oscillates smoothly without artificial flat stretches or ramps
+          const harmonic = Math.sin(i / 3.8) * 0.0016 + Math.cos(i / 7.2) * 0.0012 + Math.sin(i / 1.8) * 0.0006;
+          const noise = (Math.random() - 0.49) * 0.0014;
+          const changePct = harmonic + noise;
+          
+          let close = Math.round((open * (1 + changePct)) * 100) / 100;
           if (close <= 0.5) close = 0.5;
+
+          const bodyMin = Math.min(open, close);
+          const bodyMax = Math.max(open, close);
+          const wickExt = (anchor * 0.0010) * (0.3 + Math.random() * 0.8);
+          const high = Math.round((bodyMax + Math.random() * wickExt) * 100) / 100;
+          const low = Math.round((bodyMin - Math.random() * wickExt) * 100) / 100;
+          const volume = Math.floor(Math.random() * 4500) + 1200;
+
           arr.push({ time: t + i * 60000, open, high, low, close, volume });
-          prevClose = close;
+          currentP = close;
         }
         symObj[sym].history = arr;
-        symObj[sym].ltp = prevClose;
+        symObj[sym].ltp = currentP;
       });
     });
 
@@ -1673,7 +1633,7 @@
       const curr = getCurrSymbol();
       if (document.getElementById('curr-symbol-1')) document.getElementById('curr-symbol-1').innerText = curr;
       if (document.getElementById('curr-symbol-maxloss')) document.getElementById('curr-symbol-maxloss').innerText = curr;
-      if (document.getElementById('depth-market-tag')) document.getElementById('depth-market-tag').innerText = currentMarket.toUpperCase();
+      if (document.getElementById('depth-market-tag')) document.getElementById('depth-market-tag').innerText = (currentMarket === 'fno') ? 'NSE F&O' : (currentMarket === 'india' ? 'NSE INDIA' : currentMarket.toUpperCase());
 
       const sel = document.getElementById("sel-chart-symbol");
       if (sel) {
@@ -1707,7 +1667,12 @@
 
     function switchMarket(mkt) {
       capital = 7000;
+      positions = [];
+      marginUsed = 0.0;
       cash = 7000;
+      grossRealizedPnl = 0.0;
+      netRealizedPnl = 0.0;
+      totalTaxesPaid = 0.0;
       maxDailyLoss = 200; // 2.8% risk shield for 7,000 account
       if (document.getElementById('acc-capital')) document.getElementById('acc-capital').value = 7000;
       if (document.getElementById('input-maxloss')) document.getElementById('input-maxloss').value = 200;
@@ -2615,17 +2580,20 @@ function calculateStockMetrics(sym) {
         if (Date.now() - (state.savedAt || 0) > 48 * 3600 * 1000) return false;
 
         capital = (state.capital !== undefined) ? state.capital : 7000;
-        cash = (state.cash !== undefined) ? state.cash : 7000;
-        marginUsed = state.marginUsed || 0;
-        maxDailyLoss = state.maxDailyLoss || 200;
         grossRealizedPnl = state.grossRealizedPnl || 0;
         netRealizedPnl = state.netRealizedPnl || 0;
         totalTaxesPaid = state.totalTaxesPaid || 0;
-        positions = Array.isArray(state.positions) ? state.positions : [];
+        maxDailyLoss = state.maxDailyLoss || 200;
 
         // Always enforce 100% Indian market (never let old crypto session bleed through)
         const targetMkt = (state.currentMarket === 'fno') ? 'fno' : 'india';
         const targetSym = (state.currentSymbol && marketCatalog[targetMkt] && marketCatalog[targetMkt].symbols[state.currentSymbol]) ? state.currentSymbol : "NIFTY 50";
+
+        // Filter positions strictly to active market universe & derive margin dynamically
+        const rawPositions = Array.isArray(state.positions) ? state.positions : [];
+        positions = rawPositions.filter(p => marketCatalog[targetMkt] && marketCatalog[targetMkt].symbols[p.symbol]);
+        marginUsed = positions.reduce((sum, p) => sum + (p.cost || (p.qty * p.avg) || 0), 0);
+        cash = Math.max(0, capital - marginUsed + netRealizedPnl);
 
         if (document.getElementById('acc-capital')) document.getElementById('acc-capital').value = capital;
         if (document.getElementById('input-maxloss')) document.getElementById('input-maxloss').value = maxDailyLoss;
@@ -2839,6 +2807,8 @@ function calculateStockMetrics(sym) {
 
     function renderAccountRibbon() {
       const curr = getCurrSymbol();
+      marginUsed = positions.reduce((sum, p) => sum + (p.cost || (p.qty * p.avg) || 0), 0);
+      cash = Math.max(0, capital - marginUsed + netRealizedPnl);
       document.getElementById("acc-cash").innerText = `${curr} ${cash.toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
       document.getElementById("acc-margin-used").innerText = `${curr} ${marginUsed.toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
       
@@ -2878,23 +2848,21 @@ function calculateStockMetrics(sym) {
     }
 
     function updateMaxLoss() {
-      const val = parseFloat(document.getElementById("input-maxloss").value) || 75;
+      const val = parseFloat(document.getElementById("input-maxloss").value) || 200;
       maxDailyLoss = val;
-      const pct = capital > 0 ? ((maxDailyLoss / capital) * 100).toFixed(1) : "1.5";
+      const pct = capital > 0 ? ((maxDailyLoss / capital) * 100).toFixed(1) : "2.8";
       document.getElementById("maxloss-pct-tag").innerText = `(${pct}%)`;
       const curr = getCurrSymbol();
       logTerminal(`[RISK SHIELD] Circuit breaker adjusted to max daily loss: <strong class="text-rose-400">${curr}${maxDailyLoss.toFixed(2)}</strong> (${pct}% of capital).`);
     }
 
     function updateCapital() {
-      const val = parseFloat(document.getElementById("acc-capital").value) || 5000;
+      const val = parseFloat(document.getElementById("acc-capital").value) || 7000;
       capital = val;
-      cash = capital - marginUsed + netRealizedPnl;
-      const pct = capital > 0 ? ((maxDailyLoss / capital) * 100).toFixed(1) : "1.5";
+      const pct = capital > 0 ? ((maxDailyLoss / capital) * 100).toFixed(1) : "2.8";
       document.getElementById("maxloss-pct-tag").innerText = `(${pct}%)`;
       renderAccountRibbon();
       updateMarketSessionBadge();
-      if (mkt === 'fno') switchSubTab('optionchain');
     }
 
     function logTerminal(html) {
