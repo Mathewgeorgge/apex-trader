@@ -1094,8 +1094,8 @@
       </div>
 
       <div class="flex justify-between items-center pt-2 border-t border-gray-800">
-        <a id="kite-login-external-link" href="https://developers.kite.trade/" target="_blank" class="text-amber-400 hover:underline text-[11px] flex items-center gap-1 font-semibold">
-          <span>🔗</span> Get Kite API Keys &rarr;
+        <a id="kite-login-btn-direct" href="https://kite.zerodha.com/connect/login?v=3&api_key=d03b3y9f6btyeun5" class="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 text-black font-extrabold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow transition">
+          <span>🔑</span> 1-Click Login to Kite &rarr;
         </a>
         <div class="flex space-x-2">
           <button onclick="closeZerodhaModal()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-3 py-1.5 rounded-lg text-xs transition">
@@ -1315,9 +1315,9 @@
     // Zerodha Kite Live Connect & Trading Mode State
     let tradingMode = "PAPER"; // "PAPER" or "REAL"
     let zerodhaConfig = {
-      apiKey: "",
+      apiKey: "d03b3y9f6btyeun5",
       accessToken: "",
-      userId: "",
+      userId: "RXD245",
       connected: false
     };
 
