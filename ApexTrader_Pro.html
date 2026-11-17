@@ -214,9 +214,9 @@
 
             <!-- Timeframes -->
             <div class="flex space-x-0.5 bg-[#070b14] border border-gray-800 rounded p-0.5 text-[10px]">
-              <button onclick="setTimeframe(1)" id="tf-1" class="px-2 py-0.5 rounded text-gray-400 hover:text-white">1m</button>
+              <button onclick="setTimeframe(1)" id="tf-1" class="px-2 py-0.5 rounded bg-gray-800 text-cyan-400 font-bold">1m</button>
               <button onclick="setTimeframe(3)" id="tf-3" class="px-2 py-0.5 rounded text-gray-400 hover:text-white">3m</button>
-              <button onclick="setTimeframe(5)" id="tf-5" class="px-2 py-0.5 rounded bg-gray-800 text-cyan-400 font-bold">5m</button>
+              <button onclick="setTimeframe(5)" id="tf-5" class="px-2 py-0.5 rounded text-gray-400 hover:text-white">5m</button>
               <button onclick="setTimeframe(15)" id="tf-15" class="px-2 py-0.5 rounded text-gray-400 hover:text-white">15m</button>
             </div>
           </div>
@@ -1236,8 +1236,8 @@
     let totalTaxesPaid = 0.0;
     let netRealizedPnl = 0.0;
     let positions = [];
-    let timeframeMinutes = 5;
-    let currentSymbol = "BTC/USDT";
+    let timeframeMinutes = 1;
+    let currentSymbol = "NIFTY 50";
     let activeSubTab = "positions";
     let activeNewsFilter = "all";
     let activeBasket = new Set(); // Multi-stock symbols enabled for trading
@@ -1570,23 +1570,44 @@
       }
     };
 
-    // Pre-populate 40 historical candles for every symbol
+    // Pre-populate 45 realistic historical candles for every symbol with natural multi-wave swings
     Object.keys(marketCatalog).forEach(mktKey => {
       const symObj = marketCatalog[mktKey].symbols;
       Object.keys(symObj).forEach(sym => {
-        let base = symObj[sym].ltp;
+        const anchor = symObj[sym].ltp;
+        symObj[sym].anchorPrice = anchor;
+        symObj[sym].regime = (Math.random() < 0.5) ? 'BULLISH' : 'PULLBACK';
+        symObj[sym].regimeCandlesLeft = Math.floor(Math.random() * 4) + 3;
+        symObj[sym].ticksInCandle = 0;
+        symObj[sym].candleTargetDir = (symObj[sym].regime === 'BULLISH') ? (Math.random() < 0.7 ? 1 : -1) : -1;
+        
         let arr = [];
-        let t = Date.now() - 40 * 60 * 1000;
-        for (let i = 0; i < 40; i++) {
-          let open = base + (Math.random() - 0.49) * (base * 0.003);
-          let close = open + (Math.random() - 0.48) * (base * 0.004);
-          let high = Math.max(open, close) + Math.random() * (base * 0.002);
-          let low = Math.min(open, close) - Math.random() * (base * 0.002);
-          arr.push({ time: t + i * 60000, open, high, low, close, volume: Math.floor(Math.random() * 5000) + 1000 });
-          base = close;
+        let t = Date.now() - 45 * 60 * 1000;
+        let prevClose = anchor * (0.994 + Math.random() * 0.003);
+        
+        for (let i = 0; i < 45; i++) {
+          const open = prevClose;
+          // Harmonic wave factor: simulates intraday swings (morning range, breakout, pullback, bounce)
+          const wavePhase = Math.sin(i / 4.5) * 0.0020 + Math.cos(i / 9.0) * 0.0014;
+          const noise = (Math.random() - 0.50) * 0.0016;
+          const returnPct = wavePhase + noise;
+          
+          let close = Math.round((open * (1 + returnPct)) * 100) / 100;
+          if (close <= 0.5) close = 0.5;
+          
+          // Realistic high/low wicks
+          const bodyMin = Math.min(open, close);
+          const bodyMax = Math.max(open, close);
+          const wickSpread = (anchor * 0.0010) * (0.4 + Math.random() * 0.8);
+          const high = Math.round((bodyMax + Math.random() * wickSpread) * 100) / 100;
+          const low = Math.round((bodyMin - Math.random() * wickSpread) * 100) / 100;
+          const volume = Math.floor(Math.random() * 4500) + 1200;
+          
+          arr.push({ time: t + i * 60000, open, high, low, close, volume });
+          prevClose = close;
         }
         symObj[sym].history = arr;
-        symObj[sym].ltp = Math.round(base * 100) / 100;
+        symObj[sym].ltp = prevClose;
       });
     });
 
@@ -2876,83 +2897,136 @@ function calculateStockMetrics(sym) {
       asksEl.innerHTML = asksHtml;
     }
 
-    // Canvas Chart Rendering Engine
+    // High-Resolution Professional Institutional Chart Canvas
     function renderChart() {
       const canvas = document.getElementById("mainChartCanvas");
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = 300;
+      if (!rect.width) return;
 
-      const w = canvas.width;
-      const h = canvas.height;
+      // High-DPI (Retina / Mobile) crispness
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = 300 * dpr;
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `300px`;
+      ctx.scale(dpr, dpr);
+
+      const w = rect.width;
+      const h = 300;
       ctx.clearRect(0, 0, w, h);
 
       const symObj = marketCatalog[currentMarket].symbols[currentSymbol];
       if (!symObj || !symObj.history || symObj.history.length === 0) return;
       const candles = symObj.history;
 
-      let minP = Infinity, maxP = -Infinity;
+      let minP = Infinity, maxP = -Infinity, maxVol = 1;
       candles.forEach(c => {
         if (c.low < minP) minP = c.low;
         if (c.high > maxP) maxP = c.high;
+        if (c.volume > maxVol) maxVol = c.volume;
       });
-      const pad = (maxP - minP) * 0.08 || 1;
+      const pad = (maxP - minP) * 0.12 || 1;
       minP -= pad; maxP += pad;
 
-      // Draw Grid Lines
+      const chartRightMargin = 68;
+      const chartBottomMargin = 22;
+      const chartPlotW = w - chartRightMargin;
+      const chartPlotH = h - chartBottomMargin;
+
+      // Draw Grid Lines & Price Ticks
       ctx.strokeStyle = "#131a29";
       ctx.lineWidth = 1;
-      for (let i = 1; i <= 4; i++) {
-        const y = (h / 5) * i;
+      for (let i = 1; i <= 5; i++) {
+        const y = (chartPlotH / 6) * i;
         ctx.beginPath();
         ctx.moveTo(0, y);
-        ctx.lineTo(w - 60, y);
+        ctx.lineTo(chartPlotW, y);
         ctx.stroke();
 
-        const priceVal = maxP - (i / 5) * (maxP - minP);
+        const priceVal = maxP - (i / 6) * (maxP - minP);
         ctx.fillStyle = "#64748b";
         ctx.font = "9px monospace";
-        ctx.fillText(priceVal.toFixed(2), w - 55, y + 3);
+        ctx.textAlign = "left";
+        ctx.fillText(priceVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}), chartPlotW + 6, y + 3);
       }
 
-      // Candlestick geometry
-      const candleW = Math.max(3, (w - 70) / candles.length - 3);
+      // Draw Time Grid Lines
+      const timeSteps = 5;
+      for (let i = 1; i <= timeSteps; i++) {
+        const x = (chartPlotW / (timeSteps + 1)) * i;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, chartPlotH);
+        ctx.stroke();
+      }
+
+      // Draw Volume Histogram (bottom 18% of chart)
+      const volAreaH = chartPlotH * 0.18;
+      const candleSlot = chartPlotW / candles.length;
+      const candleW = Math.max(3, candleSlot - 2.5);
+
       candles.forEach((c, idx) => {
-        const x = 10 + idx * ((w - 70) / candles.length);
-        const yOpen = h - ((c.open - minP) / (maxP - minP)) * h;
-        const yClose = h - ((c.close - minP) / (maxP - minP)) * h;
-        const yHigh = h - ((c.high - minP) / (maxP - minP)) * h;
-        const yLow = h - ((c.low - minP) / (maxP - minP)) * h;
+        const x = idx * candleSlot + 1.25;
+        const vH = Math.max(2, (c.volume / maxVol) * volAreaH);
+        const isUp = c.close >= c.open;
+        ctx.fillStyle = isUp ? "rgba(16, 185, 129, 0.22)" : "rgba(244, 63, 94, 0.22)";
+        ctx.fillRect(x, chartPlotH - vH, candleW, vH);
+      });
+
+      // Draw Candlesticks (Historical + Live)
+      candles.forEach((c, idx) => {
+        const x = idx * candleSlot + 1.25;
+        const xCenter = x + candleW / 2;
+        const yOpen = chartPlotH - ((c.open - minP) / (maxP - minP)) * chartPlotH;
+        const yClose = chartPlotH - ((c.close - minP) / (maxP - minP)) * chartPlotH;
+        const yHigh = chartPlotH - ((c.high - minP) / (maxP - minP)) * chartPlotH;
+        const yLow = chartPlotH - ((c.low - minP) / (maxP - minP)) * chartPlotH;
 
         const isGreen = c.close >= c.open;
-        ctx.strokeStyle = isGreen ? "#10b981" : "#ef4444";
-        ctx.fillStyle = isGreen ? "#10b981" : "#ef4444";
+        const strokeColor = isGreen ? "#10b981" : "#f43f5e";
+        const fillColor = isGreen ? "#10b981" : "#f43f5e";
 
         // Wick
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.moveTo(x + candleW / 2, yHigh);
-        ctx.lineTo(x + candleW / 2, yLow);
+        ctx.moveTo(xCenter, yHigh);
+        ctx.lineTo(xCenter, yLow);
         ctx.stroke();
 
         // Body
         const top = Math.min(yOpen, yClose);
         const height = Math.max(2, Math.abs(yClose - yOpen));
+        ctx.fillStyle = fillColor;
         ctx.fillRect(x, top, candleW, height);
+
+        // Highlight Current Live Active Candle
+        if (idx === candles.length - 1) {
+          ctx.strokeStyle = isGreen ? "#34d399" : "#fb7185";
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(x - 0.5, top - 0.5, candleW + 1, height + 1);
+
+          // Pulsing live tick dot
+          ctx.fillStyle = isGreen ? "#10b981" : "#f43f5e";
+          ctx.beginPath();
+          ctx.arc(xCenter, yClose, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
       });
 
       // Overlay 20 EMA
-      if (document.getElementById("chk-ema").checked) {
+      if (document.getElementById("chk-ema") && document.getElementById("chk-ema").checked) {
         ctx.strokeStyle = "#38bdf8";
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 1.6;
         ctx.beginPath();
         let ema = candles[0].close;
         const k = 2 / (20 + 1);
         candles.forEach((c, idx) => {
           ema = c.close * k + ema * (1 - k);
-          const x = 10 + idx * ((w - 70) / candles.length) + candleW / 2;
-          const y = h - ((ema - minP) / (maxP - minP)) * h;
+          const x = idx * candleSlot + candleW / 2;
+          const y = chartPlotH - ((ema - minP) / (maxP - minP)) * chartPlotH;
           if (idx === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         });
@@ -2960,14 +3034,14 @@ function calculateStockMetrics(sym) {
       }
 
       // Overlay Supertrend (10,3)
-      if (document.getElementById("chk-supertrend").checked) {
+      if (document.getElementById("chk-supertrend") && document.getElementById("chk-supertrend").checked) {
         ctx.strokeStyle = "#10b981";
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1.8;
         ctx.beginPath();
         candles.forEach((c, idx) => {
-          const stVal = c.close * 0.994;
-          const x = 10 + idx * ((w - 70) / candles.length) + candleW / 2;
-          const y = h - ((stVal - minP) / (maxP - minP)) * h;
+          const stVal = c.close * (c.close >= c.open ? 0.995 : 1.005);
+          const x = idx * candleSlot + candleW / 2;
+          const y = chartPlotH - ((stVal - minP) / (maxP - minP)) * chartPlotH;
           if (idx === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         });
@@ -2975,7 +3049,7 @@ function calculateStockMetrics(sym) {
       }
 
       // Overlay VWAP
-      if (document.getElementById("chk-vwap").checked) {
+      if (document.getElementById("chk-vwap") && document.getElementById("chk-vwap").checked) {
         ctx.strokeStyle = "#f59e0b";
         ctx.lineWidth = 1.5;
         ctx.setLineDash([4, 3]);
@@ -2986,14 +3060,70 @@ function calculateStockMetrics(sym) {
           cumVol += c.volume;
           cumTypical += typical * c.volume;
           const vwap = cumTypical / cumVol;
-          const x = 10 + idx * ((w - 70) / candles.length) + candleW / 2;
-          const y = h - ((vwap - minP) / (maxP - minP)) * h;
+          const x = idx * candleSlot + candleW / 2;
+          const y = chartPlotH - ((vwap - minP) / (maxP - minP)) * chartPlotH;
           if (idx === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         });
         ctx.stroke();
         ctx.setLineDash([]);
       }
+
+      // LIVE HORIZONTAL PRICE LINE & BADGE (TradingView / Zerodha Kite Style)
+      const lastCandle = candles[candles.length - 1];
+      const livePrice = lastCandle.close;
+      const yLive = chartPlotH - ((livePrice - minP) / (maxP - minP)) * chartPlotH;
+      const isGreenTick = livePrice >= lastCandle.open;
+      const badgeBg = isGreenTick ? "#059669" : "#e11d48";
+
+      // Dashed price tracker line
+      ctx.save();
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = isGreenTick ? "#10b981" : "#f43f5e";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, yLive);
+      ctx.lineTo(chartPlotW, yLive);
+      ctx.stroke();
+      ctx.restore();
+
+      // Right-hand Live Price Badge
+      ctx.fillStyle = badgeBg;
+      const badgeW = 64;
+      const badgeH = 18;
+      const badgeX = chartPlotW + 2;
+      const badgeY = Math.max(0, Math.min(chartPlotH - badgeH, yLive - badgeH / 2));
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 3);
+        ctx.fill();
+      } else {
+        ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
+      }
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 10px monospace";
+      ctx.textAlign = "left";
+      ctx.fillText(livePrice.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}), badgeX + 4, badgeY + 12.5);
+
+      // Top-Left Chart Live HUD Header (Symbol, Timeframe, OHLC, Live Status)
+      ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
+      ctx.fillStyle = "#f8fafc";
+      ctx.textAlign = "left";
+      ctx.fillText(`${currentSymbol} • ${timeframeMinutes}m • ${currentMarket.toUpperCase()}`, 10, 16);
+
+      ctx.font = "10px monospace";
+      const oStr = `O: ${lastCandle.open.toFixed(2)}`;
+      const hStr = `H: ${lastCandle.high.toFixed(2)}`;
+      const lStr = `L: ${lastCandle.low.toFixed(2)}`;
+      const cStr = `C: ${lastCandle.close.toFixed(2)}`;
+      const chgVal = lastCandle.close - lastCandle.open;
+      const chgPct = (chgVal / lastCandle.open) * 100;
+      const chgStr = `${chgVal >= 0 ? '+' : ''}${chgVal.toFixed(2)} (${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%)`;
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText(`${oStr}  ${hStr}  ${lStr}  `, 10, 31);
+      ctx.fillStyle = isGreenTick ? "#34d399" : "#fb7185";
+      ctx.fillText(`${cStr}  ${chgStr}`, 10 + ctx.measureText(`${oStr}  ${hStr}  ${lStr}  `).width, 31);
 
       renderRsiSubChart(candles, minP, maxP);
     }
@@ -3002,10 +3132,20 @@ function calculateStockMetrics(sym) {
       const rsiCanvas = document.getElementById("rsiCanvas");
       if (!rsiCanvas) return;
       const rsiCtx = rsiCanvas.getContext("2d");
-      rsiCanvas.width = rsiCanvas.parentElement.getBoundingClientRect().width;
-      rsiCanvas.height = 60;
-      const rw = rsiCanvas.width;
-      const rh = rsiCanvas.height;
+      const rect = rsiCanvas.parentElement.getBoundingClientRect();
+      if (!rect.width) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      rsiCanvas.width = rect.width * dpr;
+      rsiCanvas.height = 60 * dpr;
+      rsiCanvas.style.width = `${rect.width}px`;
+      rsiCanvas.style.height = `60px`;
+      rsiCtx.scale(dpr, dpr);
+
+      const rw = rect.width;
+      const rh = 60;
+      const chartRightMargin = 68;
+      const plotW = rw - chartRightMargin;
 
       rsiCtx.clearRect(0, 0, rw, rh);
       rsiCtx.strokeStyle = "#1e293b";
@@ -3017,17 +3157,23 @@ function calculateStockMetrics(sym) {
       const y70 = rh * 0.3;
       const y30 = rh * 0.7;
       rsiCtx.beginPath();
-      rsiCtx.moveTo(0, y70); rsiCtx.lineTo(rw, y70);
-      rsiCtx.moveTo(0, y30); rsiCtx.lineTo(rw, y30);
+      rsiCtx.moveTo(0, y70); rsiCtx.lineTo(plotW, y70);
+      rsiCtx.moveTo(0, y30); rsiCtx.lineTo(plotW, y30);
       rsiCtx.stroke();
       rsiCtx.setLineDash([]);
+
+      rsiCtx.fillStyle = "#64748b";
+      rsiCtx.font = "9px monospace";
+      rsiCtx.fillText("70", plotW + 6, y70 + 3);
+      rsiCtx.fillText("30", plotW + 6, y30 + 3);
 
       rsiCtx.strokeStyle = "#06b6d4";
       rsiCtx.lineWidth = 1.5;
       rsiCtx.beginPath();
       let lastRsi = 50;
+      const slotW = plotW / candles.length;
       candles.forEach((c, idx) => {
-        const x = 10 + idx * ((rw - 40) / candles.length);
+        const x = idx * slotW + slotW / 2;
         const rsiVal = 50 + ((c.close - minP) / (maxP - minP) - 0.5) * 60;
         const y = rh - (Math.max(10, Math.min(90, rsiVal)) / 100) * rh;
         if (idx === 0) rsiCtx.moveTo(x, y);
@@ -3047,56 +3193,87 @@ function calculateStockMetrics(sym) {
           const item = symbols[sym];
           if (!item.history || item.history.length === 0) return;
 
-          // 1. Initialize Dynamic Wave State for realistic alternating Green & Red price action
-          if (item.waveTrend === undefined) {
-            item.waveTrend = (Math.random() > 0.45) ? 1 : -1;
-            item.waveTicksLeft = Math.floor(Math.random() * 18) + 10;
-            item.ticksInCurrentCandle = 0;
+          // 1. Natural Market Microstructure & Realistic Two-Way Movement Engine
+          if (!item.anchorPrice) item.anchorPrice = item.ltp;
+          if (!item.regime) {
+            item.regime = (Math.random() < 0.45) ? 'BULLISH' : (Math.random() < 0.80) ? 'PULLBACK' : 'RANGE';
+            item.regimeCandlesLeft = Math.floor(Math.random() * 4) + 3;
+            item.ticksInCandle = 0;
+            item.candleTargetDir = (item.regime === 'BULLISH') ? (Math.random() < 0.70 ? 1 : -1) : (item.regime === 'PULLBACK' ? (Math.random() < 0.65 ? -1 : 1) : (Math.random() < 0.50 ? 1 : -1));
           }
 
-          // Cycle wave states between Momentum Rally (Green) and Healthy Pullback (Red)
-          item.waveTicksLeft--;
-          if (item.waveTicksLeft <= 0) {
-            // Flip wave or consolidate: 55% chance trend continuation, 45% pullback/mean reversion
-            item.waveTrend = (item.waveTrend === 1) ? (Math.random() < 0.55 ? -1 : 1) : 1;
-            item.waveTicksLeft = Math.floor(Math.random() * 16) + 10;
-          }
+          // Mean-Reversion Anchor: Keeps prices firmly grounded around fair value (no infinite runaway)
+          const driftFromAnchor = (item.ltp - item.anchorPrice) / item.anchorPrice;
+          let meanReversionDrift = 0;
+          if (driftFromAnchor > 0.012) meanReversionDrift = 0.09;  // Drifting too high -> natural selling pulls back
+          if (driftFromAnchor < -0.012) meanReversionDrift = -0.09; // Drifting too low -> buyers step in to bounce
 
-          // Dynamic drift bias: Bullish wave drifts up (0.44), Pullback wave dips down (0.56)
-          const waveBias = (item.waveTrend === 1) ? 0.44 : 0.56;
-          const tickNoise = (Math.random() - waveBias) * (item.ltp * 0.0016);
+          // Candle Target Bias: creates realistic green vs red candles
+          const targetBias = (item.candleTargetDir === 1) ? -0.05 : 0.05;
+          const totalDrift = 0.50 + targetBias + meanReversionDrift;
+
+          // Tick noise: micro fluctuations exploring wicks and body
+          const tickNoise = (Math.random() - totalDrift) * (item.ltp * 0.0011);
           const newP = Math.max(1.0, Math.round((item.ltp + tickNoise) * 100) / 100);
-
           item.ltp = newP;
 
-          // 2. Active Candlestick Lifecycle Engine
+          // 2. Active Candlestick Formation & Lifecycle
           let last = item.history[item.history.length - 1];
-          item.ticksInCurrentCandle = (item.ticksInCurrentCandle || 0) + 1;
+          item.ticksInCandle = (item.ticksInCandle || 0) + 1;
 
-          // Update current candle high, low, close
+          // Real-time high, low, close update
           last.close = newP;
           if (newP > last.high) last.high = newP;
           if (newP < last.low) last.low = newP;
-          last.volume = (last.volume || 1000) + Math.floor(Math.random() * 150 + 20);
+          last.volume = (last.volume || 1000) + Math.floor(Math.random() * 160 + 25);
 
-          // 3. New Candle Completion & Push (Every 10-12 ticks, close candle and start a fresh one!)
-          // This ensures the chart actively forms new green and red candles, scrolling rightwards!
-          const ticksPerCandle = (timeframeMinutes === 1) ? 8 : (timeframeMinutes === 3) ? 12 : 16;
-          if (item.ticksInCurrentCandle >= ticksPerCandle) {
-            // Close previous candle and push fresh new candle
+          // Fast, Visible Multi-Candle Formation:
+          // 1m: 4 ticks (~4.4 sec) -> user actively watches new candles form, close, and sprout!
+          // 3m: 7 ticks (~7.7 sec)
+          // 5m: 10 ticks (~11 sec)
+          // 15m: 16 ticks (~17 sec)
+          const targetTicks = (timeframeMinutes === 1) ? 4 : (timeframeMinutes === 3) ? 7 : (timeframeMinutes === 5) ? 10 : 16;
+
+          if (item.ticksInCandle >= targetTicks) {
+            // Close current candle and start a fresh one!
+            item.ticksInCandle = 0;
+
+            // Regime countdown
+            item.regimeCandlesLeft--;
+            if (item.regimeCandlesLeft <= 0) {
+              // Rotate market regime naturally
+              if (item.regime === 'BULLISH') {
+                item.regime = (Math.random() < 0.55) ? 'PULLBACK' : 'RANGE';
+              } else if (item.regime === 'PULLBACK') {
+                item.regime = (Math.random() < 0.60) ? 'BULLISH' : 'RANGE';
+              } else {
+                item.regime = (Math.random() < 0.50) ? 'BULLISH' : 'PULLBACK';
+              }
+              item.regimeCandlesLeft = Math.floor(Math.random() * 4) + 3;
+            }
+
+            // Set next candle's target direction based on regime
+            if (item.regime === 'BULLISH') {
+              item.candleTargetDir = (Math.random() < 0.70) ? 1 : -1; // 70% green, 30% red pullback
+            } else if (item.regime === 'PULLBACK') {
+              item.candleTargetDir = (Math.random() < 0.65) ? -1 : 1; // 65% red, 35% green bounce
+            } else {
+              item.candleTargetDir = (Math.random() < 0.50) ? 1 : -1; // 50/50 chop
+            }
+
+            // Spawn brand-new candle at previous close
             const newCandle = {
               time: Date.now(),
               open: last.close,
               high: last.close,
               low: last.close,
               close: last.close,
-              volume: Math.floor(Math.random() * 2500) + 800
+              volume: Math.floor(Math.random() * 2200) + 700
             };
             item.history.push(newCandle);
-            if (item.history.length > 42) {
-              item.history.shift(); // Keep clean scrolling window of 42 candles
+            if (item.history.length > 46) {
+              item.history.shift(); // Keep clean scrolling window of 46 candles
             }
-            item.ticksInCurrentCandle = 0;
           }
 
           // Multi-Stock Intelligent Breakout Scanner:
