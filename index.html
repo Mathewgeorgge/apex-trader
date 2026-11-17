@@ -138,7 +138,7 @@
     <div class="border-r border-gray-800/80 pr-2">
       <span class="text-[10px] text-gray-400">Paper Capital</span>
       <div class="flex items-center gap-1">
-        <span id="curr-symbol-1" class="text-gray-400 font-bold">$</span>
+        <span id="curr-symbol-1" class="text-gray-400 font-bold">₹</span>
         <input id="acc-capital" type="number" value="7000" onchange="updateCapital()" class="w-20 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-xs font-bold text-white focus:outline-none focus:border-cyan-500" />
       </div>
     </div>
@@ -148,29 +148,34 @@
     </div>
     <div class="border-r border-gray-800/80 pr-2">
       <span class="text-[10px] text-gray-400">Margin Used</span>
-      <p id="acc-margin-used" class="font-mono font-bold text-gray-200 text-sm">$ 0.00</p>
+      <p id="acc-margin-used" class="font-mono font-bold text-gray-200 text-sm">₹ 0.00</p>
     </div>
     <div class="border-r border-gray-800/80 pr-2">
       <span class="text-[10px] text-gray-400">Gross PnL</span>
-      <p id="acc-gross-pnl" class="font-mono font-bold text-gray-300 text-sm">$ 0.00</p>
+      <p id="acc-gross-pnl" class="font-mono font-bold text-gray-300 text-sm">₹ 0.00</p>
     </div>
     <div class="border-r border-gray-800/80 pr-2 cursor-pointer group" onclick="openBrokerageModal()" title="Click to view tax breakdown">
       <div class="flex items-center justify-between">
         <span class="text-[10px] text-gray-400">Brokerage & Taxes ℹ️</span>
       </div>
-      <p id="acc-total-taxes" class="font-mono font-bold text-rose-400 text-sm group-hover:underline">- $ 0.00</p>
+      <p id="acc-total-taxes" class="font-mono font-bold text-rose-400 text-sm group-hover:underline">- ₹ 0.00</p>
     </div>
     <div class="border-r border-gray-800/80 pr-2">
       <span class="text-[10px] text-gray-400 font-bold text-emerald-400">Net Realized PnL (In-Pocket)</span>
-      <p id="acc-netpnl" class="font-mono font-extrabold text-emerald-400 text-sm">$ 0.00</p>
+      <p id="acc-netpnl" class="font-mono font-extrabold text-emerald-400 text-sm">₹ 0.00</p>
     </div>
-    <div>
-      <span class="text-[10px] text-gray-400">Circuit Breaker (Max Loss)</span>
-      <div class="flex items-center gap-1">
-        <span id="curr-symbol-maxloss" class="text-rose-400 font-bold">$</span>
-        <input id="input-maxloss" type="number" value="200" onchange="updateMaxLoss()" class="w-16 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-xs font-bold text-rose-400 focus:outline-none focus:border-rose-500" title="Adjust daily max loss circuit breaker threshold" />
-        <span id="maxloss-pct-tag" class="text-[9px] text-gray-400 font-mono">(2.8%)</span>
+    <div class="flex justify-between items-center">
+      <div>
+        <span class="text-[10px] text-gray-400">Circuit Breaker</span>
+        <div class="flex items-center gap-1">
+          <span id="curr-symbol-maxloss" class="text-rose-400 font-bold">₹</span>
+          <input id="input-maxloss" type="number" value="200" onchange="updateMaxLoss()" class="w-14 bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-xs font-bold text-rose-400 focus:outline-none focus:border-rose-500" title="Adjust daily max loss circuit breaker threshold" />
+          <span id="maxloss-pct-tag" class="text-[9px] text-gray-400 font-mono">(2.8%)</span>
+        </div>
       </div>
+      <button onclick="resetSessionDay()" class="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white px-2 py-1 rounded text-[10px] border border-gray-700 transition" title="Reset account back to clean ₹7,000 for a fresh day">
+        🔄 Reset
+      </button>
     </div>
   </div>
 
@@ -2171,7 +2176,7 @@ function calculateStockMetrics(sym) {
           const card = document.createElement("div");
           card.className = "bg-[#070b14] border border-cyan-800/60 p-2.5 rounded-lg flex items-center justify-between cursor-pointer hover:border-cyan-400 transition shadow hover:scale-[1.01]";
           card.onclick = () => { 
-            switchMarket('india');
+            if (!loadSessionState()) { switchMarket('india'); }
             changeChartSymbol(m.sym); 
             document.getElementById("sel-chart-symbol").value = m.sym; 
           };
@@ -2228,7 +2233,7 @@ function calculateStockMetrics(sym) {
         tile.style = bgStyle;
         tile.className = "border p-2.5 rounded-lg flex flex-col justify-between cursor-pointer transition-all duration-300 shadow hover:scale-[1.03]";
         tile.onclick = () => {
-          switchMarket('india');
+          if (!loadSessionState()) { switchMarket('india'); }
           changeChartSymbol(m.sym);
           document.getElementById("sel-chart-symbol").value = m.sym;
         };
@@ -2466,6 +2471,117 @@ function calculateStockMetrics(sym) {
       renderChart();
     }
 
+    
+    // =========================================================================
+    // Real-Time Session State Persistence Engine (LocalStorage)
+    // Ensures page refresh never interrupts trading or wipes positions/PnL!
+    // =========================================================================
+    function saveSessionState() {
+      try {
+        const state = {
+          isRunning,
+          capital,
+          cash,
+          marginUsed,
+          maxDailyLoss,
+          grossRealizedPnl,
+          netRealizedPnl,
+          totalTaxesPaid,
+          positions,
+          currentMarket,
+          currentSymbol,
+          savedAt: Date.now()
+        };
+        localStorage.setItem("apex_persistent_session", JSON.stringify(state));
+      } catch(e) {}
+    }
+
+    function loadSessionState() {
+      try {
+        const raw = localStorage.getItem("apex_persistent_session");
+        if (!raw) return false;
+        const state = JSON.parse(raw);
+        if (!state) return false;
+
+        // Session valid for 48 hours
+        if (Date.now() - (state.savedAt || 0) > 48 * 3600 * 1000) return false;
+
+        capital = (state.capital !== undefined) ? state.capital : 7000;
+        cash = (state.cash !== undefined) ? state.cash : 7000;
+        marginUsed = state.marginUsed || 0;
+        maxDailyLoss = state.maxDailyLoss || 200;
+        grossRealizedPnl = state.grossRealizedPnl || 0;
+        netRealizedPnl = state.netRealizedPnl || 0;
+        totalTaxesPaid = state.totalTaxesPaid || 0;
+        positions = Array.isArray(state.positions) ? state.positions : [];
+        if (state.currentMarket) currentMarket = state.currentMarket;
+        if (state.currentSymbol) currentSymbol = state.currentSymbol;
+
+        document.getElementById('acc-capital').value = capital;
+        document.getElementById('input-maxloss').value = maxDailyLoss;
+
+        renderAccountRibbon();
+        renderPositions();
+
+        // If the bot was running when refreshed, KEEP IT RUNNING AUTOMATICALLY!
+        if (state.isRunning) {
+          isRunning = true;
+          const btn = document.getElementById("btn-toggle-engine");
+          const pill = document.getElementById("status-pill");
+          const statusTag = document.getElementById("bot-status-tag");
+          if (btn) {
+            btn.innerHTML = "<span>⏹</span> STOP ALGO BOT";
+            btn.className = "w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-red";
+          }
+          if (pill) {
+            pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> BOT ACTIVE`;
+            pill.className = "px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/60 flex items-center gap-1.5";
+          }
+          if (statusTag) {
+            statusTag.innerText = "ACTIVE";
+            statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-bold border border-emerald-800";
+          }
+          logTerminal(`🔄 <strong class="text-emerald-400 font-bold">[SESSION RESTORED]</strong> Refreshed seamlessly! Bot resumed trading with ${positions.length} active position(s) and Net PnL of ₹${netRealizedPnl.toFixed(2)} intact.`);
+        }
+        return true;
+      } catch(e) {
+        return false;
+      }
+    }
+
+    function resetSessionDay() {
+      if (confirm("Reset current session back to fresh ₹7,000 capital for a new trading day?")) {
+        try { localStorage.removeItem("apex_persistent_session"); } catch(e) {}
+        isRunning = false;
+        capital = 7000;
+        cash = 7000;
+        marginUsed = 0;
+        grossRealizedPnl = 0;
+        netRealizedPnl = 0;
+        totalTaxesPaid = 0;
+        positions = [];
+        const btn = document.getElementById("btn-toggle-engine");
+        const pill = document.getElementById("status-pill");
+        const statusTag = document.getElementById("bot-status-tag");
+        if (btn) {
+          btn.innerHTML = "<span>▶</span> START ALGO BOT";
+          btn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-green";
+        }
+        if (pill) {
+          pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-gray-500"></span> BOT IDLE`;
+          pill.className = "px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-gray-800 text-gray-400 border border-gray-700 flex items-center gap-1.5";
+        }
+        if (statusTag) {
+          statusTag.innerText = "OFFLINE";
+          statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-gray-800 text-gray-400 font-bold";
+        }
+        renderAccountRibbon();
+        renderPositions();
+        logTerminal(`🧹 <strong class="text-cyan-400 font-bold">[NEW DAY RESET]</strong> Account wiped clean to ₹7,000 starting cash. Ready for fresh trading!`);
+      }
+    }
+
+
     function toggleEngine() {
       isRunning = !isRunning;
       const btn = document.getElementById("btn-toggle-engine");
@@ -2480,7 +2596,8 @@ function calculateStockMetrics(sym) {
         statusTag.innerText = "ACTIVE";
         statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-bold border border-emerald-800";
         playBeep("buy");
-        logTerminal(`<strong>[BOT STARTED]</strong> Strategy: <em>${document.getElementById("sel-algo-strategy").value}</em> on market <strong>${currentMarket.toUpperCase()}</strong>. 6 Risk Gates Active.`);
+        saveSessionState();
+      logTerminal(`<strong>[BOT STARTED]</strong> Strategy: <em>${document.getElementById("sel-algo-strategy").value}</em> on market <strong>${currentMarket.toUpperCase()}</strong>. 6 Risk Gates Active.`);
       } else {
         btn.innerHTML = "<span>▶</span> START ALGO BOT";
         btn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-green";
@@ -2490,6 +2607,7 @@ function calculateStockMetrics(sym) {
         statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-gray-800 text-gray-400 font-bold";
         playBeep("sell");
         logTerminal("Algo Bot paused by user.");
+      saveSessionState();
       }
     }
 
@@ -2731,6 +2849,7 @@ function calculateStockMetrics(sym) {
       renderAccountRibbon();
       updateMarketSessionBadge();
       renderPositions();
+      saveSessionState();
     }
 
     function renderOrderDepth() {
@@ -3090,6 +3209,7 @@ function calculateStockMetrics(sym) {
       renderAccountRibbon();
       updateMarketSessionBadge();
       if (activeSubTab === 'positions') renderPositions();
+      if (Math.random() < 0.25) saveSessionState();
       if (activeSubTab === 'breadth') renderMarketHeatmap();
       if (activeSubTab === 'optionchain') renderOptionChain();
     }, 1100);
@@ -3144,7 +3264,7 @@ function calculateStockMetrics(sym) {
 
     // Initialize with Crypto Market on load
     updateAudioUI();
-    switchMarket('india');
+    if (!loadSessionState()) { switchMarket('india'); }
     renderNewsFeed();
     runFeeSim();
   </script>
