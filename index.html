@@ -2758,7 +2758,7 @@ function calculateStockMetrics(sym) {
         }
 
         if (cost > cash) {
-          if (isManual) logTerminal(`<span class="text-rose-400">[RISK GATE 1 REJECT] Required capital ${curr}${cost.toFixed(2)} exceeds available cash!</span>`);
+          logTerminal(`<span class="text-amber-400 font-mono">[CAPITAL GATE] ${sym} requires ${curr}${cost.toFixed(2)} margin, which exceeds available cash ${curr}${cash.toFixed(2)}. Skipping.</span>`);
           playBeep("alert");
           return;
         }
@@ -3388,98 +3388,57 @@ function calculateStockMetrics(sym) {
             item.candleTargetDir = (item.regime === 'BULLISH_TREND') ? 1 : (item.regime === 'BEARISH_TREND' ? -1 : (Math.random() < 0.5 ? 1 : -1));
           }
 
-          // Regime-Specific Microstructure Calculations:
-          let tickDrift = 0.50;
-          let volatilityScale = 0.0009;
+          item.tickPhase = (item.tickPhase || 0) + 1;
+          const targetTicks = (timeframeMinutes === 1) ? 14 : (timeframeMinutes === 3) ? 22 : (timeframeMinutes === 5) ? 32 : 48;
+          item.ticksInCandle = (item.ticksInCandle || 0) + 1;
 
-          if (item.regime === 'CHOPPY_RANGE') {
-            const distPct = (item.ltp - item.anchorPrice) / item.anchorPrice;
-            const halfBox = item.rangeWidth || 0.0038;
+          // Harmonic wave creates natural intraday peaks, valleys, and breathers
+          const wave = Math.sin(item.tickPhase / 5.2) * 0.0008 + Math.cos(item.tickPhase / 11.4) * 0.0005;
+          
+          // Mean-reversion tether: pulls price gently if it strays from intraday anchor (never shoots like a train)
+          const anchorDist = (item.ltp - item.anchorPrice) / item.anchorPrice;
+          const tether = -anchorDist * 0.0004;
 
-            // Check if price is near upper boundary (resistance) -> test for Stop Hunt
-            if (distPct >= halfBox * 0.85 && Math.random() < 0.32 && !item.isStopHuntActive) {
-              // Trigger Upper Wick Liquidity Sweep: surge up to hunt stops, then reject
-              item.isStopHuntActive = true;
-              tickDrift = 0.35; // Spike up to create top wick
-              volatilityScale = 0.0016;
-            } else if (item.isStopHuntActive) {
-              // Post-sweep rejection: sell off back into box
-              item.isStopHuntActive = false;
-              tickDrift = 0.68; // Sharp down drift leaving long wick
-              volatilityScale = 0.0014;
-            } else if (distPct <= -halfBox * 0.85 && Math.random() < 0.32) {
-              // Bear Trap / Hammer Bounce at lower support
-              tickDrift = 0.32; // aggressive rebound
-              volatilityScale = 0.0015;
-            } else {
-              // Inside Choppy Box: mean-revert to VWAP (anchorPrice) with alternating 50/50 green/red
-              const meanPull = distPct * 12.0; // pulls gently toward VWAP
-              tickDrift = 0.50 + Math.max(-0.12, Math.min(0.12, meanPull)) + (item.candleTargetDir === 1 ? -0.04 : 0.04);
-              volatilityScale = 0.0007; // Compressed choppy candles (low VIX)
-            }
-          } else if (item.regime === 'BULLISH_TREND') {
-            // Directional Trend above 20 EMA: 68% green, 32% pullback
-            const trendDir = (item.candleTargetDir === 1) ? -0.06 : 0.04;
-            tickDrift = 0.50 + trendDir;
-            volatilityScale = 0.0012;
+          // Micro liquidity order book noise
+          const microNoise = (Math.random() - 0.495) * (item.ltp * 0.0006);
+          
+          // Realistic Japanese candlestick anatomy:
+          // 1. Initial 28% ticks: probe opposite direction (forges lower or upper wick)
+          // 2. Middle 55% ticks: directional momentum body expansion
+          // 3. Final 17% ticks: mild consolidation / wick recoil before candle close
+          const progress = item.ticksInCandle / targetTicks;
+          let wickDrift = 0;
+          if (progress < 0.28) {
+            wickDrift = (item.candleTargetDir === 1 ? -1 : 1) * (item.ltp * 0.00025);
+          } else if (progress > 0.83) {
+            wickDrift = (item.candleTargetDir === 1 ? -1 : 1) * (item.ltp * 0.00018);
           } else {
-            // Bearish Trend: 68% red, 32% bounce
-            const trendDir = (item.candleTargetDir === -1) ? 0.06 : -0.04;
-            tickDrift = 0.50 + trendDir;
-            volatilityScale = 0.0012;
+            wickDrift = (item.candleTargetDir === 1 ? 1 : -1) * (item.ltp * 0.00035);
           }
 
-          // Micro tick fluctuation
-          const tickNoise = (Math.random() - tickDrift) * (item.ltp * volatilityScale);
-          const newP = Math.max(1.0, Math.round((item.ltp + tickNoise) * 100) / 100);
+          const priceDelta = (item.ltp * (wave + tether)) + microNoise + wickDrift;
+          const newP = Math.max(1.0, Math.round((item.ltp + priceDelta) * 100) / 100);
           item.ltp = newP;
 
           // 2. Active Candlestick Formation & Lifecycle
           let last = item.history[item.history.length - 1];
-          item.ticksInCandle = (item.ticksInCandle || 0) + 1;
-
           last.close = newP;
           if (newP > last.high) last.high = newP;
           if (newP < last.low) last.low = newP;
-          last.volume = (last.volume || 1000) + Math.floor(Math.random() * (volatilityScale > 0.001 ? 240 : 120) + 25);
-
-          // Fast, Visible Multi-Candle Formation:
-          // 1m: 4 ticks (~4.4 sec) -> user actively watches new candles form, close, and sprout!
-          // 3m: 7 ticks (~7.7 sec)
-          // 5m: 10 ticks (~11 sec)
-          // 15m: 16 ticks (~17 sec)
-          const targetTicks = (timeframeMinutes === 1) ? 4 : (timeframeMinutes === 3) ? 7 : (timeframeMinutes === 5) ? 10 : 16;
+          last.volume = (last.volume || 1000) + Math.floor(Math.random() * 80 + 15);
 
           if (item.ticksInCandle >= targetTicks) {
             item.ticksInCandle = 0;
             item.isStopHuntActive = false;
 
-            // Regime countdown
-            item.regimeCandlesLeft--;
-            if (item.regimeCandlesLeft <= 0) {
-              // Re-roll regime adhering to Indian 68% chop / 32% trend statistics
-              const r = Math.random();
-              if (r < 0.68) {
-                item.regime = 'CHOPPY_RANGE';
-                item.rangeWidth = 0.0035 + Math.random() * 0.0025;
-                item.regimeCandlesLeft = Math.floor(Math.random() * 8) + 6;
-              } else if (r < 0.84) {
-                item.regime = 'BULLISH_TREND';
-                item.regimeCandlesLeft = Math.floor(Math.random() * 6) + 4;
-              } else {
-                item.regime = 'BEARISH_TREND';
-                item.regimeCandlesLeft = Math.floor(Math.random() * 6) + 4;
-              }
-            }
-
-            // Set next candle target direction
-            if (item.regime === 'CHOPPY_RANGE') {
-              // Alternates green and red inside box
-              item.candleTargetDir = (last.close >= last.open) ? (Math.random() < 0.65 ? -1 : 1) : (Math.random() < 0.65 ? 1 : -1);
-            } else if (item.regime === 'BULLISH_TREND') {
-              item.candleTargetDir = (Math.random() < 0.70) ? 1 : -1;
+            // Rotate candle target direction harmonically (peaks, valleys, pullbacks)
+            const waveCycle = Math.sin(item.tickPhase / 6.5);
+            if (waveCycle > 0.25) {
+              item.candleTargetDir = (Math.random() < 0.70) ? 1 : -1; // Bullish phase with 30% pullbacks
+            } else if (waveCycle < -0.25) {
+              item.candleTargetDir = (Math.random() < 0.70) ? -1 : 1; // Bearish phase with 30% bounces
             } else {
-              item.candleTargetDir = (Math.random() < 0.70) ? -1 : 1;
+              item.candleTargetDir = (Math.random() < 0.50) ? 1 : -1; // Equilibrium consolidation box
             }
 
             // Spawn brand-new candle at previous close
@@ -3508,24 +3467,28 @@ function calculateStockMetrics(sym) {
       if (document.getElementById("ticker-tatamotors")) document.getElementById("ticker-tatamotors").innerText = "₹" + marketCatalog["india"].symbols["TATAMOTORS"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
 
       // Multi-Stock Intelligent Breakout Scanner:
-      // Evaluates ONCE per cycle (outside market loops), respecting active user cooldowns
+      // Evaluates ONCE per cycle (outside market loops), respecting active user cooldowns & cash margin
       if (isRunning && positions.length < MAX_OPEN_POSITIONS && Date.now() >= autoEntryCooldownUntil) {
         const now = Date.now();
         const candidateSymbols = Object.keys(marketCatalog[currentMarket].symbols).filter(s => {
+          const symObj = marketCatalog[currentMarket].symbols[s];
+          if (!symObj) return false;
+          const cost = (symObj.lot || 1) * symObj.ltp;
+          const canAfford = cost <= cash;
           const isPositionOpen = positions.some(p => p.symbol === s);
           const isCoolingDown = (recentlyExitedSymbols[s] && recentlyExitedSymbols[s] > now);
           const isInBasket = (activeBasket.size === 0 || activeBasket.has(s));
-          return !isPositionOpen && !isCoolingDown && isInBasket;
+          return !isPositionOpen && !isCoolingDown && isInBasket && canAfford;
         });
 
-        // Paced breakout scan: ~8% chance per second (~once every 12s) to avoid frantic re-entries
-        if (candidateSymbols.length > 0 && Math.random() < 0.08) {
+        // Paced breakout scan: ~12% chance per tick (~once every 8-10s)
+        if (candidateSymbols.length > 0 && Math.random() < 0.12) {
           const scoredCandidates = candidateSymbols.map(s => calculateStockMetrics(s)).filter(Boolean);
           scoredCandidates.sort((a, b) => b.score - a.score);
 
           const topPick = scoredCandidates[0];
-          if (topPick && topPick.score >= 60) {
-            logTerminal(`🚀 <strong class="text-cyan-400">[AI SECTOR SCANNER]</strong> High-conviction breakout detected on <strong>${topPick.sym}</strong> (${topPick.sector}) with Score <strong>${topPick.score}/100</strong>! Routing trade...`);
+          if (topPick && topPick.score >= 55) {
+            logTerminal(`🚀 <strong class="text-cyan-400">[AI SECTOR SCANNER]</strong> High-conviction breakout on <strong>${topPick.sym}</strong> (${topPick.sector}) [Score <strong>${topPick.score}/100</strong>]. Routing trade...`);
             triggerImmediateTrade(topPick.sym, false);
           }
         }
