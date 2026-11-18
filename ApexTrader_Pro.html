@@ -219,6 +219,13 @@
               <button onclick="setTimeframe(5)" id="tf-5" class="px-2 py-0.5 rounded text-gray-400 hover:text-white">5m</button>
               <button onclick="setTimeframe(15)" id="tf-15" class="px-2 py-0.5 rounded text-gray-400 hover:text-white">15m</button>
             </div>
+
+            <!-- 3-Way Data Feed Switcher: AUTO / SIM / LIVE ZERODHA -->
+            <div class="flex space-x-0.5 bg-[#070b14] border border-gray-800 rounded p-0.5 text-[10px] shrink-0" title="Switch data source anytime">
+              <button onclick="setDataFeedMode('AUTO')" id="feed-btn-AUTO" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 font-bold transition">⚡ Auto</button>
+              <button onclick="setDataFeedMode('SIM')" id="feed-btn-SIM" class="px-2 py-0.5 rounded text-gray-400 hover:text-white transition">🧪 Sim</button>
+              <button onclick="setDataFeedMode('LIVE')" id="feed-btn-LIVE" class="px-2 py-0.5 rounded text-gray-400 hover:text-white transition">🟢 Zerodha</button>
+            </div>
           </div>
 
           <!-- Indicator Checkboxes -->
@@ -1332,12 +1339,16 @@
     };
     let isLiveZerodhaFeedActive = false;
     let liveFeedLastSuccessAt = 0;
+    let dataFeedMode = "AUTO"; // "AUTO" | "SIM" | "LIVE"
+    let zerodhaAfterHoursAnchored = false;
     const liveHistoricalLoadedTokens = new Set();
 
     // Load persisted Zerodha and mode preferences
     try {
       const savedMode = localStorage.getItem("apex_trading_mode");
       if (savedMode) tradingMode = savedMode;
+      const savedFeed = localStorage.getItem("apex_data_feed_mode");
+      if (savedFeed && ["AUTO", "SIM", "LIVE"].includes(savedFeed)) dataFeedMode = savedFeed;
       const savedConfig = localStorage.getItem("apex_zerodha_config");
       if (savedConfig) {
         const parsed = JSON.parse(savedConfig);
@@ -1353,6 +1364,56 @@
       if (day === 0 || day === 6) return false;
       const mins = ist.getHours() * 60 + ist.getMinutes();
       return mins >= (9 * 60 + 15) && mins <= (15 * 60 + 30);
+    }
+
+    function shouldUseRealLiveTicks() {
+      if (dataFeedMode === "SIM") return false;
+      if (!isLiveZerodhaFeedActive || (Date.now() - liveFeedLastSuccessAt > 20000)) return false;
+      if (dataFeedMode === "LIVE") return true;
+      // AUTO mode: 100% real live Zerodha ticks during NSE hours (9:15-3:30 IST); GARCH simulator after-hours!
+      return isNSEMarketHoursIST();
+    }
+
+    function updateFeedModeUI() {
+      const modes = [
+        { id: "AUTO", activeCls: "px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700/80 font-bold transition" },
+        { id: "SIM",  activeCls: "px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700/80 font-bold transition" },
+        { id: "LIVE", activeCls: "px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/80 font-bold transition" }
+      ];
+      modes.forEach(m => {
+        const el = document.getElementById("feed-btn-" + m.id);
+        if (!el) return;
+        el.className = (dataFeedMode === m.id) ? m.activeCls : "px-2 py-0.5 rounded text-gray-400 hover:text-white transition";
+      });
+    }
+
+    function setDataFeedMode(mode) {
+      if (!["AUTO", "SIM", "LIVE"].includes(mode)) return;
+      dataFeedMode = mode;
+      try { localStorage.setItem("apex_data_feed_mode", mode); } catch(e) {}
+      updateFeedModeUI();
+      updateKiteUI();
+
+      if (mode === "SIM") {
+        logTerminal(`🧪 <strong class="text-amber-400 font-bold">[FEED SWITCHED: SIMULATOR]</strong> GARCH(1,1) + Markov live simulator active 24/7.`);
+      } else if (mode === "LIVE") {
+        if (!zerodhaConfig.accessToken) {
+          logTerminal(`⚠️ <strong class="text-amber-400">[ZERODHA LOGIN NEEDED]</strong> Click "Kite Connect" -> "1-Click Login to Kite" to stream real Zerodha prices.`);
+          openZerodhaModal();
+        } else {
+          logTerminal(`🟢 <strong class="text-emerald-400 font-bold">[FEED SWITCHED: PURE ZERODHA]</strong> Pulling 100% real NSE share &amp; F&amp;O option quotes from Zerodha (Paper Mode Safe).`);
+          pollLiveZerodhaFeed(true);
+        }
+      } else {
+        const mktOpen = isNSEMarketHoursIST();
+        logTerminal(`⚡ <strong class="text-cyan-400 font-bold">[FEED SWITCHED: AUTO HYBRID]</strong> ${mktOpen ? "NSE is OPEN — streaming live Zerodha ticks!" : "NSE is closed — anchored to real Zerodha closing prices + running GARCH simulator live! Auto-switches to live Zerodha at 9:15 AM IST."}`);
+        if (zerodhaConfig.accessToken) {
+          zerodhaAfterHoursAnchored = false;
+          pollLiveZerodhaFeed(true);
+        }
+      }
+      renderChart();
+      renderOrderDepth();
     }
 
     function updateTradingModeUI() {
@@ -1391,8 +1452,9 @@
       const isConnected = Boolean(zerodhaConfig && (zerodhaConfig.connected || (zerodhaConfig.apiKey && zerodhaConfig.accessToken)));
       if (isConnected) {
         const uid = zerodhaConfig.userId || 'RXD245';
-        const feedTag = isLiveZerodhaFeedActive ? "LIVE NSE FEED" : "Kite Online";
-        if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> ${isLiveZerodhaFeedActive ? 'Streaming Real NSE Quotes' : 'Kite Authenticated'} (${uid})`;
+        const liveNow = shouldUseRealLiveTicks();
+        const feedTag = liveNow ? "LIVE NSE FEED" : (zerodhaAfterHoursAnchored ? "Kite + Sim" : "Kite Online");
+        if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> ${liveNow ? 'Streaming Live NSE Quotes' : (zerodhaAfterHoursAnchored ? 'Real Closing Anchor + Sim' : 'Kite Authenticated')} (${uid})`;
         if (label) label.innerText = `🟢 ${feedTag} (${uid})`;
         if (btn) {
           btn.className = "bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-300 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition";
@@ -1539,11 +1601,21 @@
       "RELIANCE_ATM_CE": "RELIANCE 2500 CE"
     };
 
-    async function pollLiveZerodhaFeed() {
+    async function pollLiveZerodhaFeed(forceSnapshot = false) {
       if (!zerodhaConfig || !zerodhaConfig.relayUrl || !zerodhaConfig.accessToken) {
         isLiveZerodhaFeedActive = false;
         return;
       }
+      // In pure SIM mode, never overwrite simulated prices
+      if (dataFeedMode === "SIM" && !forceSnapshot) return;
+
+      const marketOpen = isNSEMarketHoursIST();
+      // In AUTO mode when NSE is CLOSED: anchor ONCE to real Zerodha closing prices + historical candles,
+      // then let the GARCH live simulator tick smoothly on top without freezing!
+      if (dataFeedMode === "AUTO" && !marketOpen && zerodhaAfterHoursAnchored && !forceSnapshot) {
+        return;
+      }
+
       try {
         const resp = await fetch(`${zerodhaConfig.relayUrl}/api/quotes`, {
           headers: { "X-Kite-Token": zerodhaConfig.accessToken }
@@ -1562,7 +1634,13 @@
         if (data.equities) {
           Object.entries(data.equities).forEach(([sym, q]) => {
             const item = marketCatalog["india"].symbols[sym];
-            if (item) applyLiveQuoteToItem(item, q);
+            if (item) {
+              applyLiveQuoteToItem(item, q);
+              if (!marketOpen) {
+                item.anchorPrice = q.ltp;
+                item.boxCenter = q.ltp;
+              }
+            }
           });
         }
 
@@ -1574,6 +1652,10 @@
             if (item) {
               item.name = `${q.displayLabel} (Exp ${q.expiry})`;
               applyLiveQuoteToItem(item, q);
+              if (!marketOpen) {
+                item.anchorPrice = q.ltp;
+                item.boxCenter = q.ltp;
+              }
             }
           });
         }
@@ -1581,7 +1663,15 @@
         const wasActive = isLiveZerodhaFeedActive;
         isLiveZerodhaFeedActive = true;
         liveFeedLastSuccessAt = Date.now();
-        if (!wasActive) {
+
+        if (!marketOpen && dataFeedMode === "AUTO") {
+          const firstAnchor = !zerodhaAfterHoursAnchored;
+          zerodhaAfterHoursAnchored = true;
+          updateKiteUI();
+          if (firstAnchor) {
+            logTerminal(`🟡 <strong class="text-cyan-400 font-bold">[AUTO HYBRID ARMED]</strong> Loaded real Zerodha NSE closing prices &amp; historical candles! NSE is currently closed — GARCH Simulator is ticking live on top and will auto-switch to 100% live Zerodha ticks at 9:15 AM IST.`);
+          }
+        } else if (!wasActive) {
           updateKiteUI();
           logTerminal(`🟢 <strong class="text-emerald-400 font-bold">[LIVE ZERODHA DATA STREAMING]</strong> Pulling 100% real NSE share &amp; F&amp;O option prices into Paper Mode (Read-Only Safe)!`);
         }
@@ -1599,10 +1689,10 @@
       }
     }
 
-    // Poll real Zerodha quotes every 2.5 seconds whenever relay + access_token are active
+    // Poll real Zerodha quotes every 2.5 seconds when in LIVE mode or AUTO during market hours
     setInterval(() => {
       if (zerodhaConfig && zerodhaConfig.relayUrl && zerodhaConfig.accessToken) {
-        pollLiveZerodhaFeed();
+        pollLiveZerodhaFeed(false);
       }
     }, 2500);
 
@@ -3394,8 +3484,8 @@ function calculateStockMetrics(sym) {
       let bidsHtml = `<div class="flex justify-between text-gray-500 border-b border-gray-800 pb-0.5"><span>Qty</span><span>Bid</span></div>`;
       let asksHtml = `<div class="flex justify-between text-gray-500 border-b border-gray-800 pb-0.5"><span>Ask</span><span>Qty</span></div>`;
 
-      // Use 100% REAL Zerodha NSE Level 2 Depth whenever live feed is active
-      if (isLiveZerodhaFeedActive && symObj.liveDepth && symObj.liveDepth.buy && symObj.liveDepth.sell) {
+      // Use 100% REAL Zerodha NSE Level 2 Depth whenever pure live feed is active
+      if (shouldUseRealLiveTicks() && symObj.liveDepth && symObj.liveDepth.buy && symObj.liveDepth.sell) {
         for (let i = 0; i < 4; i++) {
           const b = symObj.liveDepth.buy[i] || { quantity: 0, price: 0 };
           const a = symObj.liveDepth.sell[i] || { quantity: 0, price: 0 };
@@ -3678,28 +3768,29 @@ function calculateStockMetrics(sym) {
       const symData = (marketCatalog[currentMarket] && marketCatalog[currentMarket].symbols) ? marketCatalog[currentMarket].symbols[currentSymbol] : null;
       let regimeTag = "CONSOLIDATION / RANGE";
       let regimeColor = "#38bdf8";
-      if (isLiveZerodhaFeedActive && (Date.now() - liveFeedLastSuccessAt < 15000)) {
+      if (shouldUseRealLiveTicks()) {
         const realSym = (symData && symData.realTradingSymbol) ? ` • ${symData.realTradingSymbol}` : "";
         regimeTag = `🟢 LIVE ZERODHA NSE FEED (${tradingMode})${realSym}`;
         regimeColor = "#10b981";
       } else if (symData && symData.regime) {
+        const simPrefix = (dataFeedMode === "AUTO" && zerodhaAfterHoursAnchored) ? "KITE ANCHOR + SIM • " : (dataFeedMode === "SIM" ? "SIM • " : "");
         if (symData.isStopHuntActive) {
-          regimeTag = "LIQUIDITY SWEEP / WICK";
+          regimeTag = `${simPrefix}LIQUIDITY SWEEP / WICK`;
           regimeColor = "#f59e0b";
         } else if (symData.regime === 'BREAKOUT_UP') {
-          regimeTag = "IMPULSE BREAKOUT";
+          regimeTag = `${simPrefix}IMPULSE BREAKOUT`;
           regimeColor = "#10b981";
         } else if (symData.regime === 'BREAKDOWN_DN') {
-          regimeTag = "DISTRIBUTION FLUSH";
+          regimeTag = `${simPrefix}DISTRIBUTION FLUSH`;
           regimeColor = "#f43f5e";
         } else if (symData.regime === 'UPTREND') {
-          regimeTag = "ACCUMULATION / UPTREND";
+          regimeTag = `${simPrefix}ACCUMULATION / UPTREND`;
           regimeColor = "#34d399";
         } else if (symData.regime === 'DOWNTREND') {
-          regimeTag = "BLEED / DOWNTREND";
+          regimeTag = `${simPrefix}BLEED / DOWNTREND`;
           regimeColor = "#fb7185";
         } else {
-          regimeTag = "CONSOLIDATION / RANGE";
+          regimeTag = `${simPrefix}CONSOLIDATION / RANGE`;
           regimeColor = "#38bdf8";
         }
       }
@@ -3809,9 +3900,9 @@ function calculateStockMetrics(sym) {
       if (rsiEl) rsiEl.innerText = lastRsi.toFixed(1);
     }
 
-    // High-Frequency Market Ticking Engine Loop (Uses REAL Zerodha Feed when live; falls back to GARCH Simulator when closed/offline)
+    // High-Frequency Market Ticking Engine Loop (Uses REAL Zerodha Feed when live; runs GARCH Simulator in SIM or AUTO after-hours!)
     setInterval(() => {
-      const usingRealLiveFeed = isLiveZerodhaFeedActive && (Date.now() - liveFeedLastSuccessAt < 15000);
+      const usingRealLiveFeed = shouldUseRealLiveTicks();
       if (!usingRealLiveFeed) {
         Object.keys(marketCatalog).forEach(mkt => {
           const symbols = marketCatalog[mkt].symbols;
@@ -3993,6 +4084,7 @@ function calculateStockMetrics(sym) {
     updateAudioUI();
     handleKiteRedirect();
     updateTradingModeUI();
+    updateFeedModeUI();
     updateKiteUI();
     if (!loadSessionState()) {
       populateMarketSymbols('india', 'NIFTY 50');
