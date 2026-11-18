@@ -2593,22 +2593,26 @@ function calculateStockMetrics(sym) {
       const open = symObj.open || symObj.history[0]?.open || ltp;
       const pctChange = ((ltp - open) / open) * 100;
 
-      // Indicator calculations
+      // Indicator calculations: use last COMPLETED candle for volume + 10-bar intraday momentum
       const candles = symObj.history;
-      let volRatio = 1.8;
-      if (candles.length > 5) {
-        const lastVol = candles[candles.length - 1].volume || 2500;
-        const avgVol = candles.slice(-10).reduce((acc, c) => acc + c.volume, 0) / 10;
-        volRatio = avgVol > 0 ? (lastVol / avgVol) : 1.8;
+      let volRatio = 1.4;
+      let recentPct = pctChange;
+      if (candles.length > 10) {
+        const lastCompletedVol = candles[candles.length - 2].volume || 1500;
+        const avgVol = candles.slice(-12, -2).reduce((acc, c) => acc + (c.volume || 0), 0) / 10;
+        volRatio = avgVol > 0 ? (lastCompletedVol / avgVol) : 1.4;
+        const ref10 = candles[candles.length - 10].close || open;
+        recentPct = ref10 > 0 ? ((ltp - ref10) / ref10) * 100 : pctChange;
       }
 
-      // Compute Quantitative Conviction Score (0 - 100)
-      let score = 50;
-      score += pctChange * 10; // +10 points per 1% price rise
-      if (volRatio >= 1.5) score += 15;
-      if (volRatio >= 2.0) score += 10;
-      if (pctChange > 0.5) score += 10;
-      if (pctChange < -0.5) score -= 20;
+      // Compute Quantitative Conviction Score (0 - 100) using both intraday trend & fresh 10-bar breakout
+      let score = 52;
+      const effMomentum = Math.max(pctChange, recentPct * 1.4);
+      score += effMomentum * 10;
+      if (volRatio >= 1.25) score += 12;
+      if (volRatio >= 1.8) score += 10;
+      if (recentPct > 0.25) score += 10;
+      if (recentPct < -1.0 && pctChange < -1.0) score -= 18;
 
       score = Math.max(15, Math.min(98, Math.round(score)));
 
@@ -3188,6 +3192,26 @@ function calculateStockMetrics(sym) {
     }
 
 
+    function computeAffordableOrderQty(symObj, availableCash) {
+      if (!symObj || !symObj.ltp || symObj.ltp <= 0) return { qty: 0, cost: 0, scaled: false };
+      const stdLot = symObj.lot || 1;
+      const stdCost = Math.round(stdLot * symObj.ltp * 100) / 100;
+      if (stdCost <= availableCash) {
+        return { qty: stdLot, cost: stdCost, scaled: false };
+      }
+      // In PAPER MODE on ₹7,000 accounts: if real NSE F&O lot (e.g. 75 * ₹140 = ₹10,500) exceeds available cash,
+      // auto-scale to a Paper Mini-Lot (up to 48% of available cash) so options trades ALWAYS work on ₹7,000!
+      if (tradingMode === "PAPER" && availableCash >= Math.max(250, symObj.ltp)) {
+        const budget = availableCash * 0.48;
+        const scaledQty = Math.min(stdLot, Math.max(1, Math.floor(budget / symObj.ltp)));
+        const scaledCost = Math.round(scaledQty * symObj.ltp * 100) / 100;
+        if (scaledCost <= availableCash && scaledQty >= 1) {
+          return { qty: scaledQty, cost: scaledCost, scaled: true };
+        }
+      }
+      return { qty: 0, cost: stdCost, scaled: false };
+    }
+
     function toggleEngine() {
       isRunning = !isRunning;
       const btn = document.getElementById("btn-toggle-engine");
@@ -3195,6 +3219,18 @@ function calculateStockMetrics(sym) {
       const statusTag = document.getElementById("bot-status-tag");
 
       if (isRunning) {
+        // Clear any leftover cooldown when user explicitly hits START
+        autoEntryCooldownUntil = 0;
+        // If starting fresh with 0 positions while an old session breached the circuit breaker, auto-reset PnL shield
+        if (positions.length === 0 && (grossRealizedPnl - totalTaxesPaid) <= -Math.abs(maxDailyLoss)) {
+          grossRealizedPnl = 0;
+          totalTaxesPaid = 0;
+          netRealizedPnl = 0;
+          cash = capital;
+          renderAccountRibbon();
+          logTerminal(`🔄 <strong class="text-cyan-400">[FRESH SESSION ARMED]</strong> Cleared prior daily circuit breaker — starting clean with <strong>₹${capital.toLocaleString()}</strong> capital.`);
+        }
+
         btn.innerHTML = "<span>⏹</span> STOP ALGO BOT";
         btn.className = "w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-red";
         pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> BOT ACTIVE`;
@@ -3203,7 +3239,7 @@ function calculateStockMetrics(sym) {
         statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-bold border border-emerald-800";
         playBeep("buy");
         saveSessionState();
-      logTerminal(`<strong>[BOT STARTED]</strong> Strategy: <em>${document.getElementById("sel-algo-strategy").value}</em> on market <strong>${currentMarket.toUpperCase()}</strong>. 6 Risk Gates Active.`);
+        logTerminal(`<strong>[BOT STARTED]</strong> Strategy: <em>${document.getElementById("sel-algo-strategy").value}</em> on market <strong>${currentMarket.toUpperCase()}</strong>. 6 Risk Gates Active.`);
       } else {
         btn.innerHTML = "<span>▶</span> START ALGO BOT";
         btn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-green";
@@ -3213,7 +3249,7 @@ function calculateStockMetrics(sym) {
         statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-gray-800 text-gray-400 font-bold";
         playBeep("sell");
         logTerminal("Algo Bot paused by user.");
-      saveSessionState();
+        saveSessionState();
       }
     }
 
@@ -3222,10 +3258,7 @@ function calculateStockMetrics(sym) {
       const mktObj = marketCatalog[currentMarket].symbols[sym];
       if (!mktObj) return;
       const ltp = mktObj.ltp;
-      const lotSize = mktObj.lot;
       const curr = getCurrSymbol();
-
-      const cost = lotSize * ltp;
       const existing = positions.find(p => p.symbol === sym);
 
       if (existing) {
@@ -3259,11 +3292,14 @@ function calculateStockMetrics(sym) {
           return;
         }
 
-        if (cost > cash) {
-          logTerminal(`<span class="text-amber-400 font-mono">[CAPITAL GATE] ${sym} requires ${curr}${cost.toFixed(2)} margin, which exceeds available cash ${curr}${cash.toFixed(2)}. Skipping.</span>`);
+        const sizing = computeAffordableOrderQty(mktObj, cash);
+        if (sizing.qty <= 0 || sizing.cost > cash) {
+          logTerminal(`<span class="text-amber-400 font-mono">[CAPITAL GATE] ${sym} requires ${curr}${sizing.cost.toFixed(2)} margin, which exceeds available cash ${curr}${cash.toFixed(2)}. Skipping.</span>`);
           playBeep("alert");
           return;
         }
+        const lotSize = sizing.qty;
+        const cost = sizing.cost;
 
         // Calculate estimated roundtrip breakeven
         const estCharges = calculateTradeCharges(ltp, ltp * 1.01, lotSize, currentMarket);
@@ -3295,7 +3331,8 @@ function calculateStockMetrics(sym) {
         });
 
         playBeep("buy");
-        logTerminal(`[SMART BASKET FILL] <strong class="text-emerald-400 font-bold">BUY ${sym}</strong>: ${lotSize} units @ ${curr}${ltp.toLocaleString()} [Roundtrip Fee: ${curr}${estCharges.total.toFixed(2)} &bull; Breakeven at ${curr}${(ltp + breakevenPoints).toFixed(2)}]`);
+        const scaleNote = sizing.scaled ? ` <span class="text-cyan-400">[Paper Mini-Lot scaled for ₹${capital} capital]</span>` : "";
+        logTerminal(`[SMART BASKET FILL] <strong class="text-emerald-400 font-bold">BUY ${sym}</strong>: ${lotSize} units @ ${curr}${ltp.toLocaleString()}${scaleNote} [Margin: ${curr}${cost.toFixed(0)} &bull; Breakeven: ${curr}${(ltp + breakevenPoints).toFixed(2)}]`);
       }
       renderAccountRibbon();
       updateMarketSessionBadge();
@@ -3923,27 +3960,27 @@ function calculateStockMetrics(sym) {
       if (document.getElementById("ticker-tatamotors")) document.getElementById("ticker-tatamotors").innerText = "₹" + marketCatalog["india"].symbols["TATAMOTORS"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
 
       // Multi-Stock Intelligent Breakout Scanner:
-      // Evaluates ONCE per cycle (outside market loops), respecting active user cooldowns & cash margin
+      // Evaluates ONCE per cycle (outside market loops), respecting active user cooldowns & smart ₹7k lot sizing
       if (isRunning && positions.length < MAX_OPEN_POSITIONS && Date.now() >= autoEntryCooldownUntil) {
         const now = Date.now();
         const candidateSymbols = Object.keys(marketCatalog[currentMarket].symbols).filter(s => {
           const symObj = marketCatalog[currentMarket].symbols[s];
           if (!symObj) return false;
-          const cost = (symObj.lot || 1) * symObj.ltp;
-          const canAfford = cost <= cash;
+          const sizing = computeAffordableOrderQty(symObj, cash);
+          const canAfford = sizing.qty > 0 && sizing.cost <= cash;
           const isPositionOpen = positions.some(p => p.symbol === s);
           const isCoolingDown = (recentlyExitedSymbols[s] && recentlyExitedSymbols[s] > now);
           const isInBasket = (activeBasket.size === 0 || activeBasket.has(s));
           return !isPositionOpen && !isCoolingDown && isInBasket && canAfford;
         });
 
-        // Paced breakout scan: ~12% chance per tick (~once every 8-10s)
-        if (candidateSymbols.length > 0 && Math.random() < 0.12) {
+        // Paced breakout scan: ~15% chance per tick (~once every 6-8s)
+        if (candidateSymbols.length > 0 && Math.random() < 0.15) {
           const scoredCandidates = candidateSymbols.map(s => calculateStockMetrics(s)).filter(Boolean);
           scoredCandidates.sort((a, b) => b.score - a.score);
 
           const topPick = scoredCandidates[0];
-          if (topPick && topPick.score >= 55) {
+          if (topPick && topPick.score >= 52) {
             logTerminal(`🚀 <strong class="text-cyan-400">[AI SECTOR SCANNER]</strong> High-conviction breakout on <strong>${topPick.sym}</strong> (${topPick.sector}) [Score <strong>${topPick.score}/100</strong>]. Routing trade...`);
             triggerImmediateTrade(topPick.sym, false);
           }
