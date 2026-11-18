@@ -533,8 +533,8 @@
           <div class="flex items-center space-x-2 text-xs flex-wrap">
             <span class="text-gray-400 text-[11px] font-bold">Underlying:</span>
             <select id="fno-underlying-sel" onchange="changeFnoUnderlying(this.value)" class="bg-gray-900 border border-gray-700 text-white rounded px-2.5 py-1 text-xs font-bold font-mono">
-              <option value="NIFTY 50">NIFTY 50 (Lot: 25)</option>
-              <option value="BANK NIFTY">BANK NIFTY (Lot: 15)</option>
+              <option value="NIFTY 50">NIFTY 50 (Lot: 65)</option>
+              <option value="BANK NIFTY">BANK NIFTY (Lot: 30)</option>
             </select>
             <button onclick="triggerStraddleTrade()" class="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5">
               <span>🎯</span> 9:20 AM Short Straddle
@@ -1836,22 +1836,24 @@
           "TATASTEEL": { name: "Tata Steel Ltd", ltp: 148.60, open: 146.20, lot: 30, history: [], sector: "Metals" },
           "LT": { name: "Larsen & Toubro", ltp: 3580.00, open: 3540.00, lot: 1, history: [], sector: "Infra & Cap Goods" },
           "SUNPHARMA": { name: "Sun Pharma", ltp: 1810.00, open: 1795.00, lot: 2, history: [], sector: "Pharma" },
-          "NIFTY 50": { name: "Nifty 50 Index", ltp: 24158.40, open: 24010.00, lot: 25, history: [], sector: "Benchmark" },
-          "BANK NIFTY": { name: "Bank Nifty Index", ltp: 51420.15, open: 50850.00, lot: 15, history: [], sector: "Bank Index" }
+          "NIFTY 50": { name: "Nifty 50 Index", ltp: 24158.40, open: 24010.00, lot: 65, history: [], sector: "Benchmark" },
+          "BANK NIFTY": { name: "Bank Nifty Index", ltp: 51420.15, open: 50850.00, lot: 30, history: [], sector: "Bank Index" }
         }
       },
       "fno": {
         currency: "₹",
         symbols: {
-          "NIFTY 24200 CE": { name: "Nifty 24200 Call (ATM)", ltp: 142.50, open: 130.00, lot: 25, history: [], sector: "Nifty Index Option", delta: 0.52, theta: -14.2 },
-          "NIFTY 24200 PE": { name: "Nifty 24200 Put (ATM)", ltp: 128.00, open: 138.00, lot: 25, history: [], sector: "Nifty Index Option", delta: -0.48, theta: -13.8 },
-          "NIFTY 24300 CE": { name: "Nifty 24300 Call (OTM)", ltp: 88.50, open: 82.00, lot: 25, history: [], sector: "Nifty Index Option", delta: 0.35, theta: -11.5 },
-          "NIFTY 24100 PE": { name: "Nifty 24100 Put (OTM)", ltp: 76.20, open: 84.00, lot: 25, history: [], sector: "Nifty Index Option", delta: -0.32, theta: -10.9 },
-          "BANKNIFTY 51500 CE": { name: "Bank Nifty 51500 Call", ltp: 340.00, open: 310.00, lot: 15, history: [], sector: "BankNifty Option", delta: 0.50, theta: -28.0 },
-          "BANKNIFTY 51500 PE": { name: "Bank Nifty 51500 Put", ltp: 315.00, open: 335.00, lot: 15, history: [], sector: "BankNifty Option", delta: -0.50, theta: -26.5 },
-          "NIFTY FUT": { name: "Nifty Current Month Futures", ltp: 24215.00, open: 24080.00, lot: 25, history: [], sector: "Index Futures", delta: 1.0, theta: 0 },
-          "BANKNIFTY FUT": { name: "Bank Nifty Futures", ltp: 51540.00, open: 51020.00, lot: 15, history: [], sector: "Index Futures", delta: 1.0, theta: 0 },
-          "RELIANCE 2500 CE": { name: "Reliance 2500 Call", ltp: 38.40, open: 32.00, lot: 250, history: [], sector: "Stock Option", delta: 0.48, theta: -4.5 }
+          "NIFTY 24200 CE": { name: "Nifty 24200 Call (ATM • Lot 65)", ltp: 98.50, open: 92.00, lot: 65, history: [], sector: "Nifty Index Option", delta: 0.50, theta: -14.2 },
+          "NIFTY 24200 PE": { name: "Nifty 24200 Put (ATM • Lot 65)", ltp: 92.00, open: 98.00, lot: 65, history: [], sector: "Nifty Index Option", delta: -0.48, theta: -13.8 },
+          "NIFTY 24300 CE": { name: "Nifty 24300 Call (OTM • Lot 65)", ltp: 54.50, open: 50.00, lot: 65, history: [], sector: "Nifty Index Option", delta: 0.35, theta: -11.5 },
+          "NIFTY 24100 PE": { name: "Nifty 24100 Put (OTM • Lot 65)", ltp: 48.00, open: 53.00, lot: 65, history: [], sector: "Nifty Index Option", delta: -0.32, theta: -10.9 },
+          "NIFTY 24350 CE": { name: "Nifty 24350 Call (Weekly OTM • Lot 65)", ltp: 29.50, open: 27.00, lot: 65, history: [], sector: "Nifty Index Option", delta: 0.24, theta: -8.4 },
+          "BANKNIFTY 51500 CE": { name: "Bank Nifty 51500 Call (Lot 30)", ltp: 195.00, open: 182.00, lot: 30, history: [], sector: "BankNifty Option", delta: 0.48, theta: -26.0 },
+          "BANKNIFTY 51500 PE": { name: "Bank Nifty 51500 Put (Lot 30)", ltp: 178.00, open: 190.00, lot: 30, history: [], sector: "BankNifty Option", delta: -0.48, theta: -24.5 },
+          "BANKNIFTY 51700 CE": { name: "Bank Nifty 51700 Call (OTM • Lot 30)", ltp: 105.00, open: 98.00, lot: 30, history: [], sector: "BankNifty Option", delta: 0.34, theta: -18.5 },
+          "NIFTY FUT": { name: "Nifty Current Month Futures (Lot 65)", ltp: 24215.00, open: 24080.00, lot: 65, history: [], sector: "Index Futures", delta: 1.0, theta: 0 },
+          "BANKNIFTY FUT": { name: "Bank Nifty Futures (Lot 30)", ltp: 51540.00, open: 51020.00, lot: 30, history: [], sector: "Index Futures", delta: 1.0, theta: 0 },
+          "RELIANCE 2500 CE": { name: "Reliance 2500 Call (Lot 500)", ltp: 11.20, open: 10.40, lot: 500, history: [], sector: "Stock Option", delta: 0.38, theta: -3.2 }
         }
       }
     };
@@ -2257,7 +2259,8 @@
     }
 
     function getFnoLotSize() {
-      return currentFnoUnderlying === "BANK NIFTY" ? 15 : 25;
+      // Official 2026 NSE Circular NSE/FAOP/70616 Lot Sizes: NIFTY = 65, BANKNIFTY = 30
+      return currentFnoUnderlying === "BANK NIFTY" ? 30 : 65;
     }
 
     function changeFnoUnderlying(val) {
@@ -3128,9 +3131,14 @@ function calculateStockMetrics(sym) {
         const targetMkt = (state.currentMarket === 'fno') ? 'fno' : 'india';
         const targetSym = (state.currentSymbol && marketCatalog[targetMkt] && marketCatalog[targetMkt].symbols[state.currentSymbol]) ? state.currentSymbol : "NIFTY 50";
 
-        // Filter positions strictly to active market universe & derive margin dynamically
+        // Filter positions strictly to active market universe & official NSE F&O lot multiples
         const rawPositions = Array.isArray(state.positions) ? state.positions : [];
-        positions = rawPositions.filter(p => marketCatalog[targetMkt] && marketCatalog[targetMkt].symbols[p.symbol]);
+        positions = rawPositions.filter(p => {
+          const symObj = marketCatalog[targetMkt] && marketCatalog[targetMkt].symbols[p.symbol];
+          if (!symObj) return false;
+          if (targetMkt === 'fno' && symObj.lot && (p.qty % symObj.lot !== 0)) return false;
+          return true;
+        });
         marginUsed = positions.reduce((sum, p) => sum + (p.cost || (p.qty * p.avg) || 0), 0);
         cash = Math.max(0, capital - marginUsed + netRealizedPnl);
 
@@ -3210,17 +3218,25 @@ function calculateStockMetrics(sym) {
       if (!symObj || !symObj.ltp || symObj.ltp <= 0) return { qty: 0, cost: 0, scaled: false };
       const stdLot = symObj.lot || 1;
       const stdCost = Math.round(stdLot * symObj.ltp * 100) / 100;
+
+      // STRICT NSE F&O RULE: Options & Futures ALWAYS trade in EXACT official exchange lot sizes
+      // (NIFTY = 65, BANKNIFTY = 30, RELIANCE = 500) — NEVER fractional/fake quantities!
+      if (currentMarket === "fno") {
+        if (stdCost <= availableCash) {
+          return { qty: stdLot, cost: stdCost, scaled: false };
+        }
+        return { qty: 0, cost: stdCost, scaled: false };
+      }
+
+      // NSE Cash Equities trade in whole 1-share increments (1, 2, 3... shares)
       if (stdCost <= availableCash) {
         return { qty: stdLot, cost: stdCost, scaled: false };
       }
-      // In PAPER MODE on ₹7,000 accounts: if real NSE F&O lot (e.g. 75 * ₹140 = ₹10,500) exceeds available cash,
-      // auto-scale to a Paper Mini-Lot (up to 48% of available cash) so options trades ALWAYS work on ₹7,000!
-      if (tradingMode === "PAPER" && availableCash >= Math.max(250, symObj.ltp)) {
-        const budget = availableCash * 0.48;
-        const scaledQty = Math.min(stdLot, Math.max(1, Math.floor(budget / symObj.ltp)));
-        const scaledCost = Math.round(scaledQty * symObj.ltp * 100) / 100;
-        if (scaledCost <= availableCash && scaledQty >= 1) {
-          return { qty: scaledQty, cost: scaledCost, scaled: true };
+      if (availableCash >= symObj.ltp) {
+        const shareQty = Math.min(stdLot, Math.max(1, Math.floor((availableCash * 0.48) / symObj.ltp)));
+        const shareCost = Math.round(shareQty * symObj.ltp * 100) / 100;
+        if (shareCost <= availableCash && shareQty >= 1) {
+          return { qty: shareQty, cost: shareCost, scaled: false };
         }
       }
       return { qty: 0, cost: stdCost, scaled: false };
