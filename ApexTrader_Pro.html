@@ -1059,19 +1059,25 @@
       <!-- Credentials Form -->
       <div class="space-y-3 text-xs">
         <div>
+          <label class="block text-gray-400 text-[10px] font-bold uppercase mb-1">Cloudflare Live Data Relay URL (Read-Only, $0 Free Tier)</label>
+          <input type="text" id="kite-input-relay-url" placeholder="https://apextrader-kite-relay.<your-subdomain>.workers.dev" class="w-full bg-[#070b14] border border-cyan-800/80 text-cyan-300 rounded p-2 text-xs font-mono focus:border-cyan-400 outline-none" />
+          <p class="text-[10px] text-gray-500 mt-1">Pulls 100% real NSE share &amp; F&amp;O option prices + Level 2 depth into PAPER MODE without ever placing real Zerodha orders.</p>
+        </div>
+
+        <div>
           <label class="block text-gray-400 text-[10px] font-bold uppercase mb-1">Kite API Key (from developers.kite.trade)</label>
           <input type="text" id="kite-input-api-key" placeholder="e.g. 24xyz789abc..." class="w-full bg-[#070b14] border border-gray-700 text-white rounded p-2 text-xs font-mono focus:border-amber-500 outline-none" />
         </div>
 
         <div>
-          <label class="block text-gray-400 text-[10px] font-bold uppercase mb-1">Kite Access Token (Generated Daily)</label>
-          <input type="password" id="kite-input-access-token" placeholder="Paste today's access_token..." class="w-full bg-[#070b14] border border-gray-700 text-white rounded p-2 text-xs font-mono focus:border-amber-500 outline-none" />
+          <label class="block text-gray-400 text-[10px] font-bold uppercase mb-1">Kite Access Token (Auto-Exchanged on 1-Click Login)</label>
+          <input type="password" id="kite-input-access-token" placeholder="Auto-filled after 1-Click Kite Login..." class="w-full bg-[#070b14] border border-gray-700 text-white rounded p-2 text-xs font-mono focus:border-amber-500 outline-none" />
         </div>
 
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="block text-gray-400 text-[10px] font-bold uppercase mb-1">Zerodha Client ID</label>
-            <input type="text" id="kite-input-user-id" placeholder="e.g. ZW1234" class="w-full bg-[#070b14] border border-gray-700 text-white rounded p-2 text-xs font-mono focus:border-amber-500 outline-none" />
+            <input type="text" id="kite-input-user-id" placeholder="e.g. RXD245" class="w-full bg-[#070b14] border border-gray-700 text-white rounded p-2 text-xs font-mono focus:border-amber-500 outline-none" />
           </div>
           <div>
             <label class="block text-gray-400 text-[10px] font-bold uppercase mb-1">Live Feed Status</label>
@@ -1314,22 +1320,38 @@
     }
 
     
-    // Zerodha Kite Live Connect & Trading Mode State
-    let tradingMode = "PAPER"; // "PAPER" or "REAL"
+    // Zerodha Kite Live Connect & Trading Mode State (Read-Only Paper Safe Live Feed Supported)
+    let tradingMode = "PAPER"; // Always default PAPER so zero real rupees are ever at risk
     let zerodhaConfig = {
       apiKey: "d03b3y9f6btyeun5",
       accessToken: "",
       userId: "RXD245",
+      relayUrl: "",
       connected: false
     };
+    let isLiveZerodhaFeedActive = false;
+    let liveFeedLastSuccessAt = 0;
+    const liveHistoricalLoadedTokens = new Set();
 
     // Load persisted Zerodha and mode preferences
     try {
       const savedMode = localStorage.getItem("apex_trading_mode");
       if (savedMode) tradingMode = savedMode;
       const savedConfig = localStorage.getItem("apex_zerodha_config");
-      if (savedConfig) zerodhaConfig = JSON.parse(savedConfig);
+      if (savedConfig) {
+        const parsed = JSON.parse(savedConfig);
+        zerodhaConfig = Object.assign({}, zerodhaConfig, parsed);
+      }
     } catch(e) {}
+
+    function isNSEMarketHoursIST() {
+      const now = new Date();
+      const ist = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (5.5 * 3600000));
+      const day = ist.getDay();
+      if (day === 0 || day === 6) return false;
+      const mins = ist.getHours() * 60 + ist.getMinutes();
+      return mins >= (9 * 60 + 15) && mins <= (15 * 60 + 30);
+    }
 
     function updateTradingModeUI() {
       const btn = document.getElementById("btn-trading-mode");
@@ -1367,8 +1389,9 @@
       const isConnected = Boolean(zerodhaConfig && (zerodhaConfig.connected || (zerodhaConfig.apiKey && zerodhaConfig.accessToken)));
       if (isConnected) {
         const uid = zerodhaConfig.userId || 'RXD245';
-        if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> Kite Live Connected (${uid})`;
-        if (label) label.innerText = `🟢 Kite Online (${uid})`;
+        const feedTag = isLiveZerodhaFeedActive ? "LIVE NSE FEED" : "Kite Online";
+        if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> ${isLiveZerodhaFeedActive ? 'Streaming Real NSE Quotes' : 'Kite Authenticated'} (${uid})`;
+        if (label) label.innerText = `🟢 ${feedTag} (${uid})`;
         if (btn) {
           btn.className = "bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-300 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition";
         }
@@ -1389,10 +1412,10 @@
           return;
         }
         tradingMode = "REAL";
-        logTerminal(`🚨 <strong class="text-rose-400 font-bold">[SWITCHED TO REAL MODE]</strong> Algo is now routing real orders to Zerodha Kite. Max Daily Loss Shield: ₹200.`);
+        logTerminal(`🚨 <strong class="text-rose-400 font-bold">[SWITCHED TO REAL MODE]</strong> Real mode selected (Relay remains read-only safe until live order routing is enabled).`);
       } else {
         tradingMode = "PAPER";
-        logTerminal(`🛡️ <strong class="text-emerald-400 font-bold">[SWITCHED TO PAPER MODE]</strong> 100% Safe Simulation active. Zero real balance at risk.`);
+        logTerminal(`🛡️ <strong class="text-emerald-400 font-bold">[SWITCHED TO PAPER MODE]</strong> 100% Safe Paper Mode active with live real-price data support.`);
       }
       try { localStorage.setItem("apex_trading_mode", tradingMode); } catch(e) {}
       updateTradingModeUI();
@@ -1402,6 +1425,9 @@
       const modal = document.getElementById("zerodha-modal");
       if (!modal) return;
       const key = zerodhaConfig.apiKey || "d03b3y9f6btyeun5";
+      if (document.getElementById("kite-input-relay-url")) {
+        document.getElementById("kite-input-relay-url").value = zerodhaConfig.relayUrl || "";
+      }
       document.getElementById("kite-input-api-key").value = key;
       document.getElementById("kite-input-access-token").value = zerodhaConfig.accessToken || "";
       document.getElementById("kite-input-user-id").value = zerodhaConfig.userId || "RXD245";
@@ -1420,6 +1446,8 @@
     }
 
     function saveZerodhaConfig() {
+      const relayEl = document.getElementById("kite-input-relay-url");
+      zerodhaConfig.relayUrl = relayEl ? relayEl.value.trim().replace(/\/+$/, "") : (zerodhaConfig.relayUrl || "");
       zerodhaConfig.apiKey = document.getElementById("kite-input-api-key").value.trim() || "d03b3y9f6btyeun5";
       zerodhaConfig.accessToken = document.getElementById("kite-input-access-token").value.trim();
       zerodhaConfig.userId = document.getElementById("kite-input-user-id").value.trim() || "RXD245";
@@ -1430,11 +1458,151 @@
       } catch(e) {}
 
       updateKiteUI();
-      if (zerodhaConfig.connected) {
-        logTerminal(`🪁 <strong class="text-emerald-400 font-bold">[ZERODHA KITE CONNECTED]</strong> API session active for <strong>${zerodhaConfig.userId}</strong>. Live Kite gateway armed!`);
+      if (zerodhaConfig.connected && zerodhaConfig.relayUrl) {
+        logTerminal(`🪁 <strong class="text-emerald-400 font-bold">[ZERODHA LIVE RELAY ARMED]</strong> Connected to read-only relay for <strong>${zerodhaConfig.userId}</strong>. Pulling real NSE share &amp; F&amp;O option prices into Paper Mode!`);
+        pollLiveZerodhaFeed();
+      } else if (zerodhaConfig.connected) {
+        logTerminal(`🪁 <strong class="text-emerald-400 font-bold">[ZERODHA KITE CONNECTED]</strong> API session active for <strong>${zerodhaConfig.userId}</strong>.`);
       }
       closeZerodhaModal();
     }
+
+    async function fetchLiveHistoricalForSymbol(symObj) {
+      if (!zerodhaConfig.relayUrl || !zerodhaConfig.accessToken || !symObj || !symObj.instrumentToken) return;
+      if (liveHistoricalLoadedTokens.has(symObj.instrumentToken)) return;
+      liveHistoricalLoadedTokens.add(symObj.instrumentToken);
+      try {
+        const resp = await fetch(`${zerodhaConfig.relayUrl}/api/historical?token=${encodeURIComponent(symObj.instrumentToken)}&interval=minute`, {
+          headers: { "X-Kite-Token": zerodhaConfig.accessToken }
+        });
+        if (!resp.ok) return;
+        const json = await resp.json();
+        if (json.status === "success" && Array.isArray(json.candles) && json.candles.length > 5) {
+          symObj.history = json.candles;
+          symObj.barCounter = json.candles.length - 1;
+          symObj.ltp = json.candles[json.candles.length - 1].close;
+          symObj.open = json.candles[0].open;
+          renderChart();
+        }
+      } catch (_e) {}
+    }
+
+    function applyLiveQuoteToItem(item, quote) {
+      if (!item || !quote || !quote.ltp) return;
+      item.ltp = quote.ltp;
+      if (quote.open) item.open = quote.open;
+      if (quote.token) item.instrumentToken = quote.token;
+      if (quote.tradingsymbol) item.realTradingSymbol = quote.tradingsymbol;
+      if (quote.lot) item.lot = quote.lot;
+      if (quote.depth) item.liveDepth = quote.depth;
+
+      // Update active real-time 1m candle cleanly
+      if (item.history && item.history.length > 0) {
+        const now = Date.now();
+        const last = item.history[item.history.length - 1];
+        const currMinute = Math.floor(now / 60000);
+        const lastMinute = Math.floor((last.time || now) / 60000);
+        if (currMinute > lastMinute && isNSEMarketHoursIST()) {
+          item.barCounter = (item.barCounter || item.history.length) + 1;
+          item.history.push({
+            barIndex: item.barCounter,
+            time: now,
+            open: quote.ltp,
+            high: quote.ltp,
+            low: quote.ltp,
+            close: quote.ltp,
+            volume: Math.max(10, (quote.volume || 0) - (item._lastCumVol || quote.volume || 0))
+          });
+          if (item.history.length > 480) item.history.shift();
+        } else {
+          last.close = quote.ltp;
+          if (quote.ltp > last.high) last.high = quote.ltp;
+          if (quote.ltp < last.low) last.low = quote.ltp;
+          const volDelta = Math.max(0, (quote.volume || 0) - (item._lastCumVol || quote.volume || 0));
+          if (volDelta > 0) last.volume = (last.volume || 0) + volDelta;
+        }
+        item._lastCumVol = quote.volume || 0;
+      }
+    }
+
+    const FNO_SLOT_FALLBACK_MAP = {
+      "NIFTY_ATM_CE": "NIFTY 24200 CE",
+      "NIFTY_ATM_PE": "NIFTY 24200 PE",
+      "NIFTY_OTM_CE": "NIFTY 24300 CE",
+      "NIFTY_OTM_PE": "NIFTY 24100 PE",
+      "BANKNIFTY_ATM_CE": "BANKNIFTY 51500 CE",
+      "BANKNIFTY_ATM_PE": "BANKNIFTY 51500 PE",
+      "NIFTY FUT": "NIFTY FUT",
+      "BANKNIFTY FUT": "BANKNIFTY FUT",
+      "RELIANCE_ATM_CE": "RELIANCE 2500 CE"
+    };
+
+    async function pollLiveZerodhaFeed() {
+      if (!zerodhaConfig || !zerodhaConfig.relayUrl || !zerodhaConfig.accessToken) {
+        isLiveZerodhaFeedActive = false;
+        return;
+      }
+      try {
+        const resp = await fetch(`${zerodhaConfig.relayUrl}/api/quotes`, {
+          headers: { "X-Kite-Token": zerodhaConfig.accessToken }
+        });
+        if (!resp.ok) {
+          if (resp.status === 401) {
+            isLiveZerodhaFeedActive = false;
+            updateKiteUI();
+          }
+          return;
+        }
+        const data = await resp.json();
+        if (data.status !== "success") return;
+
+        // 1. Apply 100% REAL NSE Cash Equities & Index prices
+        if (data.equities) {
+          Object.entries(data.equities).forEach(([sym, q]) => {
+            const item = marketCatalog["india"].symbols[sym];
+            if (item) applyLiveQuoteToItem(item, q);
+          });
+        }
+
+        // 2. Apply 100% REAL Active-Expiry NSE F&O Option & Futures prices
+        if (data.fno) {
+          Object.entries(data.fno).forEach(([slotKey, q]) => {
+            const uiKey = FNO_SLOT_FALLBACK_MAP[slotKey] || q.displayLabel;
+            const item = marketCatalog["fno"].symbols[uiKey];
+            if (item) {
+              item.name = `${q.displayLabel} (Exp ${q.expiry})`;
+              applyLiveQuoteToItem(item, q);
+            }
+          });
+        }
+
+        const wasActive = isLiveZerodhaFeedActive;
+        isLiveZerodhaFeedActive = true;
+        liveFeedLastSuccessAt = Date.now();
+        if (!wasActive) {
+          updateKiteUI();
+          logTerminal(`🟢 <strong class="text-emerald-400 font-bold">[LIVE ZERODHA DATA STREAMING]</strong> Pulling 100% real NSE share &amp; F&amp;O option prices into Paper Mode (Read-Only Safe)!`);
+        }
+
+        // Pull genuine 1m historical candles from Kite Historical API for active chart symbol
+        const activeSymObj = marketCatalog[currentMarket]?.symbols?.[currentSymbol];
+        if (activeSymObj && activeSymObj.instrumentToken) {
+          fetchLiveHistoricalForSymbol(activeSymObj);
+        }
+
+        renderOrderDepth();
+        renderChart();
+      } catch (_err) {
+        // Keep simulator fallback seamless if offline
+      }
+    }
+
+    // Poll real Zerodha quotes every 2.5 seconds whenever relay + access_token are active
+    setInterval(() => {
+      if (zerodhaConfig && zerodhaConfig.relayUrl && zerodhaConfig.accessToken) {
+        pollLiveZerodhaFeed();
+      }
+    }, 2500);
 
 
     function openBrokerageModal() {
@@ -2727,6 +2895,10 @@ function calculateStockMetrics(sym) {
 
     function changeChartSymbol(sym) {
       currentSymbol = sym;
+      const symObj = marketCatalog[currentMarket]?.symbols?.[sym];
+      if (symObj && symObj.instrumentToken && zerodhaConfig.relayUrl && zerodhaConfig.accessToken) {
+        fetchLiveHistoricalForSymbol(symObj);
+      }
       renderChart();
       renderOrderDepth();
       updateAICopilotMsg();
@@ -2771,7 +2943,7 @@ function calculateStockMetrics(sym) {
       } catch(e) {}
     }
 
-    function handleKiteRedirect() {
+    async function handleKiteRedirect() {
       try {
         const params = new URLSearchParams(window.location.search);
         const reqToken = params.get("request_token");
@@ -2779,20 +2951,47 @@ function calculateStockMetrics(sym) {
 
         if (reqToken && (status === "success" || !status)) {
           zerodhaConfig.requestToken = reqToken;
-          zerodhaConfig.accessToken = reqToken; // Arm access session with captured token
           zerodhaConfig.connected = true;
+
+          // Clean URL parameters immediately so request_token never sits in the address bar
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+
+          if (zerodhaConfig.relayUrl) {
+            logTerminal(`🪁 <strong class="text-cyan-400">[ZERODHA SESSION EXCHANGE]</strong> Exchanging 2FA request token via read-only Cloudflare relay...`);
+            try {
+              const resp = await fetch(`${zerodhaConfig.relayUrl}/api/session`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ request_token: reqToken })
+              });
+              const data = await resp.json();
+              if (resp.ok && data.access_token) {
+                zerodhaConfig.accessToken = data.access_token;
+                if (data.user_id) zerodhaConfig.userId = data.user_id;
+                localStorage.setItem("apex_zerodha_config", JSON.stringify(zerodhaConfig));
+                updateKiteUI();
+                logTerminal(`🟢 <strong class="text-emerald-400 font-bold">[ZERODHA LIVE SESSION ACTIVE]</strong> Real daily access_token issued for <strong>${zerodhaConfig.userId}</strong>! Streaming real NSE share &amp; F&amp;O option prices into Paper Mode...`);
+                playBeep("buy");
+                pollLiveZerodhaFeed();
+                return;
+              } else {
+                logTerminal(`⚠️ <strong class="text-amber-400">[RELAY EXCHANGE ERROR]</strong> ${data.error || "Could not exchange token."}`);
+              }
+            } catch (ex) {
+              logTerminal(`⚠️ <strong class="text-amber-400">[RELAY UNREACHABLE]</strong> Saved token locally; verify Cloudflare Relay URL in Kite Connect settings.`);
+            }
+          }
+
+          zerodhaConfig.accessToken = reqToken;
           try {
             localStorage.setItem("apex_zerodha_config", JSON.stringify(zerodhaConfig));
           } catch(e) {}
 
           updateKiteUI();
-          logTerminal(`🪁 <strong class="text-emerald-400 font-bold">[ZERODHA KITE AUTHENTICATED]</strong> Morning 2FA login verified! Client: <strong>${zerodhaConfig.userId || 'RXD245'}</strong>. Request token captured. Live Kite gateway armed!`);
+          logTerminal(`🪁 <strong class="text-emerald-400 font-bold">[ZERODHA KITE AUTHENTICATED]</strong> Morning 2FA login verified! Client: <strong>${zerodhaConfig.userId || 'RXD245'}</strong>. Request token captured.`);
           playBeep("buy");
-
-          // Clean URL parameters cleanly so token doesn't sit in browser address bar
-          if (window.history && window.history.replaceState) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-          }
         }
       } catch(e) {
         console.error("Kite redirect check error:", e);
@@ -3193,14 +3392,24 @@ function calculateStockMetrics(sym) {
       let bidsHtml = `<div class="flex justify-between text-gray-500 border-b border-gray-800 pb-0.5"><span>Qty</span><span>Bid</span></div>`;
       let asksHtml = `<div class="flex justify-between text-gray-500 border-b border-gray-800 pb-0.5"><span>Ask</span><span>Qty</span></div>`;
 
-      for (let i = 1; i <= 4; i++) {
-        const bidP = Math.round((ltp * (1 - i * 0.0006)) * 100) / 100;
-        const askP = Math.round((ltp * (1 + i * 0.0006)) * 100) / 100;
-        const bQty = Math.floor(Math.random() * 200 + 40);
-        const aQty = Math.floor(Math.random() * 200 + 40);
+      // Use 100% REAL Zerodha NSE Level 2 Depth whenever live feed is active
+      if (isLiveZerodhaFeedActive && symObj.liveDepth && symObj.liveDepth.buy && symObj.liveDepth.sell) {
+        for (let i = 0; i < 4; i++) {
+          const b = symObj.liveDepth.buy[i] || { quantity: 0, price: 0 };
+          const a = symObj.liveDepth.sell[i] || { quantity: 0, price: 0 };
+          bidsHtml += `<div class="flex justify-between text-emerald-400"><span>${b.quantity}</span><span class="font-bold">${Number(b.price).toFixed(2)}</span></div>`;
+          asksHtml += `<div class="flex justify-between text-rose-400"><span class="font-bold">${Number(a.price).toFixed(2)}</span><span>${a.quantity}</span></div>`;
+        }
+      } else {
+        for (let i = 1; i <= 4; i++) {
+          const bidP = Math.round((ltp * (1 - i * 0.0006)) * 20) / 20;
+          const askP = Math.round((ltp * (1 + i * 0.0006)) * 20) / 20;
+          const bQty = Math.floor(Math.random() * 200 + 40);
+          const aQty = Math.floor(Math.random() * 200 + 40);
 
-        bidsHtml += `<div class="flex justify-between text-emerald-400"><span>${bQty}</span><span class="font-bold">${bidP.toLocaleString()}</span></div>`;
-        asksHtml += `<div class="flex justify-between text-rose-400"><span class="font-bold">${askP.toLocaleString()}</span><span>${aQty}</span></div>`;
+          bidsHtml += `<div class="flex justify-between text-emerald-400"><span>${bQty}</span><span class="font-bold">${bidP.toFixed(2)}</span></div>`;
+          asksHtml += `<div class="flex justify-between text-rose-400"><span class="font-bold">${askP.toFixed(2)}</span><span>${aQty}</span></div>`;
+        }
       }
 
       bidsEl.innerHTML = bidsHtml;
@@ -3463,11 +3672,15 @@ function calculateStockMetrics(sym) {
       ctx.fillText(headerTitle, 10, 16);
       const headerTitleWidth = ctx.measureText(headerTitle).width;
 
-      // Live Institutional Market Microstructure Regime Badge (GARCH + Markov Chain)
+      // Live Institutional Market Microstructure Regime Badge (or REAL Zerodha Live Feed Indicator)
       const symData = (marketCatalog[currentMarket] && marketCatalog[currentMarket].symbols) ? marketCatalog[currentMarket].symbols[currentSymbol] : null;
       let regimeTag = "CONSOLIDATION / RANGE";
       let regimeColor = "#38bdf8";
-      if (symData && symData.regime) {
+      if (isLiveZerodhaFeedActive && (Date.now() - liveFeedLastSuccessAt < 15000)) {
+        const realSym = (symData && symData.realTradingSymbol) ? ` • ${symData.realTradingSymbol}` : "";
+        regimeTag = `🟢 LIVE ZERODHA NSE FEED (${tradingMode})${realSym}`;
+        regimeColor = "#10b981";
+      } else if (symData && symData.regime) {
         if (symData.isStopHuntActive) {
           regimeTag = "LIQUIDITY SWEEP / WICK";
           regimeColor = "#f59e0b";
@@ -3594,16 +3807,19 @@ function calculateStockMetrics(sym) {
       if (rsiEl) rsiEl.innerText = lastRsi.toFixed(1);
     }
 
-    // High-Frequency Market Ticking Engine Loop (Unified Base 1m Tape -> Multi-TF Aggregated in renderChart)
+    // High-Frequency Market Ticking Engine Loop (Uses REAL Zerodha Feed when live; falls back to GARCH Simulator when closed/offline)
     setInterval(() => {
-      Object.keys(marketCatalog).forEach(mkt => {
-        const symbols = marketCatalog[mkt].symbols;
-        Object.keys(symbols).forEach(sym => {
-          const item = symbols[sym];
-          if (!item.history || item.history.length === 0) return;
-          stepSymbolMicrostructure(item, mkt, TICKS_PER_1M_CANDLE, null);
+      const usingRealLiveFeed = isLiveZerodhaFeedActive && (Date.now() - liveFeedLastSuccessAt < 15000);
+      if (!usingRealLiveFeed) {
+        Object.keys(marketCatalog).forEach(mkt => {
+          const symbols = marketCatalog[mkt].symbols;
+          Object.keys(symbols).forEach(sym => {
+            const item = symbols[sym];
+            if (!item.history || item.history.length === 0) return;
+            stepSymbolMicrostructure(item, mkt, TICKS_PER_1M_CANDLE, null);
+          });
         });
-      });
+      }
 
       // Update NSE Indian Ticker Tape Prices
       if (document.getElementById("ticker-nifty")) document.getElementById("ticker-nifty").innerText = marketCatalog["india"].symbols["NIFTY 50"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
@@ -3778,6 +3994,9 @@ function calculateStockMetrics(sym) {
     updateKiteUI();
     if (!loadSessionState()) {
       populateMarketSymbols('india', 'NIFTY 50');
+    }
+    if (zerodhaConfig && zerodhaConfig.relayUrl && zerodhaConfig.accessToken) {
+      pollLiveZerodhaFeed();
     }
     renderNewsFeed();
     runFeeSim();
