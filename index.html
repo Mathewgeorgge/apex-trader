@@ -1321,12 +1321,13 @@
 
     
     // Zerodha Kite Live Connect & Trading Mode State (Read-Only Paper Safe Live Feed Supported)
+    const DEFAULT_KITE_RELAY_URL = "https://apextrader-kite-relay.mathewamanoj.workers.dev";
     let tradingMode = "PAPER"; // Always default PAPER so zero real rupees are ever at risk
     let zerodhaConfig = {
       apiKey: "d03b3y9f6btyeun5",
       accessToken: "",
       userId: "RXD245",
-      relayUrl: "",
+      relayUrl: DEFAULT_KITE_RELAY_URL,
       connected: false
     };
     let isLiveZerodhaFeedActive = false;
@@ -1341,6 +1342,7 @@
       if (savedConfig) {
         const parsed = JSON.parse(savedConfig);
         zerodhaConfig = Object.assign({}, zerodhaConfig, parsed);
+        if (!zerodhaConfig.relayUrl) zerodhaConfig.relayUrl = DEFAULT_KITE_RELAY_URL;
       }
     } catch(e) {}
 
