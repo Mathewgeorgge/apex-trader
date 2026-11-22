@@ -2136,6 +2136,96 @@
     };
 
     // =========================================================================
+    // Official NSE Master Bhavcopy Knowledge Base
+    // Ingests audited exchange EOD records: PDH, PDL, PDC, Delivery %, & OI Buildup
+    // =========================================================================
+    const DEFAULT_BHAVCOPY_BENCHMARK = {
+      equities: {
+        "NIFTY 50": { high: 24310.45, low: 24120.30, close: 24180.80, prevClose: 24140.00, volume: 28450120, delivQty: 15420100, delivPer: 54.2 },
+        "BANK NIFTY": { high: 51840.20, low: 51290.10, close: 51610.50, prevClose: 51480.00, volume: 18230400, delivQty: 9450000, delivPer: 51.8 },
+        "RELIANCE": { high: 2498.50, low: 2445.10, close: 2485.50, prevClose: 2452.00, volume: 9245100, delivQty: 5935350, delivPer: 64.2 },
+        "HDFCBANK": { high: 1698.20, low: 1662.50, close: 1684.20, prevClose: 1668.00, volume: 14210300, delivQty: 8739100, delivPer: 61.5 },
+        "ICICIBANK": { high: 1258.00, low: 1232.50, close: 1248.50, prevClose: 1238.00, volume: 11204000, delivQty: 7136940, delivPer: 63.7 },
+        "SBIN": { high: 824.50, low: 804.20, close: 814.50, prevClose: 808.00, volume: 15402000, delivQty: 7993630, delivPer: 51.9 },
+        "KOTAKBANK": { high: 1778.00, low: 1746.50, close: 1762.00, prevClose: 1752.00, volume: 4120300, delivQty: 2542200, delivPer: 61.7 },
+        "AXISBANK": { high: 1158.00, low: 1135.00, close: 1145.80, prevClose: 1140.00, volume: 6840200, delivQty: 3980100, delivPer: 58.2 },
+        "TCS": { high: 3965.00, low: 3895.00, close: 3920.00, prevClose: 3940.00, volume: 2150400, delivQty: 1277330, delivPer: 59.4 },
+        "INFY": { high: 1868.50, low: 1832.00, close: 1845.20, prevClose: 1855.00, volume: 5430200, delivQty: 2921440, delivPer: 53.8 },
+        "WIPRO": { high: 548.20, low: 534.00, close: 542.10, prevClose: 538.00, volume: 7840100, delivQty: 3998400, delivPer: 51.0 },
+        "TATAMOTORS": { high: 804.40, low: 782.10, close: 792.40, prevClose: 785.00, volume: 8940100, delivQty: 4309120, delivPer: 48.2 },
+        "M&M": { high: 2915.00, low: 2845.00, close: 2890.00, prevClose: 2855.00, volume: 3120400, delivQty: 1984200, delivPer: 63.6 },
+        "MARUTI": { high: 11340.00, low: 11150.00, close: 11250.00, prevClose: 11200.00, volume: 845000, delivQty: 498500, delivPer: 59.0 },
+        "BHARTIARTL": { high: 1578.00, low: 1542.00, close: 1560.00, prevClose: 1545.00, volume: 5840300, delivQty: 3621000, delivPer: 62.0 },
+        "ITC": { high: 476.90, low: 467.30, close: 472.50, prevClose: 468.00, volume: 12104500, delivQty: 8727340, delivPer: 72.1 },
+        "HINDUNILVR": { high: 2415.00, low: 2365.00, close: 2380.00, prevClose: 2395.00, volume: 1840200, delivQty: 1140900, delivPer: 62.0 },
+        "TATASTEEL": { high: 151.20, low: 145.80, close: 148.60, prevClose: 147.00, volume: 24500000, delivQty: 13965000, delivPer: 57.0 },
+        "LT": { high: 3615.00, low: 3540.00, close: 3580.00, prevClose: 3550.00, volume: 2410300, delivQty: 1542500, delivPer: 64.0 },
+        "SUNPHARMA": { high: 1825.00, low: 1792.00, close: 1810.00, prevClose: 1800.00, volume: 2840100, delivQty: 1647200, delivPer: 58.0 }
+      },
+      fno: {
+        "NIFTY 24200 CE": { ltp: 98.50, chgPct: 7.1, oi: 14250000, chgOi: 1250000, chgOiPct: 9.6, buildup: "SHORT_BUILDUP", desc: "ATM Call Resistance Wall" },
+        "NIFTY 24200 PE": { ltp: 92.00, chgPct: -6.1, oi: 16840000, chgOi: 1980000, chgOiPct: 13.3, buildup: "LONG_BUILDUP", desc: "ATM Put Writing / Support Base" },
+        "NIFTY 24300 CE": { ltp: 54.50, chgPct: -9.2, oi: 18450000, chgOi: 2450000, chgOiPct: 15.3, buildup: "SHORT_BUILDUP", desc: "Heavy Call Wall / Overhead Cap" },
+        "NIFTY 24100 PE": { ltp: 48.00, chgPct: -14.3, oi: 19200000, chgOi: 3100000, chgOiPct: 19.2, buildup: "SHORT_BUILDUP", desc: "Heavy Put Support Floor" },
+        "NIFTY 24350 CE": { ltp: 29.50, chgPct: -12.1, oi: 9400000, chgOi: 850000, chgOiPct: 9.9, buildup: "SHORT_BUILDUP", desc: "Weekly OTM Call Resistance" },
+        "NIFTY 24050 PE": { ltp: 28.50, chgPct: -18.6, oi: 8650000, chgOi: 1120000, chgOiPct: 14.8, buildup: "SHORT_BUILDUP", desc: "Weekly OTM Put Cushion" },
+        "BANKNIFTY 51500 CE": { ltp: 195.00, chgPct: -7.1, oi: 3450000, chgOi: 420000, chgOiPct: 13.8, buildup: "SHORT_BUILDUP", desc: "Call Writing" },
+        "BANKNIFTY 51500 PE": { ltp: 178.00, chgPct: 6.0, oi: 3820000, chgOi: 540000, chgOiPct: 16.4, buildup: "LONG_BUILDUP", desc: "Put Accumulation Floor" },
+        "BANKNIFTY 51700 CE": { ltp: 105.00, chgPct: -12.5, oi: 4250000, chgOi: 680000, chgOiPct: 19.0, buildup: "SHORT_BUILDUP", desc: "OTM Call Resistance" },
+        "BANKNIFTY 51300 PE": { ltp: 98.00, chgPct: -15.5, oi: 4620000, chgOi: 820000, chgOiPct: 21.5, buildup: "SHORT_BUILDUP", desc: "OTM Put Cushion" },
+        "NIFTY FUT": { ltp: 24215.00, chgPct: 0.65, oi: 12450000, chgOi: 850000, chgOiPct: 7.3, buildup: "LONG_BUILDUP", desc: "Institutional Index Futures Long Buildup" },
+        "BANKNIFTY FUT": { ltp: 51540.00, chgPct: 0.58, oi: 2840000, chgOi: 190000, chgOiPct: 7.2, buildup: "LONG_BUILDUP", desc: "Bank Index Futures Accumulation" },
+        "RELIANCE 2500 CE": { ltp: 11.20, chgPct: 7.7, oi: 4850000, chgOi: 620000, chgOiPct: 14.6, buildup: "LONG_BUILDUP", desc: "Stock Option Long Buildup" }
+      }
+    };
+
+    let bhavcopyData = JSON.parse(JSON.stringify(DEFAULT_BHAVCOPY_BENCHMARK));
+
+    // Try restoring custom Bhavcopy data if saved
+    try {
+      const savedBhav = localStorage.getItem("apex_bhavcopy_data");
+      if (savedBhav) {
+        bhavcopyData = JSON.parse(savedBhav);
+      }
+    } catch(e) {}
+
+    function getSymbolPivots(sym) {
+      const b = bhavcopyData.equities[sym];
+      if (b) {
+        const H = b.high, L = b.low, C = b.close;
+        const P = (H + L + C) / 3;
+        const BC = (H + L) / 2;
+        const TC = (P - BC) + P;
+        return {
+          pdh: H,
+          pdl: L,
+          pdc: C,
+          pivot: P,
+          tc: Math.max(TC, BC),
+          bc: Math.min(TC, BC),
+          cprWidthPct: (Math.abs(TC - BC) / P) * 100,
+          cprType: (Math.abs(TC - BC) / P) < 0.0025 ? "Narrow CPR (Trending)" : "Average CPR (Rangebound)"
+        };
+      }
+      const symObj = marketCatalog[currentMarket]?.symbols?.[sym];
+      if (symObj) {
+        const C = symObj.prevClose || symObj.ltp;
+        const H = C * 1.008;
+        const L = C * 0.992;
+        const P = (H + L + C) / 3;
+        const BC = (H + L) / 2;
+        const TC = (P - BC) + P;
+        return {
+          pdh: H, pdl: L, pdc: C, pivot: P,
+          tc: Math.max(TC, BC), bc: Math.min(TC, BC),
+          cprWidthPct: 0.25, cprType: "Estimated CPR"
+        };
+      }
+      return null;
+    }
+
+
+    // =========================================================================
     // Institutional Quantitative Microstructure Engine
     // Box-Muller Gaussian + GARCH(1,1) Volatility Clustering + 5-State Markov Regimes
     // ZERO sine waves: Unified engine powers both Historical Candles & Live Ticks!
@@ -4763,95 +4853,6 @@ function calculateStockMetrics(sym) {
     // NSE Official Bhavcopy Intelligence & EOD Engine
     // Real exchange settlement, institutional delivery & OI buildup tracking
     // =========================================================================
-    // =========================================================================
-    // Official NSE Master Bhavcopy Knowledge Base
-    // Ingests audited exchange EOD records: PDH, PDL, PDC, Delivery %, & OI Buildup
-    // =========================================================================
-    const DEFAULT_BHAVCOPY_BENCHMARK = {
-      equities: {
-        "NIFTY 50": { high: 24310.45, low: 24120.30, close: 24180.80, prevClose: 24140.00, volume: 28450120, delivQty: 15420100, delivPer: 54.2 },
-        "BANK NIFTY": { high: 51840.20, low: 51290.10, close: 51610.50, prevClose: 51480.00, volume: 18230400, delivQty: 9450000, delivPer: 51.8 },
-        "RELIANCE": { high: 2498.50, low: 2445.10, close: 2485.50, prevClose: 2452.00, volume: 9245100, delivQty: 5935350, delivPer: 64.2 },
-        "HDFCBANK": { high: 1698.20, low: 1662.50, close: 1684.20, prevClose: 1668.00, volume: 14210300, delivQty: 8739100, delivPer: 61.5 },
-        "ICICIBANK": { high: 1258.00, low: 1232.50, close: 1248.50, prevClose: 1238.00, volume: 11204000, delivQty: 7136940, delivPer: 63.7 },
-        "SBIN": { high: 824.50, low: 804.20, close: 814.50, prevClose: 808.00, volume: 15402000, delivQty: 7993630, delivPer: 51.9 },
-        "KOTAKBANK": { high: 1778.00, low: 1746.50, close: 1762.00, prevClose: 1752.00, volume: 4120300, delivQty: 2542200, delivPer: 61.7 },
-        "AXISBANK": { high: 1158.00, low: 1135.00, close: 1145.80, prevClose: 1140.00, volume: 6840200, delivQty: 3980100, delivPer: 58.2 },
-        "TCS": { high: 3965.00, low: 3895.00, close: 3920.00, prevClose: 3940.00, volume: 2150400, delivQty: 1277330, delivPer: 59.4 },
-        "INFY": { high: 1868.50, low: 1832.00, close: 1845.20, prevClose: 1855.00, volume: 5430200, delivQty: 2921440, delivPer: 53.8 },
-        "WIPRO": { high: 548.20, low: 534.00, close: 542.10, prevClose: 538.00, volume: 7840100, delivQty: 3998400, delivPer: 51.0 },
-        "TATAMOTORS": { high: 804.40, low: 782.10, close: 792.40, prevClose: 785.00, volume: 8940100, delivQty: 4309120, delivPer: 48.2 },
-        "M&M": { high: 2915.00, low: 2845.00, close: 2890.00, prevClose: 2855.00, volume: 3120400, delivQty: 1984200, delivPer: 63.6 },
-        "MARUTI": { high: 11340.00, low: 11150.00, close: 11250.00, prevClose: 11200.00, volume: 845000, delivQty: 498500, delivPer: 59.0 },
-        "BHARTIARTL": { high: 1578.00, low: 1542.00, close: 1560.00, prevClose: 1545.00, volume: 5840300, delivQty: 3621000, delivPer: 62.0 },
-        "ITC": { high: 476.90, low: 467.30, close: 472.50, prevClose: 468.00, volume: 12104500, delivQty: 8727340, delivPer: 72.1 },
-        "HINDUNILVR": { high: 2415.00, low: 2365.00, close: 2380.00, prevClose: 2395.00, volume: 1840200, delivQty: 1140900, delivPer: 62.0 },
-        "TATASTEEL": { high: 151.20, low: 145.80, close: 148.60, prevClose: 147.00, volume: 24500000, delivQty: 13965000, delivPer: 57.0 },
-        "LT": { high: 3615.00, low: 3540.00, close: 3580.00, prevClose: 3550.00, volume: 2410300, delivQty: 1542500, delivPer: 64.0 },
-        "SUNPHARMA": { high: 1825.00, low: 1792.00, close: 1810.00, prevClose: 1800.00, volume: 2840100, delivQty: 1647200, delivPer: 58.0 }
-      },
-      fno: {
-        "NIFTY 24200 CE": { ltp: 98.50, chgPct: 7.1, oi: 14250000, chgOi: 1250000, chgOiPct: 9.6, buildup: "SHORT_BUILDUP", desc: "ATM Call Resistance Wall" },
-        "NIFTY 24200 PE": { ltp: 92.00, chgPct: -6.1, oi: 16840000, chgOi: 1980000, chgOiPct: 13.3, buildup: "LONG_BUILDUP", desc: "ATM Put Writing / Support Base" },
-        "NIFTY 24300 CE": { ltp: 54.50, chgPct: -9.2, oi: 18450000, chgOi: 2450000, chgOiPct: 15.3, buildup: "SHORT_BUILDUP", desc: "Heavy Call Wall / Overhead Cap" },
-        "NIFTY 24100 PE": { ltp: 48.00, chgPct: -14.3, oi: 19200000, chgOi: 3100000, chgOiPct: 19.2, buildup: "SHORT_BUILDUP", desc: "Heavy Put Support Floor" },
-        "NIFTY 24350 CE": { ltp: 29.50, chgPct: -12.1, oi: 9400000, chgOi: 850000, chgOiPct: 9.9, buildup: "SHORT_BUILDUP", desc: "Weekly OTM Call Resistance" },
-        "NIFTY 24050 PE": { ltp: 28.50, chgPct: -18.6, oi: 8650000, chgOi: 1120000, chgOiPct: 14.8, buildup: "SHORT_BUILDUP", desc: "Weekly OTM Put Cushion" },
-        "BANKNIFTY 51500 CE": { ltp: 195.00, chgPct: -7.1, oi: 3450000, chgOi: 420000, chgOiPct: 13.8, buildup: "SHORT_BUILDUP", desc: "Call Writing" },
-        "BANKNIFTY 51500 PE": { ltp: 178.00, chgPct: 6.0, oi: 3820000, chgOi: 540000, chgOiPct: 16.4, buildup: "LONG_BUILDUP", desc: "Put Accumulation Floor" },
-        "BANKNIFTY 51700 CE": { ltp: 105.00, chgPct: -12.5, oi: 4250000, chgOi: 680000, chgOiPct: 19.0, buildup: "SHORT_BUILDUP", desc: "OTM Call Resistance" },
-        "BANKNIFTY 51300 PE": { ltp: 98.00, chgPct: -15.5, oi: 4620000, chgOi: 820000, chgOiPct: 21.5, buildup: "SHORT_BUILDUP", desc: "OTM Put Cushion" },
-        "NIFTY FUT": { ltp: 24215.00, chgPct: 0.65, oi: 12450000, chgOi: 850000, chgOiPct: 7.3, buildup: "LONG_BUILDUP", desc: "Institutional Index Futures Long Buildup" },
-        "BANKNIFTY FUT": { ltp: 51540.00, chgPct: 0.58, oi: 2840000, chgOi: 190000, chgOiPct: 7.2, buildup: "LONG_BUILDUP", desc: "Bank Index Futures Accumulation" },
-        "RELIANCE 2500 CE": { ltp: 11.20, chgPct: 7.7, oi: 4850000, chgOi: 620000, chgOiPct: 14.6, buildup: "LONG_BUILDUP", desc: "Stock Option Long Buildup" }
-      }
-    };
-
-    let bhavcopyData = JSON.parse(JSON.stringify(DEFAULT_BHAVCOPY_BENCHMARK));
-
-    // Try restoring custom Bhavcopy data if saved
-    try {
-      const savedBhav = localStorage.getItem("apex_bhavcopy_data");
-      if (savedBhav) {
-        bhavcopyData = JSON.parse(savedBhav);
-      }
-    } catch(e) {}
-
-    function getSymbolPivots(sym) {
-      const b = bhavcopyData.equities[sym];
-      if (b) {
-        const H = b.high, L = b.low, C = b.close;
-        const P = (H + L + C) / 3;
-        const BC = (H + L) / 2;
-        const TC = (P - BC) + P;
-        return {
-          pdh: H,
-          pdl: L,
-          pdc: C,
-          pivot: P,
-          tc: Math.max(TC, BC),
-          bc: Math.min(TC, BC),
-          cprWidthPct: (Math.abs(TC - BC) / P) * 100,
-          cprType: (Math.abs(TC - BC) / P) < 0.0025 ? "Narrow CPR (Trending)" : "Average CPR (Rangebound)"
-        };
-      }
-      const symObj = marketCatalog[currentMarket]?.symbols?.[sym];
-      if (symObj) {
-        const C = symObj.prevClose || symObj.ltp;
-        const H = C * 1.008;
-        const L = C * 0.992;
-        const P = (H + L + C) / 3;
-        const BC = (H + L) / 2;
-        const TC = (P - BC) + P;
-        return {
-          pdh: H, pdl: L, pdc: C, pivot: P,
-          tc: Math.max(TC, BC), bc: Math.min(TC, BC),
-          cprWidthPct: 0.25, cprType: "Estimated CPR"
-        };
-      }
-      return null;
-    }
-
     function openBhavcopyModal() {
       const modal = document.getElementById("bhavcopy-modal");
       if (!modal) return;
