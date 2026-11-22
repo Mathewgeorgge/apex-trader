@@ -4987,7 +4987,7 @@ function calculateStockMetrics(sym) {
       renderChart();
       const fb = document.getElementById("bhav-import-feedback");
       if (fb) fb.innerText = "✓ Reloaded official NSE EOD benchmark records.";
-      logTerminal("📊 <strong class="text-cyan-400 font-bold">[BHAVCOPY RESET]</strong> Restored official NSE benchmark master. CPR pivots & Delivery Radar refreshed.");
+      logTerminal(`📊 <strong class="text-cyan-400 font-bold">[BHAVCOPY RESET]</strong> Restored official NSE benchmark master. CPR pivots & Delivery Radar refreshed.`);
       playBeep("buy");
     }
 
