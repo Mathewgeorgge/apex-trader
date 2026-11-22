@@ -1942,10 +1942,6 @@
           });
         }
 
-        const wasActive = isLiveZerodhaFeedActive;
-        isLiveZerodhaFeedActive = true;
-        liveFeedLastSuccessAt = Date.now();
-
         if (!marketOpen && dataFeedMode === "AUTO") {
           const firstAnchor = !zerodhaAfterHoursAnchored;
           zerodhaAfterHoursAnchored = true;
