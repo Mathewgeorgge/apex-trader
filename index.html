@@ -4957,6 +4957,11 @@ function calculateStockMetrics(sym) {
           if (!symObj) return false;
           // In Cash Equity market, filter out non-tradable spot indices (trade equities or F&O options)
           if (currentMarket === "india" && (s === "NIFTY 50" || s === "BANK NIFTY")) return false;
+          // Gate 6: Block new intraday entries after 15:00 IST (3:00 PM)
+          const nowD = new Date();
+          const istD = new Date(nowD.getTime() + (nowD.getTimezoneOffset() * 60000) + (5.5 * 3600000));
+          const istMins = istD.getHours() * 60 + istD.getMinutes();
+          if ((currentMarket === "india" || currentMarket === "fno") && isNSEMarketHoursIST() && istMins >= (15 * 60)) return false;
           const sizing = computeAffordableOrderQty(symObj, cash);
           const canAfford = sizing.qty > 0 && sizing.cost <= cash;
           const isPositionOpen = positions.some(p => p.symbol === s);
@@ -4997,6 +5002,15 @@ function calculateStockMetrics(sym) {
           const isOption = (p.market === "fno");
           const trailTrigger = p.trailTriggerPct || (isOption ? 0.085 : 0.016);
           const trailDist = p.trailDistPct || (isOption ? 0.040 : 0.012);
+
+          // 0. Mandatory 15:15 IST Intraday MIS Auto Square-off (Per Zerodha RMS Rules)
+          const nowExitD = new Date();
+          const istExitD = new Date(nowExitD.getTime() + (nowExitD.getTimezoneOffset() * 60000) + (5.5 * 3600000));
+          const istExitMins = istExitD.getHours() * 60 + istExitD.getMinutes();
+          if ((p.market === "india" || currentMarket === "india" || p.market === "fno" || currentMarket === "fno") && isNSEMarketHoursIST() && istExitMins >= (15 * 60 + 15)) {
+            exitsToExecute.push({ sym: p.symbol, reason: "EOD_MIS_SQUAREOFF", ltp: liveLtp, net: netGain, gross: grossGain });
+            return;
+          }
 
           if (!isShort) {
             // === LONG (BUY) RISK & PROFIT ENGINE (1:2.2 R:R) ===
@@ -5090,8 +5104,10 @@ function calculateStockMetrics(sym) {
             logTerminal(`🎯 <strong class="text-emerald-400 font-bold">[TAKE PROFIT TARGET HIT]</strong> ${exit.sym} @ ${p.curr}${exit.ltp.toLocaleString()} | Gross: +${p.curr}${exit.gross.toFixed(2)} | <strong class="text-emerald-400">Net Profit Cashed In: +${p.curr}${exit.net.toFixed(2)}</strong>!`);
           } else if (exit.reason === "TRAILING_PROFIT") {
             logTerminal(`🔒 <strong class="text-emerald-400 font-bold">[TRAILING PROFIT SECURED]</strong> ${exit.sym} pulled back to Trailing SL @ ${p.curr}${exit.ltp.toLocaleString()} | <strong class="text-emerald-400">Net Profit Locked: +${p.curr}${exit.net.toFixed(2)}</strong>!`);
+          } else if (exit.reason === "EOD_MIS_SQUAREOFF") {
+            logTerminal(`🕒 <strong class="text-amber-400 font-bold">[15:15 IST MIS AUTO SQUARE-OFF]</strong> Market closing soon. Squaring off intraday position ${exit.sym} @ ${p.curr}${exit.ltp.toLocaleString()} | Net: <strong class="${exit.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${p.curr}${exit.net.toFixed(2)}</strong> (Avoided Zerodha RMS penalty).`);
           } else {
-            logTerminal(`🛑 <strong class="text-rose-400">[PROTECTIVE STOP LOSS]</strong> ${exit.sym} hit 2.5% stop @ ${p.curr}${exit.ltp.toLocaleString()} to protect capital.`);
+            logTerminal(`🛑 <strong class="text-rose-400">[PROTECTIVE STOP LOSS]</strong> ${exit.sym} hit stop @ ${p.curr}${exit.ltp.toLocaleString()} to protect capital.`);
           }
           closeSinglePosition(exit.sym, false);
         }
