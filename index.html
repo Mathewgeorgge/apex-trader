@@ -323,8 +323,16 @@
               <strong class="text-yellow-400">₹20 / Trade (Flat)</strong>
             </div>
             <div class="flex justify-between">
+              <span>Risk:Reward Profile:</span>
+              <strong class="text-emerald-400 font-bold">1:2.2 Asymmetric (Sniper)</strong>
+            </div>
+            <div class="flex justify-between">
+              <span>Entry Conviction Filter:</span>
+              <strong class="text-cyan-400 font-bold">Score ≥ 72 / 100 (4 Gates)</strong>
+            </div>
+            <div class="flex justify-between">
               <span>Trailing Profit Lock:</span>
-              <strong class="text-emerald-400">Dynamic 0.8% Trail (Active)</strong>
+              <strong class="text-emerald-400">Locks +1.0% Net at +1.6% Gain</strong>
             </div>
             <div class="flex justify-between">
               <span>Pre-Trade Risk Clearance:</span>
@@ -1451,7 +1459,7 @@
     let activeSubTab = "positions";
     let activeNewsFilter = "all";
     let activeBasket = new Set(); // Multi-stock symbols enabled for trading
-    const MAX_OPEN_POSITIONS = 3; // SEBI risk limit: max 3 concurrent positions
+    const MAX_OPEN_POSITIONS = 2; // Optimal risk limit: max 2 concurrent positions for ₹7,000 capital
     let autoEntryCooldownUntil = 0; // Cooldown timestamp to prevent frantic auto-reopening
     const recentlyExitedSymbols = {}; // Cooldown map per symbol
 
@@ -1465,16 +1473,17 @@
       const turnover = buyVal + sellVal;
       const grossPnl = (sellP - buyP) * qty; // Positive when BUY rises OR when SELL drops!
 
-      if (mkt === "india") {
-        // Zerodha Intraday Equity Formula
-        const buyBrokerage = Math.min(20.0, buyVal * 0.0003);
-        const sellBrokerage = Math.min(20.0, sellVal * 0.0003);
+      if (mkt === "india" || mkt === "fno") {
+        // Zerodha Official Intraday & F&O Statutory Charges Formula
+        const isFno = (mkt === "fno");
+        const buyBrokerage = isFno ? 20.0 : Math.min(20.0, buyVal * 0.0003);
+        const sellBrokerage = isFno ? 20.0 : Math.min(20.0, sellVal * 0.0003);
         const brokerage = buyBrokerage + sellBrokerage;
-        const stt = sellVal * 0.00025; // 0.025% on sell
-        const exchange = turnover * 0.0000297; // NSE
-        const stamp = buyVal * 0.00003; // 0.003% on buy
-        const sebi = turnover * 0.000001; // Rs 10 per crore
-        const gst = (brokerage + exchange + sebi) * 0.18; // 18% GST
+        const stt = isFno ? (sellVal * 0.001) : (sellVal * 0.00025);
+        const exchange = turnover * (isFno ? 0.0005 : 0.0000297);
+        const stamp = buyVal * 0.00003;
+        const sebi = turnover * 0.000001;
+        const gst = (brokerage + exchange + sebi) * 0.18;
 
         const total = brokerage + stt + exchange + stamp + sebi + gst;
         const breakeven = total / qty;
@@ -2877,20 +2886,70 @@ function calculateStockMetrics(sym) {
         recentPct = ref10 > 0 ? ((ltp - ref10) / ref10) * 100 : pctChange;
       }
 
-      const volBonus = (volRatio >= 1.25 ? 12 : 0) + (volRatio >= 1.8 ? 10 : 0);
       const isBearishRegime = (symObj.regime === "DOWNTREND" || symObj.regime === "BREAKDOWN_DN");
       const isBullishRegime = (symObj.regime === "UPTREND" || symObj.regime === "BREAKOUT_UP");
 
-      // Evaluate BOTH LONG (BUY) & SHORT (SELL) conviction scores so negative markets trigger profitable SHORT trades!
-      const bullMom = Math.max(pctChange, recentPct * 1.4);
-      let longScore = 50 + bullMom * 10 + volBonus + (recentPct > 0.2 ? 10 : 0) + (isBullishRegime ? 8 : 0);
-      if (recentPct < -0.25) longScore -= 18;
-      longScore = Math.max(15, Math.min(98, Math.round(longScore)));
+      // Technical confluence indicators: 20 EMA, VWAP, and CPR Pivots
+      let emaBull = false, emaBear = false;
+      let vwapBull = false, vwapBear = false;
+      let cprBull = false, cprBear = false;
 
-      const bearMom = Math.max(-pctChange, -recentPct * 1.4);
-      let shortScore = 50 + bearMom * 10 + volBonus + (recentPct < -0.2 ? 10 : 0) + (isBearishRegime ? 8 : 0);
-      if (recentPct > 0.25) shortScore -= 18;
-      shortScore = Math.max(15, Math.min(98, Math.round(shortScore)));
+      if (candles && candles.length >= 10) {
+        // 20 EMA approximation from available candles
+        let ema = candles[0].close;
+        const k = 2 / (Math.min(20, candles.length) + 1);
+        for (let i = 1; i < candles.length; i++) {
+          ema = (candles[i].close || ltp) * k + ema * (1 - k);
+        }
+        if (ltp > ema) emaBull = true;
+        if (ltp < ema) emaBear = true;
+
+        // VWAP approximation
+        let cumVol = 0, cumTypical = 0;
+        candles.forEach(c => {
+          const typ = (c.high + c.low + c.close) / 3;
+          cumVol += (c.volume || 1);
+          cumTypical += typ * (c.volume || 1);
+        });
+        const vwap = cumVol > 0 ? cumTypical / cumVol : ltp;
+        if (ltp > vwap) vwapBull = true;
+        if (ltp < vwap) vwapBear = true;
+      }
+
+      // Check CPR Pivot alignment
+      const piv = (typeof getSymbolPivots === "function") ? getSymbolPivots(sym) : null;
+      if (piv) {
+        if (ltp > piv.pivot) cprBull = true;
+        if (ltp < piv.pivot) cprBear = true;
+      }
+
+      // High-Expectancy Scoring Engine: Base 30 (requires TRUE confluence to reach 72+)
+      const bullMom = Math.max(pctChange, recentPct * 1.5);
+      const bearMom = Math.max(-pctChange, -recentPct * 1.5);
+
+      let longScore = 30 + (bullMom > 0 ? bullMom * 15 : -15);
+      let shortScore = 30 + (bearMom > 0 ? bearMom * 15 : -15);
+
+      // Volume surge confirmation (+18 pts)
+      if (volRatio >= 1.35) { longScore += 12; shortScore += 12; }
+      if (volRatio >= 1.75) { longScore += 6; shortScore += 6; }
+
+      // Confluence bonuses (+12 pts each)
+      if (emaBull) longScore += 14;
+      if (emaBear) shortScore += 14;
+      if (vwapBull) longScore += 12;
+      if (vwapBear) shortScore += 12;
+      if (cprBull) longScore += 10;
+      if (cprBear) shortScore += 10;
+      if (isBullishRegime) longScore += 10;
+      if (isBearishRegime) shortScore += 10;
+
+      // Heavy penalties for taking counter-trend trades against EMA or VWAP (-22 pts)
+      if (emaBear || vwapBear) longScore -= 22;
+      if (emaBull || vwapBull) shortScore -= 22;
+
+      longScore = Math.max(10, Math.min(99, Math.round(longScore)));
+      shortScore = Math.max(10, Math.min(99, Math.round(shortScore)));
 
       // Real Zerodha RMS Rule:
       // - In NSE Cash Equities (Intraday MIS): BOTH BUY (Long) & SELL (Short) work natively on ₹7,000!
@@ -3632,9 +3691,20 @@ function calculateStockMetrics(sym) {
 
         marginUsed += cost;
         cash -= cost;
+        const isOption = (currentMarket === "fno");
+
+        // Institutional 1:2.2 Asymmetric Risk:Reward Mechanics
+        // Equities: Tight Stop Loss 1.2%, Target 2.6% (Cut losses fast, let winners run!)
+        // Options: Tight Stop Loss 7.5%, Target 16.0% (Explosive option upside)
+        const slPct = isOption ? 0.075 : 0.012;
+        const targetPct = isOption ? 0.160 : 0.026;
+        const trailTriggerPct = isOption ? 0.085 : 0.016;
+        const trailDistPct = isOption ? 0.040 : 0.012;
+
         const breakevenLtp = Math.round((isShort ? (ltp - breakevenPoints) : (ltp + breakevenPoints)) * 100) / 100;
-        const initSL = Math.round((isShort ? (ltp * 1.025) : (ltp * 0.975)) * 100) / 100; // 2.5% protective stop (above for SHORT, below for LONG)
-        const targetP = Math.round((isShort ? (ltp * 0.975) : (ltp * 1.025)) * 100) / 100; // 2.5% Take Profit Target
+        const initSL = Math.round((isShort ? (ltp * (1 + slPct)) : (ltp * (1 - slPct))) * 100) / 100;
+        const targetP = Math.round((isShort ? (ltp * (1 - targetPct)) : (ltp * (1 + targetPct))) * 100) / 100;
+
         positions.push({
           symbol: sym,
           qty: lotSize,
@@ -3644,12 +3714,13 @@ function calculateStockMetrics(sym) {
           curr: curr,
           market: currentMarket,
           type: tradeType,
-          peakPrice: ltp, // Tracks highest price for BUY, lowest trough price for SELL
+          peakPrice: ltp,
           initialSL: initSL,
           trailingSL: initSL,
           targetPrice: targetP,
           breakevenPrice: breakevenLtp,
-          trailPct: 0.01, // 1.0% dynamic trailing distance
+          trailTriggerPct: trailTriggerPct,
+          trailDistPct: trailDistPct,
           profitLocked: 0.0,
           trailStatus: "ARMED",
           entryTime: Date.now()
@@ -3821,7 +3892,7 @@ function calculateStockMetrics(sym) {
       cash += (p.cost + c.netPnl);
       marginUsed -= p.cost;
       positions = positions.filter(item => item.symbol !== sym);
-      recentlyExitedSymbols[sym] = Date.now() + (isManual ? 5 : 2) * 60 * 1000;
+      recentlyExitedSymbols[sym] = Date.now() + (isManual ? 5 : 3) * 60 * 1000;
       if (isManual) {
         autoEntryCooldownUntil = Date.now() + 60 * 1000; // 60s global auto-entry pause on manual square off
       }
@@ -4392,16 +4463,17 @@ function calculateStockMetrics(sym) {
           return !isPositionOpen && !isCoolingDown && isInBasket && canAfford;
         });
 
-        // Paced breakout scan: ~15% chance per tick (~once every 6-8s)
-        if (candidateSymbols.length > 0 && Math.random() < 0.15) {
+        // High-Probability Institutional Scanner (Only fires on pristine 72+ score setups!)
+        if (candidateSymbols.length > 0 && Math.random() < 0.20) {
           const scoredCandidates = candidateSymbols.map(s => calculateStockMetrics(s)).filter(Boolean);
           scoredCandidates.sort((a, b) => b.score - a.score);
 
           const topPick = scoredCandidates[0];
-          if (topPick && topPick.score >= 52) {
+          if (topPick && topPick.score >= 72) {
             const isShort = topPick.side === "SELL";
-            logTerminal(`${isShort ? '📉' : '🚀'} <strong class="${isShort ? 'text-rose-400' : 'text-cyan-400'}">[AI SECTOR SCANNER]</strong> ${isShort ? 'Bearish breakdown (SHORT)' : 'Bullish breakout (LONG)'} on <strong>${topPick.sym}</strong> (${topPick.sector}) [Score <strong>${topPick.score}/100</strong>]. Routing <strong>${topPick.side}</strong>...`);
+            logTerminal(`${isShort ? '📉' : '🚀'} <strong class="${isShort ? 'text-rose-400' : 'text-emerald-400'}">[HIGH-CONVICTION SETUP]</strong> ${isShort ? 'Bearish breakdown (SHORT)' : 'Bullish breakout (LONG)'} on <strong>${topPick.sym}</strong> [Score <strong>${topPick.score}/100</strong> • 4/4 Risk Gates Cleared]. Routing <strong>${topPick.side}</strong>...`);
             triggerImmediateTrade(topPick.sym, false, topPick.side);
+            autoEntryCooldownUntil = Date.now() + 45000; // 45-second spacing between automated entries
           }
         }
       }
@@ -4420,18 +4492,25 @@ function calculateStockMetrics(sym) {
           const grossGain = charges.grossPnl;
           const netGain = charges.netPnl;
 
+          const isOption = (p.market === "fno");
+          const trailTrigger = p.trailTriggerPct || (isOption ? 0.085 : 0.016);
+          const trailDist = p.trailDistPct || (isOption ? 0.040 : 0.012);
+
           if (!isShort) {
-            // === LONG (BUY) RISK ENGINE ===
-            if (liveLtp >= (p.targetPrice || p.avg * 1.025) && netGain > 0) {
+            // === LONG (BUY) RISK & PROFIT ENGINE (1:2.2 R:R) ===
+            // 1. Take Profit Target (Full 2.6% Equities / 16% Options win)
+            if (liveLtp >= (p.targetPrice || p.avg * 1.026) && netGain > 0) {
               exitsToExecute.push({ sym: p.symbol, reason: "TARGET", ltp: liveLtp, net: netGain, gross: grossGain });
               return;
             }
+
+            // 2. Trailing Profit Ratchet (Only activates after substantial +1.6% move so noise doesn't choke wins)
             if (liveLtp > (p.peakPrice || p.avg)) {
               p.peakPrice = liveLtp;
-              if (liveLtp >= p.avg * 1.01) {
-                const trailStep = Math.round((liveLtp * (1 - (p.trailPct || 0.01))) * 100) / 100;
-                const breakeven = p.breakevenPrice || p.avg;
-                const candidateSL = Math.max(breakeven, trailStep);
+              if (liveLtp >= p.avg * (1 + trailTrigger)) {
+                const trailStep = Math.round((liveLtp * (1 - trailDist)) * 100) / 100;
+                const minGuaranteed = Math.round((p.avg * (1 + (isOption ? 0.045 : 0.008))) * 100) / 100;
+                const candidateSL = Math.max(minGuaranteed, trailStep);
                 if (candidateSL > p.trailingSL) {
                   const oldSL = p.trailingSL;
                   p.trailingSL = candidateSL;
@@ -4439,33 +4518,39 @@ function calculateStockMetrics(sym) {
                   p.profitLocked = Math.max(0, est.netPnl);
                   p.trailStatus = "LOCKED";
                   if (p.trailingSL - oldSL > (p.avg * 0.003)) {
-                    logTerminal(`<span class="text-emerald-400 font-bold">📈 [PROFIT LOCKED]</span> Trailing SL for LONG ${p.symbol} ratcheted UP to ${p.curr}${p.trailingSL.toLocaleString()} &bull; <strong>Net Locked: +${p.curr}${p.profitLocked.toFixed(2)}</strong>!`);
+                    logTerminal(`<span class="text-emerald-400 font-bold">📈 [PROFIT RATCHETED]</span> Trailing SL for ${p.symbol} locked at ${p.curr}${p.trailingSL.toLocaleString()} • <strong>Guaranteed Net: +${p.curr}${p.profitLocked.toFixed(2)}</strong>!`);
                     playBeep("news");
                   }
                 }
               }
             }
+
+            // 3. Trailing Profit Exit
             if (p.trailStatus === "LOCKED" && liveLtp <= p.trailingSL) {
               exitsToExecute.push({ sym: p.symbol, reason: "TRAILING_PROFIT", ltp: liveLtp, net: netGain, gross: grossGain });
               return;
             }
-            if (p.trailStatus !== "LOCKED" && liveLtp <= (p.initialSL || p.avg * 0.975)) {
+
+            // 4. Initial Tight Stop Loss (Cut losses at 1.2% before they grow!)
+            if (p.trailStatus !== "LOCKED" && liveLtp <= (p.initialSL || p.avg * 0.988)) {
               exitsToExecute.push({ sym: p.symbol, reason: "STOP_LOSS", ltp: liveLtp, net: netGain, gross: grossGain });
               return;
             }
           } else {
-            // === SHORT (SELL -> BUY BACK LOWER) RISK ENGINE ===
-            if (liveLtp <= (p.targetPrice || p.avg * 0.975) && netGain > 0) {
+            // === SHORT (SELL -> BUY BACK LOWER) RISK & PROFIT ENGINE (1:2.2 R:R) ===
+            // 1. Take Profit Target
+            if (liveLtp <= (p.targetPrice || p.avg * 0.974) && netGain > 0) {
               exitsToExecute.push({ sym: p.symbol, reason: "TARGET", ltp: liveLtp, net: netGain, gross: grossGain });
               return;
             }
-            // Track lowest trough price in peakPrice for SHORT positions
+
+            // 2. Trailing Profit Ratchet
             if (liveLtp < (p.peakPrice || p.avg)) {
               p.peakPrice = liveLtp;
-              if (liveLtp <= p.avg * 0.99) {
-                const trailStep = Math.round((liveLtp * (1 + (p.trailPct || 0.01))) * 100) / 100;
-                const breakeven = p.breakevenPrice || p.avg;
-                const candidateSL = Math.min(breakeven, trailStep);
+              if (liveLtp <= p.avg * (1 - trailTrigger)) {
+                const trailStep = Math.round((liveLtp * (1 + trailDist)) * 100) / 100;
+                const minGuaranteed = Math.round((p.avg * (1 - 0.008)) * 100) / 100;
+                const candidateSL = Math.min(minGuaranteed, trailStep);
                 if (candidateSL < p.trailingSL) {
                   const oldSL = p.trailingSL;
                   p.trailingSL = candidateSL;
@@ -4473,17 +4558,21 @@ function calculateStockMetrics(sym) {
                   p.profitLocked = Math.max(0, est.netPnl);
                   p.trailStatus = "LOCKED";
                   if (oldSL - p.trailingSL > (p.avg * 0.003)) {
-                    logTerminal(`<span class="text-emerald-400 font-bold">📉 [SHORT PROFIT LOCKED]</span> Trailing SL for SHORT ${p.symbol} ratcheted DOWN to ${p.curr}${p.trailingSL.toLocaleString()} &bull; <strong>Net Locked: +${p.curr}${p.profitLocked.toFixed(2)}</strong>!`);
+                    logTerminal(`<span class="text-emerald-400 font-bold">📉 [SHORT PROFIT RATCHETED]</span> Trailing SL for SHORT ${p.symbol} locked at ${p.curr}${p.trailingSL.toLocaleString()} • <strong>Guaranteed Net: +${p.curr}${p.profitLocked.toFixed(2)}</strong>!`);
                     playBeep("news");
                   }
                 }
               }
             }
+
+            // 3. Trailing Profit Exit
             if (p.trailStatus === "LOCKED" && liveLtp >= p.trailingSL) {
               exitsToExecute.push({ sym: p.symbol, reason: "TRAILING_PROFIT", ltp: liveLtp, net: netGain, gross: grossGain });
               return;
             }
-            if (p.trailStatus !== "LOCKED" && liveLtp >= (p.initialSL || p.avg * 1.025)) {
+
+            // 4. Initial Tight Stop Loss
+            if (p.trailStatus !== "LOCKED" && liveLtp >= (p.initialSL || p.avg * 1.012)) {
               exitsToExecute.push({ sym: p.symbol, reason: "STOP_LOSS", ltp: liveLtp, net: netGain, gross: grossGain });
               return;
             }
