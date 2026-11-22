@@ -448,7 +448,7 @@
                   </tr>
                 </thead>
                 <tbody id="pos-table-body" class="divide-y divide-gray-800/50 font-mono">
-                  <tr><td colspan="9" class="py-6 text-center text-gray-500 text-xs">No active positions. Click "START ALGO BOT" to begin automated paper trading.</td></tr>
+                  <tr><td colspan="10" class="py-6 text-center text-gray-500 text-xs">No active positions. Click "START ALGO BOT" to begin automated paper trading.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3605,31 +3605,64 @@ function calculateStockMetrics(sym) {
 
 
     function computeAffordableOrderQty(symObj, availableCash) {
-      if (!symObj || !symObj.ltp || symObj.ltp <= 0) return { qty: 0, cost: 0, scaled: false };
+      if (!symObj || !symObj.ltp || symObj.ltp <= 0) return { qty: 0, cost: 0, exposure: 0, leverage: 1.0, scaled: false };
       const stdLot = symObj.lot || 1;
       const stdCost = Math.round(stdLot * symObj.ltp * 100) / 100;
 
       // STRICT NSE F&O RULE: Options & Futures ALWAYS trade in EXACT official exchange lot sizes
       // (NIFTY = 65, BANKNIFTY = 30, RELIANCE = 500) — NEVER fractional/fake quantities!
+      // Option buyers pay 100% premium upfront in cash (no intraday leverage under SEBI rules).
       if (currentMarket === "fno") {
         if (stdCost <= availableCash) {
-          return { qty: stdLot, cost: stdCost, scaled: false };
+          return { qty: stdLot, cost: stdCost, exposure: stdCost, leverage: 1.0, scaled: false };
         }
-        return { qty: 0, cost: stdCost, scaled: false };
+        return { qty: 0, cost: stdCost, exposure: stdCost, leverage: 1.0, scaled: false };
       }
 
-      // NSE Cash Equities trade in whole 1-share increments (1, 2, 3... shares)
+      // NSE CASH EQUITIES (Zerodha Intraday MIS 5x Leverage):
+      // Target ₹10,000 worth of stock exposure per trade.
+      // Zerodha MIS Intraday provides 5x leverage (20% margin requirement).
+      // Each ₹10,000 stock exposure blocks only ~₹2,000 cash from the user's ₹7,000 capital account,
+      // leaving ample cash cushion while generating ₹225+ net in-pocket profit on winning trades!
+      if (currentMarket === "india") {
+        const TARGET_EXPOSURE_INR = Math.max(10000.0, Math.round(capital * 1.4));
+        const INTRADAY_LEVERAGE = 5.0; // 5x intraday MIS leverage
+        const MARGIN_RATE = 1.0 / INTRADAY_LEVERAGE; // 0.20 (20% margin required)
+
+        // Calculate target whole shares closest to ₹10,000 exposure (minimum 1 share)
+        let targetShares = Math.max(1, Math.round(TARGET_EXPOSURE_INR / symObj.ltp));
+        let exposure = targetShares * symObj.ltp;
+        let marginRequired = Math.round(exposure * MARGIN_RATE * 100) / 100;
+
+        // If user has enough cash for the full ₹10k exposure position:
+        if (marginRequired <= availableCash) {
+          return { qty: targetShares, cost: marginRequired, exposure: exposure, leverage: INTRADAY_LEVERAGE, scaled: false };
+        }
+
+        // If available cash cannot cover full ~₹2,000 margin, safely scale down shares to fit remaining cash
+        const maxAffordableShares = Math.floor(availableCash / (symObj.ltp * MARGIN_RATE));
+        if (maxAffordableShares >= 1) {
+          const scaledExposure = maxAffordableShares * symObj.ltp;
+          const scaledMargin = Math.round(scaledExposure * MARGIN_RATE * 100) / 100;
+          return { qty: maxAffordableShares, cost: scaledMargin, exposure: scaledExposure, leverage: INTRADAY_LEVERAGE, scaled: true };
+        }
+
+        // Cannot afford even 1 share with 5x leverage
+        return { qty: 0, cost: marginRequired, exposure: exposure, leverage: INTRADAY_LEVERAGE, scaled: false };
+      }
+
+      // US & Crypto markets fallback (0.48 capital allocation or standard lot)
       if (stdCost <= availableCash) {
-        return { qty: stdLot, cost: stdCost, scaled: false };
+        return { qty: stdLot, cost: stdCost, exposure: stdCost, leverage: 1.0, scaled: false };
       }
       if (availableCash >= symObj.ltp) {
         const shareQty = Math.min(stdLot, Math.max(1, Math.floor((availableCash * 0.48) / symObj.ltp)));
         const shareCost = Math.round(shareQty * symObj.ltp * 100) / 100;
         if (shareCost <= availableCash && shareQty >= 1) {
-          return { qty: shareQty, cost: shareCost, scaled: false };
+          return { qty: shareQty, cost: shareCost, exposure: shareCost, leverage: 1.0, scaled: true };
         }
       }
-      return { qty: 0, cost: stdCost, scaled: false };
+      return { qty: 0, cost: stdCost, exposure: stdCost, leverage: 1.0, scaled: false };
     }
 
     function toggleEngine() {
@@ -3740,6 +3773,7 @@ function calculateStockMetrics(sym) {
 
         marginUsed += cost;
         cash -= cost;
+        const totalExposure = sizing.exposure || (lotSize * ltp);
         const isOption = (currentMarket === "fno");
 
         // Institutional 1:2.2 Asymmetric Risk:Reward Mechanics
@@ -3760,6 +3794,8 @@ function calculateStockMetrics(sym) {
           avg: ltp,
           ltp: ltp,
           cost: cost,
+          exposure: totalExposure,
+          leverage: sizing.leverage || (currentMarket === "india" ? 5.0 : 1.0),
           curr: curr,
           market: currentMarket,
           type: tradeType,
@@ -3776,11 +3812,14 @@ function calculateStockMetrics(sym) {
         });
 
         playBeep(isShort ? "sell" : "buy");
-        const scaleNote = sizing.scaled ? ` <span class="text-cyan-400">[Paper Mini-Lot scaled for ₹${capital} capital]</span>` : "";
+        const scaleNote = sizing.scaled ? ` <span class="text-cyan-400">[Scaled to cash]</span>` : "";
         const sideHtml = isShort
           ? `<strong class="text-rose-400 font-bold">SELL (SHORT) ${sym}</strong>`
           : `<strong class="text-emerald-400 font-bold">BUY (LONG) ${sym}</strong>`;
-        logTerminal(`[SMART BASKET FILL] ${sideHtml}: ${lotSize} units @ ${curr}${ltp.toLocaleString()}${scaleNote} [Margin: ${curr}${cost.toFixed(0)} &bull; Target: ${curr}${targetP} &bull; SL: ${curr}${initSL}]`);
+        const misInfo = (currentMarket === "india")
+          ? ` &bull; <span class="text-cyan-300 font-semibold">₹${Math.round(totalExposure).toLocaleString('en-IN')} Stock Exposure (5x MIS Margin: ₹${cost.toFixed(0)})</span>`
+          : ` [Margin: ${curr}${cost.toFixed(0)}]`;
+        logTerminal(`[SMART BASKET FILL] ${sideHtml}: ${lotSize} shares @ ${curr}${ltp.toLocaleString()}${scaleNote}${misInfo} [Target: ${curr}${targetP} &bull; SL: ${curr}${initSL}]`);
       }
       renderAccountRibbon();
       updateMarketSessionBadge();
@@ -3886,7 +3925,7 @@ function calculateStockMetrics(sym) {
       const tbody = document.getElementById("pos-table-body");
       tbody.innerHTML = "";
       if (positions.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="py-6 text-center text-gray-500 text-xs">No active positions. Click "START ALGO BOT" to begin automated paper trading.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="py-6 text-center text-gray-500 text-xs">No active positions. Click "START ALGO BOT" to begin automated paper trading.</td></tr>`;
         return;
       }
 
@@ -3908,7 +3947,12 @@ function calculateStockMetrics(sym) {
         tr.innerHTML = `
           <td class="py-2 px-2 font-bold text-white">${p.symbol}</td>
           <td class="py-2 px-2">${sideBadge}</td>
-          <td class="py-2 px-2">${p.qty}</td>
+          <td class="py-2 px-2">
+            <span class="font-bold text-white">${p.qty}</span>
+            ${(p.market === "india" || currentMarket === "india")
+              ? `<div class="text-[9px] text-cyan-400 font-normal">₹${Math.round(p.exposure || (p.qty * p.avg)).toLocaleString('en-IN')} <span class="text-gray-400 font-semibold">(5x MIS)</span></div>`
+              : `<div class="text-[9px] text-gray-400 font-mono">${p.curr}${Math.round(p.exposure || (p.qty * p.avg)).toLocaleString()}</div>`}
+          </td>
           <td class="py-2 px-2 text-gray-300">${p.curr}${p.avg.toLocaleString()}</td>
           <td class="py-2 px-2 text-white">${p.curr}${p.ltp.toLocaleString()}</td>
           <td class="py-2 px-2">${trailBadge}</td>
@@ -4504,6 +4548,8 @@ function calculateStockMetrics(sym) {
         const candidateSymbols = Object.keys(marketCatalog[currentMarket].symbols).filter(s => {
           const symObj = marketCatalog[currentMarket].symbols[s];
           if (!symObj) return false;
+          // In Cash Equity market, filter out non-tradable spot indices (trade equities or F&O options)
+          if (currentMarket === "india" && (s === "NIFTY 50" || s === "BANK NIFTY")) return false;
           const sizing = computeAffordableOrderQty(symObj, cash);
           const canAfford = sizing.qty > 0 && sizing.cost <= cash;
           const isPositionOpen = positions.some(p => p.symbol === s);
