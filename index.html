@@ -1063,6 +1063,16 @@
         </p>
       </div>
 
+      <!-- Expiry Warning Banner (Shown when Kite daily token expired) -->
+      <div id="kite-expired-alert" class="hidden bg-amber-950/80 border border-amber-600/80 text-amber-200 p-3 rounded-lg text-xs space-y-1">
+        <div class="font-bold flex items-center gap-1.5 text-amber-300">
+          <span>⚠️</span> Daily Zerodha Session Expired (Daily 6:00 AM Reset)
+        </div>
+        <p class="text-[11px] text-amber-200/90 leading-relaxed">
+          Zerodha invalidates all API access tokens every morning at 6:00 AM IST by regulatory compliance. Click <strong>"1-Click Login to Kite &rarr;"</strong> below to approve with 2FA/TOTP — your fresh token will be exchanged automatically in 2 seconds.
+        </p>
+      </div>
+
       <!-- Credentials Form -->
       <div class="space-y-3 text-xs">
         <div>
@@ -1342,6 +1352,8 @@
     };
     let isLiveZerodhaFeedActive = false;
     let liveFeedLastSuccessAt = 0;
+    let kiteSessionExpired = false;
+    let lastTokenExpiryLogTime = 0;
     let dataFeedMode = "AUTO"; // "AUTO" | "SIM" | "LIVE"
     let zerodhaAfterHoursAnchored = false;
     const liveHistoricalLoadedTokens = new Set();
@@ -1371,6 +1383,7 @@
 
     function shouldUseRealLiveTicks() {
       if (dataFeedMode === "SIM") return false;
+      if (kiteSessionExpired) return false;
       if (!isLiveZerodhaFeedActive || (Date.now() - liveFeedLastSuccessAt > 20000)) return false;
       if (dataFeedMode === "LIVE") return true;
       // AUTO mode: 100% real live Zerodha ticks during NSE hours (9:15-3:30 IST); GARCH simulator after-hours!
@@ -1403,14 +1416,22 @@
         if (!zerodhaConfig.accessToken) {
           logTerminal(`⚠️ <strong class="text-amber-400">[ZERODHA LOGIN NEEDED]</strong> Click "Kite Connect" -> "1-Click Login to Kite" to stream real Zerodha prices.`);
           openZerodhaModal();
+        } else if (kiteSessionExpired) {
+          logTerminal(`⚠️ <strong class="text-amber-400 font-bold">[ZERODHA SESSION EXPIRED]</strong> Previous session expired at 6:00 AM IST. Click "Kite Expired" -> "1-Click Login to Kite" to activate today's live feed.`);
+          openZerodhaModal();
         } else {
-          logTerminal(`🟢 <strong class="text-emerald-400 font-bold">[FEED SWITCHED: PURE ZERODHA]</strong> Pulling 100% real NSE share &amp; F&amp;O option quotes from Zerodha (Paper Mode Safe).`);
+          const mktOpen = isNSEMarketHoursIST();
+          if (!mktOpen) {
+            logTerminal(`🟢 <strong class="text-emerald-400 font-bold">[FEED SWITCHED: PURE ZERODHA]</strong> Market is currently CLOSED (Reopens Monday 9:15 AM IST). Displaying official NSE closing prices from Zerodha.`);
+          } else {
+            logTerminal(`🟢 <strong class="text-emerald-400 font-bold">[FEED SWITCHED: PURE ZERODHA]</strong> Pulling 100% real live NSE share &amp; F&amp;O option quotes from Zerodha (Paper Mode Safe).`);
+          }
           pollLiveZerodhaFeed(true);
         }
       } else {
         const mktOpen = isNSEMarketHoursIST();
         logTerminal(`⚡ <strong class="text-cyan-400 font-bold">[FEED SWITCHED: AUTO HYBRID]</strong> ${mktOpen ? "NSE is OPEN — streaming live Zerodha ticks!" : "NSE is closed — anchored to real Zerodha closing prices + running GARCH simulator live! Auto-switches to live Zerodha at 9:15 AM IST."}`);
-        if (zerodhaConfig.accessToken) {
+        if (zerodhaConfig.accessToken && !kiteSessionExpired) {
           zerodhaAfterHoursAnchored = false;
           pollLiveZerodhaFeed(true);
         }
@@ -1451,22 +1472,54 @@
       const statusEl = document.getElementById("kite-connection-status");
       const label = document.getElementById("kite-status-label");
       const btn = document.getElementById("btn-zerodha-connect");
+      const alertBox = document.getElementById("kite-expired-alert");
 
-      const isConnected = Boolean(zerodhaConfig && (zerodhaConfig.connected || (zerodhaConfig.apiKey && zerodhaConfig.accessToken)));
-      if (isConnected) {
-        const uid = zerodhaConfig.userId || 'RXD245';
+      const uid = (zerodhaConfig && zerodhaConfig.userId) || 'RXD245';
+      const hasToken = Boolean(zerodhaConfig && zerodhaConfig.accessToken);
+      const isConfigured = Boolean(zerodhaConfig && zerodhaConfig.apiKey);
+
+      if (kiteSessionExpired) {
+        if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span> <span class="text-amber-300 font-bold">Session Expired (Reset at 6 AM)</span>`;
+        if (label) label.innerText = `🟡 Kite Expired (${uid})`;
+        if (btn) {
+          btn.className = "bg-amber-950/90 hover:bg-amber-900 border border-amber-500 text-amber-300 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow glow-amber animate-pulse";
+          btn.title = "Zerodha access token expired. Click to 1-Click Login to Kite.";
+        }
+        if (alertBox) alertBox.classList.remove("hidden");
+        return;
+      }
+
+      if (alertBox) alertBox.classList.add("hidden");
+
+      if (hasToken && isConfigured) {
         const liveNow = shouldUseRealLiveTicks();
-        const feedTag = liveNow ? "LIVE NSE FEED" : (zerodhaAfterHoursAnchored ? "Kite + Sim" : "Kite Online");
-        if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> ${liveNow ? 'Streaming Live NSE Quotes' : (zerodhaAfterHoursAnchored ? 'Real Closing Anchor + Sim' : 'Kite Authenticated')} (${uid})`;
+        const mktOpen = isNSEMarketHoursIST();
+        let feedTag = "Kite Online";
+        let statusText = `Kite Authenticated (${uid})`;
+
+        if (liveNow) {
+          feedTag = "LIVE NSE FEED";
+          statusText = `Streaming Live NSE Quotes (${uid})`;
+        } else if (dataFeedMode === "SIM") {
+          feedTag = "Kite (Sim Mode)";
+          statusText = `Sim Mode Active (${uid})`;
+        } else if (!mktOpen) {
+          feedTag = "Kite (Mkt Closed)";
+          statusText = `Market Closed — Anchored (${uid})`;
+        }
+
+        if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> ${statusText}`;
         if (label) label.innerText = `🟢 ${feedTag} (${uid})`;
         if (btn) {
           btn.className = "bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-300 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition";
+          btn.title = "Zerodha Kite Connected & Safe";
         }
       } else {
         if (statusEl) statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> Standby / Not Logged In`;
         if (label) label.innerText = "Kite Connect";
         if (btn) {
           btn.className = "bg-amber-950/80 hover:bg-amber-900 border border-amber-700/80 text-amber-300 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition";
+          btn.title = "Configure Zerodha Kite Connect Live API";
         }
       }
     }
@@ -1502,6 +1555,11 @@
       if (loginBtn) {
         loginBtn.href = `https://kite.zerodha.com/connect/login?v=3&api_key=${encodeURIComponent(key)}`;
       }
+      const alertBox = document.getElementById("kite-expired-alert");
+      if (alertBox) {
+        if (kiteSessionExpired) alertBox.classList.remove("hidden");
+        else alertBox.classList.add("hidden");
+      }
       updateTradingModeUI();
       updateKiteUI();
       modal.classList.remove("hidden");
@@ -1519,6 +1577,7 @@
       zerodhaConfig.accessToken = document.getElementById("kite-input-access-token").value.trim();
       zerodhaConfig.userId = document.getElementById("kite-input-user-id").value.trim() || "RXD245";
       zerodhaConfig.connected = Boolean(zerodhaConfig.apiKey && zerodhaConfig.accessToken);
+      kiteSessionExpired = false;
 
       try {
         localStorage.setItem("apex_zerodha_config", JSON.stringify(zerodhaConfig));
@@ -1624,14 +1683,32 @@
           headers: { "X-Kite-Token": zerodhaConfig.accessToken }
         });
         if (!resp.ok) {
-          if (resp.status === 401) {
+          if (resp.status === 401 || resp.status === 403) {
             isLiveZerodhaFeedActive = false;
+            kiteSessionExpired = true;
             updateKiteUI();
+            const alertBox = document.getElementById("kite-expired-alert");
+            if (alertBox) alertBox.classList.remove("hidden");
+
+            const nowTime = Date.now();
+            if (nowTime - lastTokenExpiryLogTime > 90000) {
+              lastTokenExpiryLogTime = nowTime;
+              logTerminal(`⚠️ <strong class="text-amber-400 font-bold">[ZERODHA TOKEN EXPIRED]</strong> Today's Zerodha 2FA session expired (tokens reset daily at 6:00 AM IST). Click <strong>"Kite Expired"</strong> → <strong>"1-Click Login to Kite"</strong> to refresh today's live feed.`);
+              playBeep("sell");
+            }
           }
           return;
         }
         const data = await resp.json();
         if (data.status !== "success") return;
+
+        const wasActive = isLiveZerodhaFeedActive;
+        const wasExpired = kiteSessionExpired;
+        isLiveZerodhaFeedActive = true;
+        kiteSessionExpired = false;
+        liveFeedLastSuccessAt = Date.now();
+        const alertBox = document.getElementById("kite-expired-alert");
+        if (alertBox) alertBox.classList.add("hidden");
 
         // 1. Apply 100% REAL NSE Cash Equities & Index prices
         if (data.equities) {
@@ -3090,11 +3167,15 @@ function calculateStockMetrics(sym) {
               if (resp.ok && data.access_token) {
                 zerodhaConfig.accessToken = data.access_token;
                 if (data.user_id) zerodhaConfig.userId = data.user_id;
+                zerodhaConfig.connected = true;
+                kiteSessionExpired = false;
+                isLiveZerodhaFeedActive = true;
+                liveFeedLastSuccessAt = Date.now();
                 localStorage.setItem("apex_zerodha_config", JSON.stringify(zerodhaConfig));
                 updateKiteUI();
                 logTerminal(`🟢 <strong class="text-emerald-400 font-bold">[ZERODHA LIVE SESSION ACTIVE]</strong> Real daily access_token issued for <strong>${zerodhaConfig.userId}</strong>! Streaming real NSE share &amp; F&amp;O option prices into Paper Mode...`);
                 playBeep("buy");
-                pollLiveZerodhaFeed();
+                pollLiveZerodhaFeed(true);
                 return;
               } else {
                 logTerminal(`⚠️ <strong class="text-amber-400">[RELAY EXCHANGE ERROR]</strong> ${data.error || "Could not exchange token."}`);
