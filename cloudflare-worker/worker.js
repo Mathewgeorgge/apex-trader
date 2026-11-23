@@ -371,6 +371,41 @@ export default {
       }
     }
 
-    return jsonResponse(request, { error: "Not found. Read-only endpoints: /health, /api/session, /api/quotes, /api/historical" }, 404);
+    // 4. Place Live Orders on Zerodha Kite Connect (Safe Intraday MIS Router)
+    if (url.pathname === "/api/orders" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const form = new URLSearchParams();
+        form.set("exchange", body.exchange || "NSE");
+        form.set("tradingsymbol", body.tradingsymbol);
+        form.set("transaction_type", body.transaction_type); // BUY or SELL
+        form.set("quantity", String(body.quantity));
+        form.set("product", body.product || "MIS");
+        form.set("order_type", body.order_type || "MARKET");
+        form.set("variety", body.variety || "regular");
+        form.set("validity", body.validity || "DAY");
+        if (body.price) form.set("price", String(body.price));
+        if (body.trigger_price) form.set("trigger_price", String(body.trigger_price));
+
+        const orderResp = await fetch("https://api.kite.trade/orders/regular", {
+          method: "POST",
+          headers: {
+            "X-Kite-Version": "3",
+            "Authorization": `token ${apiKey}:${accessToken}`,
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: form.toString()
+        });
+        const orderJson = await orderResp.json();
+        if (!orderResp.ok || orderJson.status !== "success") {
+          return jsonResponse(request, { error: orderJson.message || "Kite order placement failed", details: orderJson }, orderResp.status || 400);
+        }
+        return jsonResponse(request, { status: "success", data: orderJson.data });
+      } catch (err) {
+        return jsonResponse(request, { error: String(err) }, 500);
+      }
+    }
+
+    return jsonResponse(request, { error: "Not found. Supported endpoints: /health, /api/session, /api/quotes, /api/historical, /api/orders" }, 404);
   }
 };

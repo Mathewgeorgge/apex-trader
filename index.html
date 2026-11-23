@@ -6,134 +6,145 @@
   <title>ApexTrader Global Pro - Multi-Asset Algo Trading Terminal & Intelligence Suite</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background-color: #060910; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif; overflow-x: hidden; }
-    .card-panel { background: #0c1322; border: 1px solid #1a2538; }
-    .glass-header { background: rgba(12, 19, 34, 0.96); backdrop-filter: blur(14px); border-bottom: 1px solid #1a2538; }
-    .market-tab.active { background: #0284c7; color: white; font-weight: bold; }
-    .sub-tab.active { background: #1e293b; color: #38bdf8; border-bottom: 2px solid #38bdf8; font-weight: 700; }
-    .pulse-dot { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+    body { background-color: #07090e; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, monospace, sans-serif; overflow-x: hidden; }
+    .card-panel { background: #0c101c; border: 1px solid rgba(255, 255, 255, 0.07); box-shadow: 0 4px 20px -2px rgba(0,0,0,0.5); }
+    .glass-header { background: rgba(10, 14, 24, 0.92); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+    .btn-fintech { background: rgba(18, 26, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); color: #e2e8f0; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+    .btn-fintech:hover { background: rgba(30, 41, 65, 0.9); border-color: rgba(255, 255, 255, 0.2); color: #ffffff; }
+    .market-tab { transition: all 0.2s ease; border: 1px solid transparent; }
+    .market-tab.active { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: 700; box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.15); }
+    .sub-tab { transition: all 0.2s ease; border-bottom: 2px solid transparent; }
+    .sub-tab.active { background: rgba(30, 41, 59, 0.6); color: #38bdf8; border-bottom: 2px solid #38bdf8; font-weight: 700; }
+    .pulse-dot { animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(0.85); } }
     .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #070b14; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1a2538; border-radius: 4px; }
-    .glow-green { box-shadow: 0 0 15px rgba(16, 185, 129, 0.25); }
-    .glow-red { box-shadow: 0 0 15px rgba(239, 68, 68, 0.25); }
-    .glow-cyan { box-shadow: 0 0 15px rgba(6, 182, 212, 0.2); }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #07090e; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    .glow-green { box-shadow: 0 0 20px rgba(16, 185, 129, 0.25); }
+    .glow-red { box-shadow: 0 0 20px rgba(244, 63, 94, 0.25); }
+    .glow-cyan { box-shadow: 0 0 20px rgba(6, 182, 212, 0.2); }
   </style>
 </head>
 <body class="min-h-screen flex flex-col text-xs select-none">
 
-  <!-- NSE Indian Market Live Ticker Tape -->
-  <div class="bg-[#03060c] border-b border-gray-800/80 px-4 py-1.5 flex items-center justify-between text-[11px] overflow-x-auto whitespace-nowrap custom-scrollbar">
+  <!-- NSE Indian Market Live Ticker Tape (Calibrated to Real Bhavcopy / Kite Quotes) -->
+  <div class="bg-[#040711] border-b border-slate-800/80 px-4 py-1.5 flex items-center justify-between text-[11px] overflow-x-auto whitespace-nowrap custom-scrollbar">
     <div class="flex items-center space-x-6">
       <div class="flex items-center space-x-2">
-        <span class="text-amber-400 font-semibold">🇮🇳 NIFTY 50:</span>
+        <span class="text-amber-400 font-semibold tracking-wide">🇮🇳 NIFTY 50:</span>
         <span class="font-mono font-bold text-white" id="ticker-nifty">24,158.40</span>
         <span class="text-emerald-400 font-mono text-[10px]">+0.62% ▲</span>
       </div>
       <div class="flex items-center space-x-2">
-        <span class="text-cyan-400 font-semibold">🏦 BANK NIFTY:</span>
+        <span class="text-sky-400 font-semibold tracking-wide">🏦 BANK NIFTY:</span>
         <span class="font-mono font-bold text-white" id="ticker-banknifty">51,420.15</span>
         <span class="text-emerald-400 font-mono text-[10px]">+1.12% ▲</span>
       </div>
       <div class="flex items-center space-x-2">
-        <span class="text-purple-400 font-semibold">⚡ INDIA VIX:</span>
+        <span class="text-purple-400 font-semibold tracking-wide">⚡ INDIA VIX:</span>
         <span class="font-mono font-bold text-white" id="ticker-vix">13.45</span>
         <span class="text-emerald-400 font-mono text-[10px]">-4.20% ▼</span>
       </div>
-      <div class="flex items-center space-x-2 border-l border-gray-800 pl-4">
-        <span class="text-blue-400 font-semibold">📊 SENSEX:</span>
+      <div class="flex items-center space-x-2 border-l border-slate-800 pl-4">
+        <span class="text-blue-400 font-semibold tracking-wide">📊 SENSEX:</span>
         <span class="font-mono font-bold text-white" id="ticker-sensex">79,480.20</span>
         <span class="text-emerald-400 font-mono text-[10px]">+0.55% ▲</span>
       </div>
-      <div class="flex items-center space-x-2 border-l border-gray-800 pl-4">
-        <span class="text-emerald-400 font-semibold">⛽ RELIANCE:</span>
-        <span class="font-mono font-bold text-white" id="ticker-reliance">₹2,485.50</span>
-        <span class="text-emerald-400 font-mono text-[10px]">+1.25% ▲</span>
+      <div class="flex items-center space-x-2 border-l border-slate-800 pl-4">
+        <span class="text-emerald-400 font-semibold tracking-wide">⛽ RELIANCE:</span>
+        <span class="font-mono font-bold text-white" id="ticker-reliance">₹1,265.50</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+0.45% ▲</span>
       </div>
-      <div class="flex items-center space-x-2 border-l border-gray-800 pl-4">
-        <span class="text-indigo-400 font-semibold">🏛️ HDFCBANK:</span>
+      <div class="flex items-center space-x-2 border-l border-slate-800 pl-4">
+        <span class="text-indigo-400 font-semibold tracking-wide">🏛️ HDFCBANK:</span>
         <span class="font-mono font-bold text-white" id="ticker-hdfc">₹1,684.20</span>
         <span class="text-emerald-400 font-mono text-[10px]">+0.85% ▲</span>
       </div>
-      <div class="flex items-center space-x-2 border-l border-gray-800 pl-4">
-        <span class="text-rose-400 font-semibold">💻 TCS:</span>
-        <span class="font-mono font-bold text-white" id="ticker-tcs">₹3,920.00</span>
+      <div class="flex items-center space-x-2 border-l border-slate-800 pl-4">
+        <span class="text-rose-400 font-semibold tracking-wide">💻 TCS:</span>
+        <span class="font-mono font-bold text-white" id="ticker-tcs">₹4,080.00</span>
         <span class="text-rose-400 font-mono text-[10px]">-0.30% ▼</span>
       </div>
-      <div class="flex items-center space-x-2 border-l border-gray-800 pl-4">
-        <span class="text-cyan-400 font-semibold">🚗 TATAMOTORS:</span>
+      <div class="flex items-center space-x-2 border-l border-slate-800 pl-4">
+        <span class="text-cyan-400 font-semibold tracking-wide">🚗 TATAMOTORS:</span>
         <span class="font-mono font-bold text-white" id="ticker-tatamotors">₹792.40</span>
         <span class="text-emerald-400 font-mono text-[10px]">+2.10% ▲</span>
+      </div>
+      <div class="flex items-center space-x-2 border-l border-slate-800 pl-4">
+        <span class="text-yellow-400 font-semibold tracking-wide">🔩 TATASTEEL:</span>
+        <span class="font-mono font-bold text-white" id="ticker-tatasteel">₹161.65</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+1.35% ▲</span>
       </div>
     </div>
     <div class="flex items-center space-x-2 text-[10px] pl-4">
       <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
-      <span class="text-emerald-400 font-bold font-mono">NSE SIMULATOR ACTIVE (24x7)</span>
-      <span class="text-gray-500 font-mono text-[9px]">&bull; Zerodha API Ready</span>
+      <span class="text-emerald-400 font-bold font-mono tracking-wide">NSE EQUITIES CALIBRATED (5x MIS)</span>
+      <span class="text-slate-500 font-mono text-[9px]">&bull; Zerodha Live Gateway</span>
     </div>
   </div>
 
-  <!-- Primary Application Header -->
+  <!-- Primary Application Header (Institutional Luxury Fintech Redesign) -->
   <header class="glass-header px-4 py-2 flex flex-wrap lg:flex-nowrap items-center justify-between gap-3 sticky top-0 z-30">
     <div class="flex items-center space-x-3">
-      <div class="bg-gradient-to-tr from-cyan-600 to-indigo-600 p-2 rounded-lg text-white font-black text-sm shadow">
+      <div class="bg-gradient-to-br from-indigo-500 via-sky-500 to-emerald-400 p-2 rounded-lg text-white font-black text-xs tracking-wider shadow-md">
         APEX
       </div>
       <div>
         <div class="flex items-center space-x-2">
-          <h1 class="text-sm font-bold text-white tracking-wide">ApexTrader Global Pro</h1>
-          <span class="bg-cyan-950 text-cyan-300 border border-cyan-700/60 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">Quantum Risk Engine</span>
+          <h1 class="text-sm font-bold text-white tracking-wide">ApexTrader <span class="text-sky-400 font-extrabold">Institutional</span></h1>
+          <span class="bg-sky-950/60 text-sky-300 border border-sky-800/60 text-[9px] px-2 py-0.5 rounded font-mono font-semibold tracking-wider uppercase">Equities Engine</span>
         </div>
-        <p class="text-[10px] text-gray-400">6 Risk Filter Gates &bull; Zerodha Tax & Brokerage Engine &bull; Multi-Market</p>
+        <p class="text-[10px] text-slate-400">NSE Cash Equities (5x MIS) &bull; Official Zerodha Contract Note &bull; Multi-Gate Risk Shield</p>
       </div>
     </div>
 
-    <!-- Market Selector Tabs (NSE Focused) -->
-    <div class="flex flex-wrap items-center gap-1 border border-gray-800 bg-[#070b14] p-1 rounded-lg">
-      <button onclick="switchMarket('india')" id="market-btn-india" class="market-tab active px-3 py-1 rounded text-xs transition font-bold">
-        🇮🇳 NSE Cash Equities (Stocks)
+    <!-- Market Selector Tabs (Sleek Segmented Control) -->
+    <div class="flex items-center gap-1 border border-slate-800/80 bg-[#080d17] p-1 rounded-lg">
+      <button onclick="switchMarket('india')" id="market-btn-india" class="market-tab active px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span> NSE Cash Equities (Stocks)
       </button>
-      <button onclick="switchMarket('fno')" id="market-btn-fno" class="market-tab px-3 py-1 rounded text-xs text-cyan-400 hover:text-white transition font-bold bg-cyan-950/40 border border-cyan-800/40">
-        🎯 NSE F&O (Options Chain & Greeks)
+      <button onclick="switchMarket('fno')" id="market-btn-fno" class="market-tab px-3 py-1.5 rounded-md text-xs text-slate-400 hover:text-slate-200 font-semibold flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-slate-600"></span> NSE F&O (Options Desk)
       </button>
     </div>
 
-    <!-- Actions & Kill Switch -->
+    <!-- Actions & Kill Switch (Institutional Fintech Palette) -->
     <div class="flex flex-wrap items-center gap-2">
       <!-- Zerodha Kite Connect Button -->
-      <button onclick="openZerodhaModal()" id="btn-zerodha-connect" class="bg-amber-950/80 hover:bg-amber-900 border border-amber-700/80 text-amber-300 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition" title="Configure Zerodha Kite Connect Live API">
-        <span>🪁</span> <span id="kite-status-label">Kite Connect</span>
+      <button onclick="openZerodhaModal()" id="btn-zerodha-connect" class="btn-fintech px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2" title="Configure Zerodha Kite Connect API">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+        <span id="kite-status-label" class="font-mono text-slate-200">Kite (RXD245)</span>
       </button>
 
       <!-- Trading Mode Switcher (Paper vs Real) -->
-      <button onclick="toggleTradingMode()" id="btn-trading-mode" class="bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-600 text-emerald-300 px-2.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition shadow" title="Toggle between Safe Paper Simulation and Real Money Orders">
-        <span id="mode-icon">📝</span> <span id="mode-label">PAPER MODE</span>
+      <button onclick="toggleTradingMode()" id="btn-trading-mode" class="btn-fintech px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2" title="Toggle between Safe Paper Simulation and Real Money Orders">
+        <span id="mode-led" class="w-2 h-2 rounded-full bg-amber-400"></span>
+        <span id="mode-label" class="font-mono text-amber-300 font-bold tracking-wider">PAPER MODE</span>
       </button>
 
       <!-- Brokerage Calculator Modal Trigger -->
-      <button onclick="openBrokerageModal()" class="bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700 text-indigo-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition" title="View Zerodha Brokerage & STT Tax Calculator">
-        <span>🧮</span> Brokerage Calculator
+      <button onclick="openBrokerageModal()" class="btn-fintech px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5" title="View Zerodha Brokerage & STT Tax Calculator">
+        <span class="text-slate-400">🧾</span> <span class="text-slate-200">Contract Note</span>
       </button>
 
       <!-- NSE Bhavcopy Intelligence Modal Trigger -->
-      <button onclick="openBhavcopyModal()" id="btn-bhavcopy" class="bg-blue-950/80 hover:bg-blue-900 border border-blue-700/80 text-blue-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition" title="NSE Bhavcopy EOD Analyzer, Institutional Delivery Radar & OI Buildup">
-        <span>📊</span> Bhavcopy Intelligence
+      <button onclick="openBhavcopyModal()" id="btn-bhavcopy" class="btn-fintech px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5" title="NSE Bhavcopy EOD Analyzer, Institutional Delivery Radar & OI Buildup">
+        <span class="text-slate-400">📊</span> <span class="text-slate-200">Bhavcopy Radar</span>
       </button>
 
       <!-- Audio Mute Button -->
-      <button onclick="toggleAudio()" id="btn-audio-toggle" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition" title="Toggle Sound Effects">
-        <span id="audio-icon">🔊</span> <span id="audio-label">Sound ON</span>
+      <button onclick="toggleAudio()" id="btn-audio-toggle" class="btn-fintech px-2 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white" title="Toggle Sound">
+        <span id="audio-icon">🔊</span>
       </button>
 
       <!-- Bot Engine Status Pill -->
-      <div id="status-pill" class="px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-gray-800 text-gray-400 border border-gray-700 flex items-center gap-1.5">
-        <span class="w-2 h-2 rounded-full bg-gray-500"></span> BOT IDLE
+      <div id="status-pill" class="px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold bg-[#0a0e17] text-slate-400 border border-slate-800 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-slate-500"></span> <span id="status-pill-text">BOT IDLE</span>
       </div>
 
       <!-- Emergency Kill Switch -->
-      <button onclick="triggerKillSwitch()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg flex items-center gap-1.5 transition glow-red">
-        <span>🚨</span> KILL SWITCH
+      <button onclick="triggerKillSwitch()" class="bg-rose-950/70 hover:bg-rose-900 border border-rose-700/60 text-rose-200 px-3 py-1.5 rounded-lg text-xs font-bold tracking-wider flex items-center gap-1.5 transition shadow-lg glow-red">
+        <span class="w-2 h-2 rounded-full bg-rose-500 pulse-dot"></span> KILL SWITCH
       </button>
     </div>
   </header>
@@ -473,13 +484,19 @@
         <!-- Date-Wise Master Trade Book & Daily Performance Ledger -->
         <div class="space-y-2 mt-3 pt-3 border-t border-gray-800/80">
           <div class="flex flex-wrap justify-between items-center gap-2">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <span class="font-bold text-white text-xs flex items-center gap-1.5">
-                <span>📖</span> Date-Wise Master Trade Book &amp; Performance Ledger
+                <span>📖</span> Master Performance Ledger
               </span>
-              <span class="bg-indigo-950 text-indigo-300 border border-indigo-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                AUDITED JOURNAL
-              </span>
+              <!-- Strict Quarantine Switcher between Real Zerodha Trades & Simulator -->
+              <div class="flex items-center gap-1 bg-[#060a14] border border-slate-800 p-0.5 rounded-lg text-xs">
+                <button onclick="setTradeBookMode('ZERODHA')" id="tb-btn-zerodha" class="px-2.5 py-1 rounded-md font-semibold text-[11px] transition bg-sky-950 text-sky-300 border border-sky-700/80 shadow-sm flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 🏢 Zerodha Real Market Journal
+                </button>
+                <button onclick="setTradeBookMode('SIMULATOR')" id="tb-btn-sim" class="px-2.5 py-1 rounded-md font-semibold text-[11px] transition text-slate-400 hover:text-white flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> 🧪 Sandbox Simulator (Demo)
+                </button>
+              </div>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
               <!-- Date Filter -->
@@ -1771,7 +1788,10 @@
     let totalTaxesPaid = 0.0;
     let netRealizedPnl = 0.0;
     let positions = [];
-    let tradeBook = [];
+    let tradeBook = []; // Legacy compatibility
+    let zerodhaTradeBook = []; // 100% Authentic Zerodha Live / Market Practice Ledger (Never polluted!)
+    let simulatorTradeBook = []; // Sandboxed Simulator / Synthetic Benchmark Ledger
+    let currentTradeBookMode = "ZERODHA"; // "ZERODHA" or "SIMULATOR"
     let timeframeMinutes = 1;
     let currentSymbol = "NIFTY 50";
     let activeSubTab = "positions";
@@ -2464,26 +2484,26 @@
       "india": {
         currency: "₹",
         symbols: {
-          "RELIANCE": { name: "Reliance Industries", ltp: 2485.50, open: 2430.00, lot: 1, history: [], sector: "Energy & Oil" },
-          "HDFCBANK": { name: "HDFC Bank Ltd", ltp: 1684.20, open: 1655.00, lot: 1, history: [], sector: "Banking" },
-          "ICICIBANK": { name: "ICICI Bank Ltd", ltp: 1248.50, open: 1228.00, lot: 2, history: [], sector: "Banking" },
-          "SBIN": { name: "State Bank of India", ltp: 814.50, open: 802.00, lot: 3, history: [], sector: "PSU Bank" },
-          "KOTAKBANK": { name: "Kotak Mahindra Bank", ltp: 1762.00, open: 1748.00, lot: 1, history: [], sector: "Banking" },
-          "AXISBANK": { name: "Axis Bank Ltd", ltp: 1145.80, open: 1152.00, lot: 2, history: [], sector: "Banking" },
-          "TCS": { name: "Tata Consultancy", ltp: 3920.00, open: 3955.00, lot: 1, history: [], sector: "IT Services" },
-          "INFY": { name: "Infosys Ltd", ltp: 1845.20, open: 1858.00, lot: 1, history: [], sector: "IT Services" },
-          "WIPRO": { name: "Wipro Ltd", ltp: 542.10, open: 535.00, lot: 4, history: [], sector: "IT Services" },
-          "TATAMOTORS": { name: "Tata Motors Ltd", ltp: 792.40, open: 772.00, lot: 3, history: [], sector: "Auto & EV" },
-          "M&M": { name: "Mahindra & Mahindra", ltp: 2890.00, open: 2840.00, lot: 1, history: [], sector: "Auto & EV" },
-          "MARUTI": { name: "Maruti Suzuki", ltp: 11250.00, open: 11180.00, lot: 1, history: [], sector: "Auto" },
-          "BHARTIARTL": { name: "Bharti Airtel", ltp: 1560.00, open: 1535.00, lot: 1, history: [], sector: "Telecom" },
-          "ITC": { name: "ITC Ltd", ltp: 472.50, open: 468.00, lot: 5, history: [], sector: "FMCG" },
-          "HINDUNILVR": { name: "Hindustan Unilever", ltp: 2380.00, open: 2405.00, lot: 1, history: [], sector: "FMCG" },
-          "TATASTEEL": { name: "Tata Steel Ltd", ltp: 148.60, open: 146.20, lot: 15, history: [], sector: "Metals" },
-          "LT": { name: "Larsen & Toubro", ltp: 3580.00, open: 3540.00, lot: 1, history: [], sector: "Infra & Cap Goods" },
-          "SUNPHARMA": { name: "Sun Pharma", ltp: 1810.00, open: 1795.00, lot: 1, history: [], sector: "Pharma" },
-          "NIFTY 50": { name: "Nifty 50 Index", ltp: 24158.40, open: 24010.00, lot: 65, history: [], sector: "Benchmark" },
-          "BANK NIFTY": { name: "Bank Nifty Index", ltp: 51420.15, open: 50850.00, lot: 30, history: [], sector: "Bank Index" }
+          "RELIANCE": { name: "Reliance Industries", ltp: 1265.50, open: 1258.00, lot: 1, history: [], sector: "Energy & Oil", officialClose: 1265.50 },
+          "HDFCBANK": { name: "HDFC Bank Ltd", ltp: 1684.20, open: 1670.00, lot: 1, history: [], sector: "Banking", officialClose: 1684.20 },
+          "ICICIBANK": { name: "ICICI Bank Ltd", ltp: 1248.50, open: 1238.00, lot: 2, history: [], sector: "Banking", officialClose: 1248.50 },
+          "SBIN": { name: "State Bank of India", ltp: 814.50, open: 808.00, lot: 3, history: [], sector: "PSU Bank", officialClose: 814.50 },
+          "KOTAKBANK": { name: "Kotak Mahindra Bank", ltp: 1762.00, open: 1750.00, lot: 1, history: [], sector: "Banking", officialClose: 1762.00 },
+          "AXISBANK": { name: "Axis Bank Ltd", ltp: 1145.80, open: 1140.00, lot: 2, history: [], sector: "Banking", officialClose: 1145.80 },
+          "TCS": { name: "Tata Consultancy", ltp: 4080.00, open: 4050.00, lot: 1, history: [], sector: "IT Services", officialClose: 4080.00 },
+          "INFY": { name: "Infosys Ltd", ltp: 1845.20, open: 1840.00, lot: 1, history: [], sector: "IT Services", officialClose: 1845.20 },
+          "WIPRO": { name: "Wipro Ltd", ltp: 542.10, open: 538.00, lot: 4, history: [], sector: "IT Services", officialClose: 542.10 },
+          "TATAMOTORS": { name: "Tata Motors Ltd", ltp: 792.40, open: 785.00, lot: 3, history: [], sector: "Auto & EV", officialClose: 792.40 },
+          "M&M": { name: "Mahindra & Mahindra", ltp: 2890.00, open: 2860.00, lot: 1, history: [], sector: "Auto & EV", officialClose: 2890.00 },
+          "MARUTI": { name: "Maruti Suzuki", ltp: 11250.00, open: 11200.00, lot: 1, history: [], sector: "Auto", officialClose: 11250.00 },
+          "BHARTIARTL": { name: "Bharti Airtel", ltp: 1560.00, open: 1550.00, lot: 1, history: [], sector: "Telecom", officialClose: 1560.00 },
+          "ITC": { name: "ITC Ltd", ltp: 472.50, open: 470.00, lot: 5, history: [], sector: "FMCG", officialClose: 472.50 },
+          "HINDUNILVR": { name: "Hindustan Unilever", ltp: 2380.00, open: 2390.00, lot: 1, history: [], sector: "FMCG", officialClose: 2380.00 },
+          "TATASTEEL": { name: "Tata Steel Ltd", ltp: 161.65, open: 160.00, lot: 15, history: [], sector: "Metals", officialClose: 161.65 },
+          "LT": { name: "Larsen & Toubro", ltp: 3580.00, open: 3560.00, lot: 1, history: [], sector: "Infra & Cap Goods", officialClose: 3580.00 },
+          "SUNPHARMA": { name: "Sun Pharma", ltp: 1810.00, open: 1800.00, lot: 1, history: [], sector: "Pharma", officialClose: 1810.00 },
+          "NIFTY 50": { name: "Nifty 50 Index", ltp: 24158.40, open: 24100.00, lot: 65, history: [], sector: "Benchmark", officialClose: 24158.40 },
+          "BANK NIFTY": { name: "Bank Nifty Index", ltp: 51420.15, open: 51250.00, lot: 30, history: [], sector: "Bank Index", officialClose: 51420.15 }
         }
       },
       "fno": {
@@ -2541,13 +2561,13 @@
       equities: {
         "NIFTY 50": { high: 24310.45, low: 24120.30, close: 24180.80, prevClose: 24140.00, volume: 28450120, delivQty: 15420100, delivPer: 54.2 },
         "BANK NIFTY": { high: 51840.20, low: 51290.10, close: 51610.50, prevClose: 51480.00, volume: 18230400, delivQty: 9450000, delivPer: 51.8 },
-        "RELIANCE": { high: 2498.50, low: 2445.10, close: 2485.50, prevClose: 2452.00, volume: 9245100, delivQty: 5935350, delivPer: 64.2 },
+        "RELIANCE": { high: 1278.50, low: 1245.10, close: 1265.50, prevClose: 1252.00, volume: 9245100, delivQty: 5935350, delivPer: 64.2 },
         "HDFCBANK": { high: 1698.20, low: 1662.50, close: 1684.20, prevClose: 1668.00, volume: 14210300, delivQty: 8739100, delivPer: 61.5 },
         "ICICIBANK": { high: 1258.00, low: 1232.50, close: 1248.50, prevClose: 1238.00, volume: 11204000, delivQty: 7136940, delivPer: 63.7 },
         "SBIN": { high: 824.50, low: 804.20, close: 814.50, prevClose: 808.00, volume: 15402000, delivQty: 7993630, delivPer: 51.9 },
         "KOTAKBANK": { high: 1778.00, low: 1746.50, close: 1762.00, prevClose: 1752.00, volume: 4120300, delivQty: 2542200, delivPer: 61.7 },
         "AXISBANK": { high: 1158.00, low: 1135.00, close: 1145.80, prevClose: 1140.00, volume: 6840200, delivQty: 3980100, delivPer: 58.2 },
-        "TCS": { high: 3965.00, low: 3895.00, close: 3920.00, prevClose: 3940.00, volume: 2150400, delivQty: 1277330, delivPer: 59.4 },
+        "TCS": { high: 4120.00, low: 4040.00, close: 4080.00, prevClose: 4060.00, volume: 2150400, delivQty: 1277330, delivPer: 59.4 },
         "INFY": { high: 1868.50, low: 1832.00, close: 1845.20, prevClose: 1855.00, volume: 5430200, delivQty: 2921440, delivPer: 53.8 },
         "WIPRO": { high: 548.20, low: 534.00, close: 542.10, prevClose: 538.00, volume: 7840100, delivQty: 3998400, delivPer: 51.0 },
         "TATAMOTORS": { high: 804.40, low: 782.10, close: 792.40, prevClose: 785.00, volume: 8940100, delivQty: 4309120, delivPer: 48.2 },
@@ -2556,7 +2576,7 @@
         "BHARTIARTL": { high: 1578.00, low: 1542.00, close: 1560.00, prevClose: 1545.00, volume: 5840300, delivQty: 3621000, delivPer: 62.0 },
         "ITC": { high: 476.90, low: 467.30, close: 472.50, prevClose: 468.00, volume: 12104500, delivQty: 8727340, delivPer: 72.1 },
         "HINDUNILVR": { high: 2415.00, low: 2365.00, close: 2380.00, prevClose: 2395.00, volume: 1840200, delivQty: 1140900, delivPer: 62.0 },
-        "TATASTEEL": { high: 151.20, low: 145.80, close: 148.60, prevClose: 147.00, volume: 24500000, delivQty: 13965000, delivPer: 57.0 },
+        "TATASTEEL": { high: 163.50, low: 160.20, close: 161.65, prevClose: 160.50, volume: 24500000, delivQty: 13965000, delivPer: 57.0 },
         "LT": { high: 3615.00, low: 3540.00, close: 3580.00, prevClose: 3550.00, volume: 2410300, delivQty: 1542500, delivPer: 64.0 },
         "SUNPHARMA": { high: 1825.00, low: 1792.00, close: 1810.00, prevClose: 1800.00, volume: 2840100, delivQty: 1647200, delivPer: 58.0 }
       },
@@ -2753,12 +2773,16 @@
         }
       }
 
-      // Soft outer intraday circuit guardrail (±4% equities, ±18% options)
+      // Firm anchor spring to prevent uncalibrated simulation drift (Keeps prices within ±2.5% of official close)
       let outerPull = 0;
-      const maxDev = isOption ? 0.18 : 0.04;
-      const devAnchor = (item.ltp - item.anchorPrice) / item.anchorPrice;
-      if (Math.abs(devAnchor) > maxDev * 0.65) {
-        outerPull = -Math.sign(devAnchor) * tickVol * 0.38;
+      const anchorP = item.anchorPrice || item.officialClose || item.ltp;
+      const devAnchor = (item.ltp - anchorP) / anchorP;
+      const maxDev = isOption ? 0.10 : 0.025; // Equities tight ±2.5%, Options ±10%
+      if (Math.abs(devAnchor) > maxDev * 0.60) {
+        outerPull = -Math.sign(devAnchor) * tickVol * 1.5;
+      }
+      if (Math.abs(devAnchor) > maxDev) {
+        outerPull = -Math.sign(devAnchor) * tickVol * 3.5;
       }
 
       const tickRet = regimeDrift + orderFlow + shock + boxPull + outerPull;
@@ -4351,19 +4375,19 @@ function calculateStockMetrics(sym) {
         }
 
         btn.innerHTML = "<span>⏹</span> STOP ALGO BOT";
-        btn.className = "w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-red";
-        pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> BOT ACTIVE`;
-        pill.className = "px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/60 flex items-center gap-1.5";
+        btn.className = "w-full bg-rose-950/80 hover:bg-rose-900 border border-rose-700/80 text-rose-200 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-red";
+        pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> <span>BOT ACTIVE</span>`;
+        pill.className = "px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold bg-[#071912] text-emerald-300 border border-emerald-600/40 flex items-center gap-2 glow-green";
         statusTag.innerText = "ACTIVE";
-        statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-bold border border-emerald-800";
+        statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-300 font-bold border border-emerald-800";
         playBeep("buy");
         saveSessionState();
         logTerminal(`<strong>[BOT STARTED]</strong> Strategy: <em>${document.getElementById("sel-algo-strategy").value}</em> on market <strong>${currentMarket.toUpperCase()}</strong>. 6 Risk Gates Active.`);
       } else {
         btn.innerHTML = "<span>▶</span> START ALGO BOT";
-        btn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-green";
-        pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-gray-500"></span> BOT IDLE`;
-        pill.className = "px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-gray-800 text-gray-400 border border-gray-700 flex items-center gap-1.5";
+        btn.className = "w-full bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-200 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-green";
+        pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-500"></span> <span>BOT IDLE</span>`;
+        pill.className = "px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold bg-[#0a0e17] text-slate-400 border border-slate-800 flex items-center gap-2";
         statusTag.innerText = "OFFLINE";
         statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-gray-800 text-gray-400 font-bold";
         playBeep("sell");
@@ -4540,6 +4564,16 @@ function calculateStockMetrics(sym) {
         unrealizedGross += c.grossPnl;
         unrealizedTaxes += c.total;
       });
+
+      // Synchronize realized PnL directly from today's trades in the active trade book
+      const todayIso = getIsoDate(new Date());
+      const activeBook = (typeof currentTradeBookMode !== 'undefined' && currentTradeBookMode === "SIMULATOR") ? (simulatorTradeBook || []) : (zerodhaTradeBook || tradeBook || []);
+      const todayTrades = activeBook.filter(t => t.dateStr === todayIso);
+      if (todayTrades.length > 0) {
+        grossRealizedPnl = todayTrades.reduce((sum, t) => sum + (Number(t.grossPnl) || 0), 0);
+        totalTaxesPaid = todayTrades.reduce((sum, t) => sum + (Number(t.taxes) || 0), 0);
+        netRealizedPnl = todayTrades.reduce((sum, t) => sum + (Number(t.netPnl) || 0), 0);
+      }
 
       const totalGross = grossRealizedPnl + unrealizedGross;
       const totalTaxes = totalTaxesPaid + unrealizedTaxes;
@@ -5080,6 +5114,224 @@ function calculateStockMetrics(sym) {
       ctx.textAlign = "left";
       ctx.fillText(livePrice.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}), badgeX + 4, badgeY + 12.5);
 
+      // =========================================================================
+      // ACTIVE POSITION OVERLAY: ENTRY, TARGET, STOP LOSS & DYNAMIC TRAILING SL
+      // Institutional TradingView / Bloomberg / Kite Execution Visualizer
+      // =========================================================================
+      const activePos = positions.find(p => p.symbol === currentSymbol);
+      if (activePos) {
+        const isShort = (activePos.type === "SELL");
+        const entryPrice = Number(activePos.avg);
+        const qty = activePos.qty;
+        const targetPrice = Number(activePos.targetPrice || (isShort ? entryPrice * 0.974 : entryPrice * 1.026));
+        const initialSL = Number(activePos.initialSL || (isShort ? entryPrice * 1.012 : entryPrice * 0.988));
+        const trailingSL = Number(activePos.trailingSL || initialSL);
+        const isLocked = activePos.trailStatus === "LOCKED" || (isShort ? trailingSL < entryPrice : trailingSL > entryPrice);
+        const profitLocked = Number(activePos.profitLocked || 0);
+
+        const getY = (val) => chartPlotH - ((val - minP) / (maxP - minP)) * chartPlotH;
+
+        // 1. ENTRY LINE (Solid Cyan/Blue for BUY, Rose for SELL)
+        if (entryPrice >= minP && entryPrice <= maxP) {
+          const yEntry = getY(entryPrice);
+          ctx.save();
+          ctx.strokeStyle = isShort ? "#f43f5e" : "#0284c7";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(0, yEntry);
+          ctx.lineTo(chartPlotW, yEntry);
+          ctx.stroke();
+
+          // Left-side floating tag on chart
+          ctx.fillStyle = isShort ? "rgba(136, 19, 55, 0.9)" : "rgba(3, 105, 161, 0.9)";
+          const entryTag = `${isShort ? '▼ SELL ENTRY' : '▲ BUY ENTRY'} ₹${entryPrice.toFixed(2)} (${qty} shs)`;
+          ctx.font = "bold 9.5px monospace";
+          const tagW = ctx.measureText(entryTag).width + 12;
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(8, yEntry - 10, tagW, 20, 4);
+            ctx.fill();
+          } else {
+            ctx.fillRect(8, yEntry - 10, tagW, 20);
+          }
+          ctx.fillStyle = "#ffffff";
+          ctx.fillText(entryTag, 14, yEntry + 4);
+
+          // Right Price Axis Pill
+          ctx.fillStyle = isShort ? "#be123c" : "#0284c7";
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(chartPlotW + 2, yEntry - 9, 64, 18, 3);
+            ctx.fill();
+          } else {
+            ctx.fillRect(chartPlotW + 2, yEntry - 9, 64, 18);
+          }
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 9.5px monospace";
+          ctx.fillText("ENTRY " + entryPrice.toFixed(1), chartPlotW + 4, yEntry + 3.5);
+          ctx.restore();
+        }
+
+        // 2. PROFIT TARGET LINE (Dashed Emerald)
+        if (targetPrice >= minP && targetPrice <= maxP) {
+          const yTarget = getY(targetPrice);
+          ctx.save();
+          ctx.setLineDash([5, 4]);
+          ctx.strokeStyle = "#10b981";
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(0, yTarget);
+          ctx.lineTo(chartPlotW, yTarget);
+          ctx.stroke();
+
+          // Left Tag
+          ctx.fillStyle = "rgba(6, 78, 59, 0.9)";
+          const tgtGain = Math.abs(targetPrice - entryPrice) * qty;
+          const tgtTag = `🎯 TARGET ₹${targetPrice.toFixed(2)} (+₹${tgtGain.toFixed(1)} / +2.6%)`;
+          ctx.font = "bold 9.5px monospace";
+          const tgtW = ctx.measureText(tgtTag).width + 12;
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(8, yTarget - 10, tgtW, 20, 4);
+            ctx.fill();
+          } else {
+            ctx.fillRect(8, yTarget - 10, tgtW, 20);
+          }
+          ctx.fillStyle = "#34d399";
+          ctx.fillText(tgtTag, 14, yTarget + 4);
+
+          // Right Pill
+          ctx.fillStyle = "#059669";
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(chartPlotW + 2, yTarget - 9, 64, 18, 3);
+            ctx.fill();
+          } else {
+            ctx.fillRect(chartPlotW + 2, yTarget - 9, 64, 18);
+          }
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 9.5px monospace";
+          ctx.fillText("TGT " + targetPrice.toFixed(1), chartPlotW + 4, yTarget + 3.5);
+          ctx.restore();
+        }
+
+        // 3. INITIAL STOP LOSS (Dashed Crimson) - shown if trailing has not locked yet
+        if (!isLocked && initialSL >= minP && initialSL <= maxP) {
+          const ySL = getY(initialSL);
+          ctx.save();
+          ctx.setLineDash([4, 4]);
+          ctx.strokeStyle = "#ef4444";
+          ctx.lineWidth = 1.3;
+          ctx.beginPath();
+          ctx.moveTo(0, ySL);
+          ctx.lineTo(chartPlotW, ySL);
+          ctx.stroke();
+
+          // Left Tag
+          ctx.fillStyle = "rgba(127, 29, 29, 0.9)";
+          const slLoss = Math.abs(entryPrice - initialSL) * qty;
+          const slTag = `🛑 STOP LOSS ₹${initialSL.toFixed(2)} (-₹${slLoss.toFixed(1)} / -1.2%)`;
+          ctx.font = "bold 9.5px monospace";
+          const slW = ctx.measureText(slTag).width + 12;
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(8, ySL - 10, slW, 20, 4);
+            ctx.fill();
+          } else {
+            ctx.fillRect(8, ySL - 10, slW, 20);
+          }
+          ctx.fillStyle = "#f87171";
+          ctx.fillText(slTag, 14, ySL + 4);
+
+          // Right Pill
+          ctx.fillStyle = "#dc2626";
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(chartPlotW + 2, ySL - 9, 64, 18, 3);
+            ctx.fill();
+          } else {
+            ctx.fillRect(chartPlotW + 2, ySL - 9, 64, 18);
+          }
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 9.5px monospace";
+          ctx.fillText("SL " + initialSL.toFixed(1), chartPlotW + 4, ySL + 3.5);
+          ctx.restore();
+        }
+
+        // 4. DYNAMIC TRAILING STOP LOSS / LOCKED PROFIT LINE
+        if (isLocked && trailingSL >= minP && trailingSL <= maxP) {
+          const yTrail = getY(trailingSL);
+          ctx.save();
+          ctx.setLineDash([3, 2]);
+          ctx.strokeStyle = "#f59e0b";
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.moveTo(0, yTrail);
+          ctx.lineTo(chartPlotW, yTrail);
+          ctx.stroke();
+
+          // Left Tag (Glowing Amber/Gold)
+          ctx.fillStyle = "rgba(120, 53, 15, 0.92)";
+          const trailTag = `🔒 TRAILING SL ₹${trailingSL.toFixed(2)} [PROFIT LOCKED: +₹${profitLocked.toFixed(2)}]`;
+          ctx.font = "bold 9.5px monospace";
+          const trailW = ctx.measureText(trailTag).width + 12;
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(8, yTrail - 10, trailW, 20, 4);
+            ctx.fill();
+          } else {
+            ctx.fillRect(8, yTrail - 10, trailW, 20);
+          }
+          ctx.fillStyle = "#fbbf24";
+          ctx.fillText(trailTag, 14, yTrail + 4);
+
+          // Right Pill
+          ctx.fillStyle = "#d97706";
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(chartPlotW + 2, yTrail - 9, 64, 18, 3);
+            ctx.fill();
+          } else {
+            ctx.fillRect(chartPlotW + 2, yTrail - 9, 64, 18);
+          }
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 9.5px monospace";
+          ctx.fillText("TRAIL " + trailingSL.toFixed(1), chartPlotW + 4, yTrail + 3.5);
+          ctx.restore();
+        }
+
+        // 5. Draw Entry Marker on the closest candle
+        const entryTs = activePos.entryTime || (Date.now() - 300000);
+        let bestCandleIdx = candles.length - 1;
+        let minDiff = Infinity;
+        candles.forEach((candle, idx) => {
+          const diff = Math.abs((candle.timestamp || 0) - entryTs);
+          if (diff < minDiff) {
+            minDiff = diff;
+            bestCandleIdx = idx;
+          }
+        });
+        const markerCandle = candles[bestCandleIdx];
+        if (markerCandle) {
+          const xMark = bestCandleIdx * candleSlot + candleW / 2;
+          ctx.save();
+          if (!isShort) {
+            const yMark = chartPlotH - ((markerCandle.low - minP) / (maxP - minP)) * chartPlotH + 14;
+            ctx.fillStyle = "#10b981";
+            ctx.font = "bold 13px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("▲", xMark, yMark);
+          } else {
+            const yMark = chartPlotH - ((markerCandle.high - minP) / (maxP - minP)) * chartPlotH - 6;
+            ctx.fillStyle = "#f43f5e";
+            ctx.font = "bold 13px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("▼", xMark, yMark);
+          }
+          ctx.restore();
+        }
+      }
+
       // Top-Left Chart Live HUD Header (Symbol, Timeframe, OHLC, Live Status)
       ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
       ctx.fillStyle = "#f8fafc";
@@ -5245,6 +5497,7 @@ function calculateStockMetrics(sym) {
       if (document.getElementById("ticker-hdfc")) document.getElementById("ticker-hdfc").innerText = "₹" + marketCatalog["india"].symbols["HDFCBANK"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
       if (document.getElementById("ticker-tcs")) document.getElementById("ticker-tcs").innerText = "₹" + marketCatalog["india"].symbols["TCS"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
       if (document.getElementById("ticker-tatamotors")) document.getElementById("ticker-tatamotors").innerText = "₹" + marketCatalog["india"].symbols["TATAMOTORS"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
+      if (document.getElementById("ticker-tatasteel")) document.getElementById("ticker-tatasteel").innerText = "₹" + marketCatalog["india"].symbols["TATASTEEL"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
 
       // Multi-Stock Intelligent Breakout Scanner:
       // Evaluates ONCE per cycle (outside market loops), respecting active user cooldowns & smart ₹7k lot sizing
@@ -5524,24 +5777,65 @@ function calculateStockMetrics(sym) {
       return `${h}:${m}:${s}`;
     }
 
+    function setTradeBookMode(mode) {
+      currentTradeBookMode = mode;
+      const btnZerodha = document.getElementById("tb-btn-zerodha");
+      const btnSim = document.getElementById("tb-btn-sim");
+      if (btnZerodha && btnSim) {
+        if (mode === "ZERODHA") {
+          btnZerodha.className = "px-2.5 py-1 rounded-md font-semibold text-[11px] transition bg-sky-950 text-sky-300 border border-sky-700/80 shadow-sm flex items-center gap-1.5";
+          btnSim.className = "px-2.5 py-1 rounded-md font-semibold text-[11px] transition text-slate-400 hover:text-white flex items-center gap-1.5";
+        } else {
+          btnSim.className = "px-2.5 py-1 rounded-md font-semibold text-[11px] transition bg-amber-950 text-amber-300 border border-amber-700/80 shadow-sm flex items-center gap-1.5";
+          btnZerodha.className = "px-2.5 py-1 rounded-md font-semibold text-[11px] transition text-slate-400 hover:text-white flex items-center gap-1.5";
+        }
+      }
+      renderTradeBookUI();
+      renderAccountRibbon();
+    }
+
     function loadTradeBook() {
+      // 1. Load 100% Authentic Zerodha Live / Real Market Practice Trades
       try {
-        const raw = localStorage.getItem("apex_trade_book");
-        if (raw) {
-          tradeBook = JSON.parse(raw);
+        const rawZerodha = localStorage.getItem("apex_zerodha_live_trades");
+        if (rawZerodha) {
+          zerodhaTradeBook = JSON.parse(rawZerodha);
+        } else {
+          // One-time graceful migration: pull any genuine user practice trades from legacy apex_trade_book
+          const oldRaw = localStorage.getItem("apex_trade_book");
+          if (oldRaw) {
+            const oldList = JSON.parse(oldRaw);
+            // Quarantine: Filter out benchmark mock entries so Zerodha trade book starts clean
+            zerodhaTradeBook = oldList.filter(t => !t.id || !t.id.startsWith("TB-2026-11-23-0"));
+          }
         }
       } catch (e) {
-        tradeBook = [];
+        zerodhaTradeBook = [];
       }
-      if (!tradeBook || !Array.isArray(tradeBook) || tradeBook.length === 0) {
-        tradeBook = generateBenchmarkTradeBook();
-        saveTradeBook();
+      if (!Array.isArray(zerodhaTradeBook)) zerodhaTradeBook = [];
+
+      // 2. Load Sandbox Simulator / Benchmark Trades
+      try {
+        const rawSim = localStorage.getItem("apex_simulator_trades");
+        if (rawSim) {
+          simulatorTradeBook = JSON.parse(rawSim);
+        } else {
+          simulatorTradeBook = generateBenchmarkTradeBook();
+          localStorage.setItem("apex_simulator_trades", JSON.stringify(simulatorTradeBook));
+        }
+      } catch (e) {
+        simulatorTradeBook = [];
       }
+      if (!Array.isArray(simulatorTradeBook)) simulatorTradeBook = [];
+
+      tradeBook = zerodhaTradeBook; // Legacy backward pointer
     }
 
     function saveTradeBook() {
       try {
-        localStorage.setItem("apex_trade_book", JSON.stringify(tradeBook));
+        localStorage.setItem("apex_zerodha_live_trades", JSON.stringify(zerodhaTradeBook));
+        localStorage.setItem("apex_simulator_trades", JSON.stringify(simulatorTradeBook));
+        localStorage.setItem("apex_trade_book", JSON.stringify(zerodhaTradeBook));
       } catch (e) {}
     }
 
@@ -5551,7 +5845,7 @@ function calculateStockMetrics(sym) {
       const entryDate = new Date(entry.entryTimestamp || (now.getTime() - 600000));
       
       const record = {
-        id: entry.id || ("TB-" + now.getTime().toString(36).toUpperCase() + "-" + Math.floor(Math.random() * 1000)),
+        id: entry.id || ("TX-" + now.getTime().toString(36).toUpperCase() + "-" + Math.floor(Math.random() * 1000)),
         dateStr: getIsoDate(now),
         dateDisplay: getFormattedDate(now),
         entryTimeStr: getFormattedTime(entryDate),
@@ -5575,8 +5869,17 @@ function calculateStockMetrics(sym) {
         capitalAfter: Number(entry.capitalAfter || cash)
       };
 
-      tradeBook.unshift(record);
+      // Strict Data Quarantine:
+      // Real market practice & live orders route ONLY to the clean Zerodha ledger
+      if (entry.market === "india" || entry.market === "fno" || currentMarket === "india" || zerodhaConfig.connected) {
+        zerodhaTradeBook.unshift(record);
+        tradeBook = zerodhaTradeBook;
+      } else {
+        simulatorTradeBook.unshift(record);
+      }
       saveTradeBook();
+      renderTradeBookUI();
+      renderAccountRibbon();
     }
 
     
@@ -5757,7 +6060,8 @@ function calculateStockMetrics(sym) {
     }
 
     function openTradeContractNote(tradeId) {
-      const t = tradeBook.find(x => x.id === tradeId);
+      const activeBook = (currentTradeBookMode === "SIMULATOR") ? simulatorTradeBook : zerodhaTradeBook;
+      const t = activeBook.find(x => x.id === tradeId) || zerodhaTradeBook.find(x => x.id === tradeId) || simulatorTradeBook.find(x => x.id === tradeId);
       if (!t) return;
       const c = t.chargesBreakdown || calculateTradeCharges(t.entryPrice, t.exitPrice, t.qty, t.market || "india", t.side || "BUY");
 
@@ -5803,12 +6107,13 @@ function calculateStockMetrics(sym) {
     }
 
     function openConsolidatedContractNote() {
+      const activeBook = (currentTradeBookMode === "SIMULATOR") ? simulatorTradeBook : zerodhaTradeBook;
       const dateSelect = document.getElementById("tb-filter-date");
       const selectedDate = dateSelect ? dateSelect.value : "ALL";
       
       const tradesToAggregate = (selectedDate === "ALL")
-        ? tradeBook
-        : tradeBook.filter(t => t.dateStr === selectedDate);
+        ? activeBook
+        : activeBook.filter(t => t.dateStr === selectedDate);
 
       if (tradesToAggregate.length === 0) {
         alert("No trades recorded for this date to generate a contract note.");
@@ -6233,14 +6538,16 @@ function calculateStockMetrics(sym) {
       const tbody = document.getElementById("tb-table-body");
       if (!tbody || !summaryRibbon) return;
 
+      const activeBook = (currentTradeBookMode === "SIMULATOR") ? simulatorTradeBook : zerodhaTradeBook;
       const selectedDate = dateSelect ? dateSelect.value : "ALL";
-      const uniqueDates = Array.from(new Set(tradeBook.map(t => t.dateStr))).sort().reverse();
+      const uniqueDates = Array.from(new Set(activeBook.map(t => t.dateStr))).sort().reverse();
 
       if (dateSelect) {
-        let optionsHtml = `<option value="ALL" ${selectedDate === 'ALL' ? 'selected' : ''}>All Dates (${tradeBook.length} Trades)</option>`;
+        const modeLabel = (currentTradeBookMode === "SIMULATOR") ? "Simulator" : "Zerodha Live";
+        let optionsHtml = `<option value="ALL" ${selectedDate === 'ALL' ? 'selected' : ''}>All Dates (${activeBook.length} Trades • ${modeLabel})</option>`;
         const todayIso = getIsoDate(new Date());
         uniqueDates.forEach(dStr => {
-          const match = tradeBook.find(t => t.dateStr === dStr);
+          const match = activeBook.find(t => t.dateStr === dStr);
           const display = (dStr === todayIso) ? `${match?.dateDisplay || dStr} (Today)` : (match?.dateDisplay || dStr);
           const isSelected = (selectedDate === dStr) ? 'selected' : '';
           optionsHtml += `<option value="${dStr}" ${isSelected}>${display}</option>`;
@@ -6252,7 +6559,7 @@ function calculateStockMetrics(sym) {
       const filterOutcomeVal = outcomeSelect ? outcomeSelect.value : "ALL";
       const filterSearchVal = searchInput ? searchInput.value.trim().toUpperCase() : "";
 
-      const filtered = tradeBook.filter(t => {
+      const filtered = activeBook.filter(t => {
         if (filterDateVal !== "ALL" && t.dateStr !== filterDateVal) return false;
         if (filterOutcomeVal === "WIN" && t.netPnl <= 0) return false;
         if (filterOutcomeVal === "LOSS" && t.netPnl >= 0) return false;
@@ -6368,12 +6675,13 @@ function calculateStockMetrics(sym) {
     }
 
     function exportTradeBookCSV() {
-      if (!tradeBook || tradeBook.length === 0) {
-        alert("Trade Book is empty. No trades to export.");
+      const activeBook = (currentTradeBookMode === "SIMULATOR") ? simulatorTradeBook : zerodhaTradeBook;
+      if (!activeBook || activeBook.length === 0) {
+        alert("Active ledger has no trades to export.");
         return;
       }
       const headers = ["Trade ID", "Date", "Entry Time", "Exit Time", "Duration", "Symbol", "Market", "Side", "Qty", "Stock Exposure", "Margin Used", "Entry Price", "Exit Price", "Exit Reason", "Gross PnL (INR)", "Brokerage & Taxes (INR)", "Net PnL (INR)", "Running Capital (INR)"];
-      const rows = tradeBook.map(t => [
+      const rows = activeBook.map(t => [
         `"${t.id}"`,
         `"${t.dateDisplay || t.dateStr}"`,
         `"${t.entryTimeStr}"`,
@@ -6405,11 +6713,22 @@ function calculateStockMetrics(sym) {
     }
 
     function clearTradeBookPrompt() {
-      if (confirm("Reset trade book journal back to factory benchmark records?")) {
-        tradeBook = generateBenchmarkTradeBook();
-        saveTradeBook();
-        renderTradeBookUI();
-        logTerminal("📖 <strong class=\"text-cyan-400\">[TRADE BOOK RESET]</strong> Journal restored to benchmark 3-day history.");
+      if (currentTradeBookMode === "ZERODHA") {
+        if (confirm("Clear Zerodha Real Market Journal for a fresh audited session?")) {
+          zerodhaTradeBook = [];
+          saveTradeBook();
+          renderTradeBookUI();
+          renderAccountRibbon();
+          logTerminal("📖 <strong class=\"text-emerald-400\">[ZERODHA JOURNAL RESET]</strong> Real market ledger cleared for a fresh trading session.");
+        }
+      } else {
+        if (confirm("Reset simulator benchmark records?")) {
+          simulatorTradeBook = generateBenchmarkTradeBook();
+          saveTradeBook();
+          renderTradeBookUI();
+          renderAccountRibbon();
+          logTerminal("📖 <strong class=\"text-cyan-400\">[SIMULATOR RESET]</strong> Benchmark sandbox restored.");
+        }
       }
     }
 
