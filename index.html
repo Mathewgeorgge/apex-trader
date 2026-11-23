@@ -6,392 +6,155 @@
   <title>ApexTrader Global Pro - Multi-Asset Algo Trading Terminal & Intelligence Suite</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background-color: #07090e; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, monospace, sans-serif; overflow-x: hidden; }
-    .card-panel { background: #0c101c; border: 1px solid rgba(255, 255, 255, 0.07); box-shadow: 0 4px 20px -2px rgba(0,0,0,0.5); }
-    .glass-header { background: rgba(10, 14, 24, 0.92); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-    .btn-fintech { background: rgba(18, 26, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); color: #e2e8f0; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
-    .btn-fintech:hover { background: rgba(30, 41, 65, 0.9); border-color: rgba(255, 255, 255, 0.2); color: #ffffff; }
-    .market-tab { transition: all 0.2s ease; border: 1px solid transparent; }
-    .market-tab.active { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: 700; box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.15); }
-    .sub-tab { transition: all 0.2s ease; border-bottom: 2px solid transparent; }
-    .sub-tab.active { background: rgba(30, 41, 59, 0.6); color: #38bdf8; border-bottom: 2px solid #38bdf8; font-weight: 700; }
-    .pulse-dot { animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(0.85); } }
-    .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #07090e; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
-    .glow-green { box-shadow: 0 0 20px rgba(16, 185, 129, 0.25); }
-    .glow-red { box-shadow: 0 0 20px rgba(244, 63, 94, 0.25); }
-    .glow-cyan { box-shadow: 0 0 20px rgba(6, 182, 212, 0.2); }
-  
     /* =========================================================================
-       ApexTrader Multi-Palette Theme Engine (Daylight Pearl / Oceanic / Midnight)
-       ========================================================================= */
-    /* body.theme-bright */ {
-      background-color: #f1f5f9 !important;
-      color: #0f172a !important;
-    }
-    /* body.theme-bright */ .card-panel {
-      background: #ffffff !important;
-      border: 1px solid #e2e8f0 !important;
-      box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.04) !important;
-      color: #0f172a !important;
-    }
-    /* body.theme-bright */ .glass-header {
-      background: rgba(255, 255, 255, 0.95) !important;
-      border-bottom: 1px solid #e2e8f0 !important;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
-    }
-    /* body.theme-bright */ .btn-fintech {
-      background: #ffffff !important;
-      border: 1px solid #cbd5e1 !important;
-      color: #1e293b !important;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
-    }
-    /* body.theme-bright */ .btn-fintech:hover {
-      background: #f8fafc !important;
-      border-color: #94a3b8 !important;
-      color: #0f172a !important;
-    }
-    /* body.theme-bright */ .market-tab {
-      color: #64748b !important;
-    }
-    /* body.theme-bright */ .market-tab.active {
-      background: rgba(2, 132, 199, 0.12) !important;
-      color: #0284c7 !important;
-      border: 1px solid rgba(2, 132, 199, 0.4) !important;
-    }
-    /* body.theme-bright */ .sub-tab {
-      color: #64748b !important;
-    }
-    /* body.theme-bright */ .sub-tab.active {
-      background: #ffffff !important;
-      color: #0284c7 !important;
-      border-bottom: 2px solid #0284c7 !important;
-      font-weight: 700;
-    }
-    /* body.theme-bright */ [class*="bg-[#0"], /* body.theme-bright */ [class*="bg-[#1"] {
-      background-color: #f8fafc !important;
-    }
-    /* body.theme-bright */ [class*="border-slate-800"],
-    /* body.theme-bright */ [class*="border-gray-800"],
-    /* body.theme-bright */ [class*="border-gray-700"] {
-      border-color: #e2e8f0 !important;
-    }
-    /* body.theme-bright */ .text-white {
-      color: #0f172a !important;
-    }
-    /* body.theme-bright */ .text-gray-200,
-    /* body.theme-bright */ .text-gray-300,
-    /* body.theme-bright */ .text-slate-200,
-    /* body.theme-bright */ .text-slate-300 {
-      color: #1e293b !important;
-    }
-    /* body.theme-bright */ .text-gray-400,
-    /* body.theme-bright */ .text-slate-400 {
-      color: #475569 !important;
-    }
-    /* body.theme-bright */ .text-gray-500,
-    /* body.theme-bright */ .text-slate-500 {
-      color: #64748b !important;
-    }
-    /* body.theme-bright */ select,
-    /* body.theme-bright */ input[type="text"],
-    /* body.theme-bright */ input[type="number"] {
-      background-color: #ffffff !important;
-      border-color: #cbd5e1 !important;
-      color: #0f172a !important;
-    }
-    /* body.theme-bright */ th {
-      background-color: #f8fafc !important;
-      color: #475569 !important;
-      border-color: #e2e8f0 !important;
-    }
-    /* body.theme-bright */ td {
-      border-color: #e2e8f0 !important;
-      color: #1e293b !important;
-    }
-    /* body.theme-bright */ tr:hover td {
-      background-color: #f1f5f9 !important;
-    }
-    /* body.theme-bright */ [class*="bg-emerald-600"],
-    /* body.theme-bright */ [class*="bg-rose-600"],
-    /* body.theme-bright */ [class*="bg-indigo-600"],
-    /* body.theme-bright */ [class*="bg-sky-600"],
-    /* body.theme-bright */ [class*="bg-amber-600"] {
-      color: #ffffff !important;
-    }
-    /* body.theme-bright */ [class*="bg-emerald-600"] *,
-    /* body.theme-bright */ [class*="bg-rose-600"] *,
-    /* body.theme-bright */ [class*="bg-indigo-600"] *,
-    /* body.theme-bright */ [class*="bg-sky-600"] *,
-    /* body.theme-bright */ [class*="bg-amber-600"] * {
-      color: #ffffff !important;
-    }
-
-    /* Oceanic Azure (Bright Blue Tinted Theme) */
-    body.theme-azure {
-      background-color: #e8f0fe !important;
-      color: #0c2340 !important;
-    }
-    body.theme-azure .card-panel {
-      background: #ffffff !important;
-      border: 1px solid #bfdbfe !important;
-      box-shadow: 0 4px 18px -2px rgba(30, 64, 175, 0.08) !important;
-      color: #0c2340 !important;
-    }
-    body.theme-azure .glass-header {
-      background: rgba(240, 248, 255, 0.96) !important;
-      border-bottom: 1px solid #bfdbfe !important;
-      box-shadow: 0 1px 4px rgba(30,64,175,0.07) !important;
-    }
-    body.theme-azure .btn-fintech {
-      background: #ffffff !important;
-      border: 1px solid #93c5fd !important;
-      color: #1e3a8a !important;
-      box-shadow: 0 1px 2px rgba(30,64,175,0.05) !important;
-    }
-    body.theme-azure .btn-fintech:hover {
-      background: #dbeafe !important;
-      border-color: #60a5fa !important;
-      color: #0c2340 !important;
-    }
-    body.theme-azure .market-tab {
-      color: #1e40af !important;
-    }
-    body.theme-azure .market-tab.active {
-      background: rgba(37, 99, 235, 0.15) !important;
-      color: #1d4ed8 !important;
-      border: 1px solid rgba(37, 99, 235, 0.4) !important;
-    }
-    body.theme-azure .sub-tab {
-      color: #3b82f6 !important;
-    }
-    body.theme-azure .sub-tab.active {
-      background: #ffffff !important;
-      color: #1d4ed8 !important;
-      border-bottom: 2px solid #1d4ed8 !important;
-      font-weight: 700;
-    }
-    body.theme-azure [class*="bg-[#0"], body.theme-azure [class*="bg-[#1"] {
-      background-color: #f0f7ff !important;
-    }
-    body.theme-azure [class*="border-slate-800"],
-    body.theme-azure [class*="border-gray-800"],
-    body.theme-azure [class*="border-gray-700"] {
-      border-color: #bfdbfe !important;
-    }
-    body.theme-azure .text-white {
-      color: #0c2340 !important;
-    }
-    body.theme-azure .text-gray-200,
-    body.theme-azure .text-gray-300,
-    body.theme-azure .text-slate-200,
-    body.theme-azure .text-slate-300 {
-      color: #1e3a8a !important;
-    }
-    body.theme-azure .text-gray-400,
-    body.theme-azure .text-slate-400 {
-      color: #2563eb !important;
-    }
-    body.theme-azure .text-gray-500,
-    body.theme-azure .text-slate-500 {
-      color: #3b82f6 !important;
-    }
-    body.theme-azure select,
-    body.theme-azure input[type="text"],
-    body.theme-azure input[type="number"] {
-      background-color: #ffffff !important;
-      border-color: #93c5fd !important;
-      color: #0c2340 !important;
-    }
-    body.theme-azure th {
-      background-color: #eff6ff !important;
-      color: #1e40af !important;
-      border-color: #bfdbfe !important;
-    }
-    body.theme-azure td {
-      border-color: #bfdbfe !important;
-      color: #1e3a8a !important;
-    }
-    body.theme-azure tr:hover td {
-      background-color: #dbeafe !important;
-    }
-    body.theme-azure [class*="bg-emerald-600"],
-    body.theme-azure [class*="bg-rose-600"],
-    body.theme-azure [class*="bg-indigo-600"],
-    body.theme-azure [class*="bg-sky-600"],
-    body.theme-azure [class*="bg-amber-600"] {
-      color: #ffffff !important;
-    }
-    body.theme-azure [class*="bg-emerald-600"] *,
-    body.theme-azure [class*="bg-rose-600"] *,
-    body.theme-azure [class*="bg-indigo-600"] *,
-    body.theme-azure [class*="bg-sky-600"] *,
-    body.theme-azure [class*="bg-amber-600"] * {
-      color: #ffffff !important;
-    }
-  
-    /* Distinct Section & Metric Cards for Visual Differentiation */
-    .metric-card {
-      background: #090e1c;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .metric-card.hero-pnl {
-      background: rgba(6, 78, 59, 0.35);
-      border: 1px solid rgba(16, 185, 129, 0.5);
-    }
-    .summary-tile {
-      background: #090e1c;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .summary-tile.hero-pnl {
-      background: rgba(6, 78, 59, 0.35);
-      border: 1px solid rgba(16, 185, 129, 0.5);
-    }
-    .ticker-pill {
-      background: rgba(15, 23, 42, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    /* body.theme-bright */ .metric-card {
-      background: #ffffff !important;
-      border: 1px solid #cbd5e1 !important;
-      box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03) !important;
-    }
-    /* body.theme-bright */ .metric-card.hero-pnl {
-      background: #ecfdf5 !important;
-      border: 1px solid #6ee7b7 !important;
-      box-shadow: 0 2px 8px -1px rgba(16, 185, 129, 0.15) !important;
-    }
-    /* body.theme-bright */ .summary-tile {
-      background: #ffffff !important;
-      border: 1px solid #cbd5e1 !important;
-      box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.04) !important;
-    }
-    /* body.theme-bright */ .summary-tile.hero-pnl {
-      background: #ecfdf5 !important;
-      border: 1px solid #6ee7b7 !important;
-      box-shadow: 0 2px 8px -1px rgba(16, 185, 129, 0.15) !important;
-    }
-    /* body.theme-bright */ .ticker-pill {
-      background: #ffffff !important;
-      border: 1px solid #cbd5e1 !important;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
-    }
-    body.theme-azure .metric-card {
-      background: #ffffff !important;
-      border: 1px solid #bfdbfe !important;
-      box-shadow: 0 2px 6px -1px rgba(30, 64, 175, 0.06) !important;
-    }
-    body.theme-azure .metric-card.hero-pnl {
-      background: #ecfdf5 !important;
-      border: 1px solid #6ee7b7 !important;
-    }
-    body.theme-azure .summary-tile {
-      background: #ffffff !important;
-      border: 1px solid #bfdbfe !important;
-    }
-    body.theme-azure .ticker-pill {
-      background: #ffffff !important;
-      border: 1px solid #bfdbfe !important;
-    }
-  
-    /* =========================================================================
-       CLASSIC MIDNIGHT DARK TERMINAL TYPOGRAPHY & HIGH-CONTRAST CARD SURFACES
+       APEXTRADER INSTITUTIONAL 100% DARK FINTECH THEME & TYPOGRAPHY
        ========================================================================= */
     html {
       font-size: 16px;
+      background-color: #040711;
     }
     body {
-      background-color: #060911 !important;
+      background-color: #040711 !important;
       color: #f8fafc !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, monospace, sans-serif;
+      overflow-x: hidden;
       font-size: 15px;
       line-height: 1.5;
     }
     .glass-header {
-      background: rgba(10, 15, 28, 0.96) !important;
+      background: rgba(8, 13, 24, 0.96) !important;
+      backdrop-filter: blur(16px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5) !important;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6) !important;
     }
     .card-panel {
-      background: #0a101f !important;
+      background: #080d19 !important;
       border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 0.75rem;
       box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.6) !important;
       color: #f8fafc !important;
     }
+    .btn-fintech {
+      background: #0f172a !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #e2e8f0 !important;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-fintech:hover {
+      background: #1e293b !important;
+      border-color: rgba(56, 189, 248, 0.4) !important;
+      color: #ffffff !important;
+    }
+    .market-tab {
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      color: #94a3b8 !important;
+    }
+    .market-tab.active {
+      background: rgba(14, 165, 233, 0.15) !important;
+      color: #38bdf8 !important;
+      border: 1px solid rgba(56, 189, 248, 0.4) !important;
+      font-weight: 700;
+      box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.15);
+    }
+    .sub-tab {
+      transition: all 0.2s ease;
+      border-bottom: 2px solid transparent;
+      color: #94a3b8 !important;
+    }
+    .sub-tab.active {
+      background: rgba(30, 41, 59, 0.6) !important;
+      color: #38bdf8 !important;
+      border-bottom: 2px solid #38bdf8 !important;
+      font-weight: 700;
+    }
     .metric-card {
-      background: #0f182c !important;
+      background: #0d1527 !important;
       border: 1px solid rgba(255, 255, 255, 0.12) !important;
       border-radius: 0.75rem !important;
       padding: 0.75rem 0.85rem !important;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
       transition: all 0.2s ease !important;
     }
     .metric-card:hover {
       border-color: rgba(56, 189, 248, 0.45) !important;
-      background: #131f38 !important;
+      background: #111c34 !important;
     }
     .metric-card.hero-pnl {
-      background: rgba(6, 78, 59, 0.5) !important;
+      background: rgba(6, 78, 59, 0.55) !important;
       border: 1.5px solid rgba(16, 185, 129, 0.8) !important;
       box-shadow: 0 0 25px rgba(16, 185, 129, 0.25) !important;
     }
     .summary-tile {
-      background: #0f182c !important;
+      background: #0d1527 !important;
       border: 1px solid rgba(255, 255, 255, 0.12) !important;
       border-radius: 0.75rem !important;
       padding: 0.75rem 0.85rem !important;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
       transition: all 0.2s ease !important;
     }
     .summary-tile:hover {
       border-color: rgba(56, 189, 248, 0.45) !important;
-      background: #131f38 !important;
+      background: #111c34 !important;
     }
     .summary-tile.hero-pnl {
-      background: rgba(6, 78, 59, 0.5) !important;
+      background: rgba(6, 78, 59, 0.55) !important;
       border: 1.5px solid rgba(16, 185, 129, 0.8) !important;
       box-shadow: 0 0 25px rgba(16, 185, 129, 0.25) !important;
     }
     .ticker-pill {
-      background: #0f182c !important;
+      background: #0b1220 !important;
       border: 1px solid rgba(255, 255, 255, 0.12) !important;
       border-radius: 0.5rem !important;
       padding: 0.35rem 0.75rem !important;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25) !important;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
       transition: all 0.2s ease !important;
     }
     .ticker-pill:hover {
-      background: #162442 !important;
+      background: #141f36 !important;
       border-color: rgba(255, 255, 255, 0.25) !important;
     }
-
-    /* High contrast text classes on dark background */
-    .text-slate-300 {
-      color: #cbd5e1 !important;
-    }
-    .text-slate-200 {
-      color: #e2e8f0 !important;
-    }
-    .text-gray-400 {
-      color: #cbd5e1 !important; /* Elevate faint gray to clear silver */
-    }
-    .text-white {
+    select, input[type="text"], input[type="number"] {
+      background-color: #0b1220 !important;
+      border-color: rgba(255, 255, 255, 0.15) !important;
       color: #ffffff !important;
     }
-    .text-emerald-400 {
-      color: #34d399 !important;
+    select option {
+      background-color: #0b1220 !important;
+      color: #ffffff !important;
     }
-    .text-rose-400 {
-      color: #fb7185 !important;
+    th {
+      background-color: #0b1220 !important;
+      color: #cbd5e1 !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
     }
-    .text-cyan-400 {
-      color: #38bdf8 !important;
+    td {
+      border-color: rgba(255, 255, 255, 0.06) !important;
+      color: #f1f5f9 !important;
     }
-    .text-amber-400 {
-      color: #fbbf24 !important;
+    tr:hover td {
+      background-color: rgba(30, 41, 59, 0.4) !important;
     }
-</style>
+    .pulse-dot { animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(0.85); } }
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #040711; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    .glow-green { box-shadow: 0 0 20px rgba(16, 185, 129, 0.25); }
+    .glow-red { box-shadow: 0 0 20px rgba(244, 63, 94, 0.25); }
+    .glow-cyan { box-shadow: 0 0 20px rgba(6, 182, 212, 0.2); }
+
+    /* High contrast text classes on dark background */
+    .text-slate-300 { color: #cbd5e1 !important; }
+    .text-slate-200 { color: #e2e8f0 !important; }
+    .text-gray-400 { color: #cbd5e1 !important; }
+    .text-gray-500 { color: #94a3b8 !important; }
+    .text-white { color: #ffffff !important; }
+    .text-emerald-400 { color: #34d399 !important; }
+    .text-rose-400 { color: #fb7185 !important; }
+    .text-cyan-400 { color: #38bdf8 !important; }
+    .text-amber-400 { color: #fbbf24 !important; }
+  </style>
 </head>
 <body class="min-h-screen flex flex-col text-sm select-none">
 
@@ -500,9 +263,9 @@
         <span class="text-slate-400">📊</span> <span class="text-slate-200">Bhavcopy Radar</span>
       </button>
 
-      <!-- Theme Switcher (Bright Daylight / Oceanic Azure / Midnight Dark) -->
-      <button onclick="cycleTheme()" id="btn-theme-switcher" class="btn-fintech px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5" title="Switch Theme: Bright Pearl / Oceanic Azure / Midnight Dark">
-        <span id="theme-icon">☀️</span> <span id="theme-label" class="font-mono text-slate-200">Daylight Pearl</span>
+      <!-- Theme Indicator (100% Dark Institutional Terminal) -->
+      <button onclick="cycleTheme()" id="btn-theme-switcher" class="btn-fintech px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5" title="ApexTrader 100% Dark Terminal">
+        <span id="theme-icon">🌙</span> <span id="theme-label" class="font-mono text-slate-200">Midnight Dark</span>
       </button>
 
       <!-- Font Zoom Scaler (Compact / Standard / Large) -->
@@ -2126,48 +1889,26 @@
     // =========================================================================
     let currentTheme = "dark";
     try {
-      const savedTheme = localStorage.getItem("apex_theme");
-      // Respect dark as default; clear any leftover bright setting
-      if (savedTheme === "bright") {
-        localStorage.setItem("apex_theme", "dark");
-        currentTheme = "dark";
-      } else if (savedTheme) {
-        currentTheme = savedTheme;
-      }
+      localStorage.setItem("apex_theme", "dark");
     } catch(e) {}
 
     function isThemeLight() {
-      return document.body.classList.contains("theme-bright") || document.body.classList.contains("theme-azure");
+      return false; // Terminal is 100% Dark
     }
 
     function applyTheme(theme) {
-      currentTheme = theme;
-      document.body.classList.remove("theme-bright", "theme-azure", "theme-dark");
-      if (theme === "bright") {
-        document.body.classList.add("theme-bright");
-      } else if (theme === "azure") {
-        document.body.classList.add("theme-azure");
-      } else {
-        document.body.classList.add("theme-dark");
-      }
+      currentTheme = "dark";
+      document.body.classList.remove("theme-bright", "theme-azure");
+      document.body.classList.add("theme-dark");
       try {
-        localStorage.setItem("apex_theme", theme);
+        localStorage.setItem("apex_theme", "dark");
       } catch(e) {}
       updateThemeUI();
       if (typeof renderChart === "function") renderChart();
     }
 
     function cycleTheme() {
-      if (currentTheme === "bright") {
-        applyTheme("azure");
-        logTerminal("🎨 Theme switched to <strong class='text-sky-400'>Oceanic Azure (Bright Blue)</strong>.");
-      } else if (currentTheme === "azure") {
-        applyTheme("dark");
-        logTerminal("🌙 Theme switched to <strong class='text-slate-400'>Midnight Obsidian (Dark)</strong>.");
-      } else {
-        applyTheme("bright");
-        logTerminal("☀️ Theme switched to <strong class='text-amber-400'>Daylight Pearl (Bright)</strong>.");
-      }
+      logTerminal("🌙 <strong class='text-slate-200'>ApexTrader is locked in 100% Dark Institutional Terminal mode.</strong>");
       playBeep("news");
     }
 
