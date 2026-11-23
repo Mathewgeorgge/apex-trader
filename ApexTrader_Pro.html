@@ -223,10 +223,14 @@
         <!-- Controls Bar -->
         <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-gray-800/80 text-xs">
           <div class="flex items-center space-x-2">
-            <span class="text-gray-400 text-[10px] font-bold">ASSET:</span>
-            <select id="sel-chart-symbol" onchange="changeChartSymbol(this.value)" class="bg-[#070b14] border border-gray-700 text-white font-bold rounded px-2.5 py-1 text-xs font-mono min-w-[170px] max-w-[220px] shrink-0">
-              <!-- Dynamically populated -->
-            </select>
+            <div class="flex items-center gap-1.5 bg-[#090e1c] border border-sky-500/50 hover:border-sky-400 px-2.5 py-1 rounded-lg shadow-sm">
+              <span class="text-sky-400 text-[10px] font-extrabold tracking-wider uppercase flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-sky-400 pulse-dot"></span> ASSET:
+              </span>
+              <select id="sel-chart-symbol" onchange="changeChartSymbol(this.value)" class="bg-transparent text-white font-bold text-xs font-mono outline-none cursor-pointer min-w-[170px] max-w-[230px]">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
 
             <!-- Timeframes -->
             <div class="flex space-x-0.5 bg-[#070b14] border border-gray-800 rounded p-0.5 text-[10px]">
@@ -504,6 +508,14 @@
                 <label for="tb-filter-date" class="text-gray-400">Date:</label>
                 <select id="tb-filter-date" onchange="renderTradeBookUI()" class="bg-[#0b1324] border border-gray-700 text-white rounded px-2 py-1 text-xs focus:outline-none focus:border-indigo-500">
                   <option value="ALL">All Dates (Full History)</option>
+                </select>
+              </div>
+
+              <!-- Asset / Symbol Filter Dropdown -->
+              <div class="flex items-center gap-1 text-[11px] text-gray-300">
+                <label for="tb-filter-symbol" class="text-gray-400">Asset:</label>
+                <select id="tb-filter-symbol" onchange="renderTradeBookUI()" class="bg-[#0b1324] border border-gray-700 text-white rounded px-2 py-1 text-xs font-semibold focus:outline-none focus:border-indigo-500">
+                  <option value="ALL">All Assets</option>
                 </select>
               </div>
 
@@ -6316,6 +6328,7 @@ function calculateStockMetrics(sym) {
 
     function renderTradeBookUI() {
       const dateSelect = document.getElementById("tb-filter-date");
+      const symbolSelect = document.getElementById("tb-filter-symbol");
       const outcomeSelect = document.getElementById("tb-filter-outcome");
       const searchInput = document.getElementById("tb-search-symbol");
       const summaryRibbon = document.getElementById("tb-summary-ribbon");
@@ -6339,12 +6352,25 @@ function calculateStockMetrics(sym) {
         dateSelect.innerHTML = optionsHtml;
       }
 
+      if (symbolSelect) {
+        const selectedSym = symbolSelect.value || "ALL";
+        const uniqueSymbols = Array.from(new Set(activeBook.map(t => t.symbol))).filter(Boolean).sort();
+        let symOptionsHtml = `<option value="ALL" ${selectedSym === 'ALL' ? 'selected' : ''}>All Assets (${uniqueSymbols.length})</option>`;
+        uniqueSymbols.forEach(sym => {
+          const isSelected = (selectedSym === sym) ? 'selected' : '';
+          symOptionsHtml += `<option value="${sym}" ${isSelected}>${sym}</option>`;
+        });
+        symbolSelect.innerHTML = symOptionsHtml;
+      }
+
       const filterDateVal = dateSelect ? dateSelect.value : "ALL";
+      const filterSymbolVal = symbolSelect ? symbolSelect.value : "ALL";
       const filterOutcomeVal = outcomeSelect ? outcomeSelect.value : "ALL";
       const filterSearchVal = searchInput ? searchInput.value.trim().toUpperCase() : "";
 
       const filtered = activeBook.filter(t => {
         if (filterDateVal !== "ALL" && t.dateStr !== filterDateVal) return false;
+        if (filterSymbolVal !== "ALL" && t.symbol !== filterSymbolVal) return false;
         if (filterOutcomeVal === "WIN" && t.netPnl <= 0) return false;
         if (filterOutcomeVal === "LOSS" && t.netPnl >= 0) return false;
         if (filterOutcomeVal === "MIS_AUTO" && !t.reason.includes("MIS") && !t.reason.includes("EOD")) return false;
