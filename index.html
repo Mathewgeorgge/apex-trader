@@ -1709,13 +1709,15 @@
       const label = document.getElementById("audio-label");
       if (!btn) return;
       if (isAudioMuted) {
-        icon.innerText = "🔇";
-        label.innerText = "Muted";
-        btn.className = "bg-rose-950/80 hover:bg-rose-900 border border-rose-800/60 text-rose-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition";
+        if (icon) icon.innerText = "🔇";
+        if (label) label.innerText = "Muted";
+        btn.title = "Sound Muted (Click to Unmute)";
+        btn.classList.add("text-rose-400");
       } else {
-        icon.innerText = "🔊";
-        label.innerText = "Sound ON";
-        btn.className = "bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition";
+        if (icon) icon.innerText = "🔊";
+        if (label) label.innerText = "Sound ON";
+        btn.title = "Sound ON (Click to Mute)";
+        btn.classList.remove("text-rose-400");
       }
     }
 
