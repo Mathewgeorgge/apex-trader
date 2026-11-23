@@ -6,205 +6,74 @@
   <title>ApexTrader Global Pro - Multi-Asset Algo Trading Terminal & Intelligence Suite</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* =========================================================================
-       APEXTRADER INSTITUTIONAL 100% DARK FINTECH THEME & TYPOGRAPHY
-       ========================================================================= */
-    html {
-      font-size: 16px;
-      background-color: #040711;
-    }
-    body {
-      background-color: #040711 !important;
-      color: #f8fafc !important;
-      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, monospace, sans-serif;
-      overflow-x: hidden;
-      font-size: 15px;
-      line-height: 1.5;
-    }
-    .glass-header {
-      background: rgba(8, 13, 24, 0.96) !important;
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6) !important;
-    }
-    .card-panel {
-      background: #080d19 !important;
-      border: 1px solid rgba(255, 255, 255, 0.1) !important;
-      border-radius: 0.75rem;
-      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.6) !important;
-      color: #f8fafc !important;
-    }
-    .btn-fintech {
-      background: #0f172a !important;
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
-      color: #e2e8f0 !important;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .btn-fintech:hover {
-      background: #1e293b !important;
-      border-color: rgba(56, 189, 248, 0.4) !important;
-      color: #ffffff !important;
-    }
-    .market-tab {
-      transition: all 0.2s ease;
-      border: 1px solid transparent;
-      color: #94a3b8 !important;
-    }
-    .market-tab.active {
-      background: rgba(14, 165, 233, 0.15) !important;
-      color: #38bdf8 !important;
-      border: 1px solid rgba(56, 189, 248, 0.4) !important;
-      font-weight: 700;
-      box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.15);
-    }
-    .sub-tab {
-      transition: all 0.2s ease;
-      border-bottom: 2px solid transparent;
-      color: #94a3b8 !important;
-    }
-    .sub-tab.active {
-      background: rgba(30, 41, 59, 0.6) !important;
-      color: #38bdf8 !important;
-      border-bottom: 2px solid #38bdf8 !important;
-      font-weight: 700;
-    }
-    .metric-card {
-      background: #0d1527 !important;
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
-      border-radius: 0.75rem !important;
-      padding: 0.75rem 0.85rem !important;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
-      transition: all 0.2s ease !important;
-    }
-    .metric-card:hover {
-      border-color: rgba(56, 189, 248, 0.45) !important;
-      background: #111c34 !important;
-    }
-    .metric-card.hero-pnl {
-      background: rgba(6, 78, 59, 0.55) !important;
-      border: 1.5px solid rgba(16, 185, 129, 0.8) !important;
-      box-shadow: 0 0 25px rgba(16, 185, 129, 0.25) !important;
-    }
-    .summary-tile {
-      background: #0d1527 !important;
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
-      border-radius: 0.75rem !important;
-      padding: 0.75rem 0.85rem !important;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
-      transition: all 0.2s ease !important;
-    }
-    .summary-tile:hover {
-      border-color: rgba(56, 189, 248, 0.45) !important;
-      background: #111c34 !important;
-    }
-    .summary-tile.hero-pnl {
-      background: rgba(6, 78, 59, 0.55) !important;
-      border: 1.5px solid rgba(16, 185, 129, 0.8) !important;
-      box-shadow: 0 0 25px rgba(16, 185, 129, 0.25) !important;
-    }
-    .ticker-pill {
-      background: #0b1220 !important;
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
-      border-radius: 0.5rem !important;
-      padding: 0.35rem 0.75rem !important;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
-      transition: all 0.2s ease !important;
-    }
-    .ticker-pill:hover {
-      background: #141f36 !important;
-      border-color: rgba(255, 255, 255, 0.25) !important;
-    }
-    select, input[type="text"], input[type="number"] {
-      background-color: #0b1220 !important;
-      border-color: rgba(255, 255, 255, 0.15) !important;
-      color: #ffffff !important;
-    }
-    select option {
-      background-color: #0b1220 !important;
-      color: #ffffff !important;
-    }
-    th {
-      background-color: #0b1220 !important;
-      color: #cbd5e1 !important;
-      border-color: rgba(255, 255, 255, 0.08) !important;
-    }
-    td {
-      border-color: rgba(255, 255, 255, 0.06) !important;
-      color: #f1f5f9 !important;
-    }
-    tr:hover td {
-      background-color: rgba(30, 41, 59, 0.4) !important;
-    }
+    body { background-color: #07090e; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, monospace, sans-serif; overflow-x: hidden; }
+    .card-panel { background: #0c101c; border: 1px solid rgba(255, 255, 255, 0.07); box-shadow: 0 4px 20px -2px rgba(0,0,0,0.5); }
+    .glass-header { background: rgba(10, 14, 24, 0.92); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+    .btn-fintech { background: rgba(18, 26, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); color: #e2e8f0; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+    .btn-fintech:hover { background: rgba(30, 41, 65, 0.9); border-color: rgba(255, 255, 255, 0.2); color: #ffffff; }
+    .market-tab { transition: all 0.2s ease; border: 1px solid transparent; }
+    .market-tab.active { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: 700; box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.15); }
+    .sub-tab { transition: all 0.2s ease; border-bottom: 2px solid transparent; }
+    .sub-tab.active { background: rgba(30, 41, 59, 0.6); color: #38bdf8; border-bottom: 2px solid #38bdf8; font-weight: 700; }
     .pulse-dot { animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(0.85); } }
     .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #040711; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #07090e; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
     .glow-green { box-shadow: 0 0 20px rgba(16, 185, 129, 0.25); }
     .glow-red { box-shadow: 0 0 20px rgba(244, 63, 94, 0.25); }
     .glow-cyan { box-shadow: 0 0 20px rgba(6, 182, 212, 0.2); }
-
-    /* High contrast text classes on dark background */
-    .text-slate-300 { color: #cbd5e1 !important; }
-    .text-slate-200 { color: #e2e8f0 !important; }
-    .text-gray-400 { color: #cbd5e1 !important; }
-    .text-gray-500 { color: #94a3b8 !important; }
-    .text-white { color: #ffffff !important; }
-    .text-emerald-400 { color: #34d399 !important; }
-    .text-rose-400 { color: #fb7185 !important; }
-    .text-cyan-400 { color: #38bdf8 !important; }
-    .text-amber-400 { color: #fbbf24 !important; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col text-sm select-none">
+<body class="min-h-screen flex flex-col text-xs select-none">
 
   <!-- NSE Indian Market Live Ticker Tape (Calibrated to Real Bhavcopy / Kite Quotes) -->
   <div class="bg-[#040711] border-b border-slate-800/80 px-4 py-1.5 flex items-center justify-between text-[11px] overflow-x-auto whitespace-nowrap custom-scrollbar">
     <div class="flex items-center space-x-6">
-      <div class="ticker-pill px-3 py-1 rounded-lg flex items-center space-x-2 shadow-sm">
-        <span class="text-amber-400 font-bold text-xs tracking-wide">🇮🇳 NIFTY 50:</span>
-        <span class="font-mono font-black text-xs text-white" id="ticker-nifty">24,158.40</span>
-        <span class="text-emerald-400 font-mono text-xs font-bold">+0.62% ▲</span>
+      <div class="flex items-center space-x-2">
+        <span class="text-amber-400 font-semibold tracking-wide">🇮🇳 NIFTY 50:</span>
+        <span class="font-mono font-bold text-white" id="ticker-nifty">24,158.40</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+0.62% ▲</span>
       </div>
-      <div class="ticker-pill px-3 py-1 rounded-lg flex items-center space-x-2 shadow-sm">
-        <span class="text-sky-400 font-bold text-xs tracking-wide">🏦 BANK NIFTY:</span>
-        <span class="font-mono font-black text-xs text-white" id="ticker-banknifty">51,420.15</span>
-        <span class="text-emerald-400 font-mono text-xs font-bold">+1.12% ▲</span>
+      <div class="flex items-center space-x-2">
+        <span class="text-sky-400 font-semibold tracking-wide">🏦 BANK NIFTY:</span>
+        <span class="font-mono font-bold text-white" id="ticker-banknifty">51,420.15</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+1.12% ▲</span>
       </div>
-      <div class="ticker-pill px-3 py-1 rounded-lg flex items-center space-x-2 shadow-sm">
-        <span class="text-purple-400 font-bold text-xs tracking-wide">⚡ INDIA VIX:</span>
-        <span class="font-mono font-black text-xs text-white" id="ticker-vix">13.45</span>
-        <span class="text-rose-400 font-mono text-xs font-bold">-4.20% ▼</span>
+      <div class="flex items-center space-x-2">
+        <span class="text-purple-400 font-semibold tracking-wide">⚡ INDIA VIX:</span>
+        <span class="font-mono font-bold text-white" id="ticker-vix">13.45</span>
+        <span class="text-emerald-400 font-mono text-[10px]">-4.20% ▼</span>
       </div>
-      <div class="ticker-pill px-3 py-1 rounded-lg flex items-center space-x-2 shadow-sm">
-        <span class="text-blue-400 font-bold text-xs tracking-wide">📊 SENSEX:</span>
-        <span class="font-mono font-black text-xs text-white" id="ticker-sensex">79,480.20</span>
-        <span class="text-emerald-400 font-mono text-xs font-bold">+0.55% ▲</span>
+      <div class="flex items-center space-x-2 border-l border-slate-800 pl-4">
+        <span class="text-blue-400 font-semibold tracking-wide">📊 SENSEX:</span>
+        <span class="font-mono font-bold text-white" id="ticker-sensex">79,480.20</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+0.55% ▲</span>
       </div>
-      <div class="ticker-pill px-3 py-1 rounded-lg flex items-center space-x-2 shadow-sm">
-        <span class="text-emerald-400 font-bold text-xs tracking-wide">⛽ RELIANCE:</span>
-        <span class="font-mono font-black text-xs text-white" id="ticker-reliance">₹1,265.50</span>
-        <span class="text-emerald-400 font-mono text-xs font-bold">+0.45% ▲</span>
+      <div class="flex items-center space-x-2 border-l border-slate-800 pl-4">
+        <span class="text-emerald-400 font-semibold tracking-wide">⛽ RELIANCE:</span>
+        <span class="font-mono font-bold text-white" id="ticker-reliance">₹1,265.50</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+0.45% ▲</span>
       </div>
-      <div class="ticker-pill px-3 py-1 rounded-lg flex items-center space-x-2 shadow-sm">
-        <span class="text-indigo-400 font-bold text-xs tracking-wide">🏛️ HDFCBANK:</span>
-        <span class="font-mono font-black text-xs text-white" id="ticker-hdfc">₹1,684.20</span>
-        <span class="text-emerald-400 font-mono text-xs font-bold">+0.85% ▲</span>
+      <div class="flex items-center space-x-2 border-l border-slate-800 pl-4">
+        <span class="text-indigo-400 font-semibold tracking-wide">🏛️ HDFCBANK:</span>
+        <span class="font-mono font-bold text-white" id="ticker-hdfc">₹1,684.20</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+0.85% ▲</span>
       </div>
-      <div class="ticker-pill px-3 py-1 rounded-lg flex items-center space-x-2 shadow-sm">
-        <span class="text-rose-400 font-bold text-xs tracking-wide">💻 TCS:</span>
-        <span class="font-mono font-black text-xs text-white" id="ticker-tcs">₹4,080.00</span>
-        <span class="text-rose-400 font-mono text-xs font-bold">-0.30% ▼</span>
+      <div class="flex items-center space-x-2 border-l border-slate-800 pl-4">
+        <span class="text-rose-400 font-semibold tracking-wide">💻 TCS:</span>
+        <span class="font-mono font-bold text-white" id="ticker-tcs">₹4,080.00</span>
+        <span class="text-rose-400 font-mono text-[10px]">-0.30% ▼</span>
       </div>
-      <div class="ticker-pill px-3 py-1 rounded-lg flex items-center space-x-2 shadow-sm">
-        <span class="text-cyan-400 font-bold text-xs tracking-wide">🚗 TATAMOTORS:</span>
-        <span class="font-mono font-black text-xs text-white" id="ticker-tatamotors">₹792.40</span>
-        <span class="text-emerald-400 font-mono text-xs font-bold">+2.10% ▲</span>
+      <div class="flex items-center space-x-2 border-l border-slate-800 pl-4">
+        <span class="text-cyan-400 font-semibold tracking-wide">🚗 TATAMOTORS:</span>
+        <span class="font-mono font-bold text-white" id="ticker-tatamotors">₹792.40</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+2.10% ▲</span>
       </div>
-      <div class="ticker-pill px-3 py-1 rounded-lg flex items-center space-x-2 shadow-sm">
-        <span class="text-yellow-400 font-bold text-xs tracking-wide">🔩 TATASTEEL:</span>
-        <span class="font-mono font-black text-xs text-white" id="ticker-tatasteel">₹161.65</span>
-        <span class="text-emerald-400 font-mono text-xs font-bold">+1.35% ▲</span>
+      <div class="flex items-center space-x-2 border-l border-slate-800 pl-4">
+        <span class="text-yellow-400 font-semibold tracking-wide">🔩 TATASTEEL:</span>
+        <span class="font-mono font-bold text-white" id="ticker-tatasteel">₹161.65</span>
+        <span class="text-emerald-400 font-mono text-[10px]">+1.35% ▲</span>
       </div>
     </div>
     <div class="flex items-center space-x-2 text-[10px] pl-4">
@@ -263,16 +132,6 @@
         <span class="text-slate-400">📊</span> <span class="text-slate-200">Bhavcopy Radar</span>
       </button>
 
-      <!-- Theme Indicator (100% Dark Institutional Terminal) -->
-      <button onclick="cycleTheme()" id="btn-theme-switcher" class="btn-fintech px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5" title="ApexTrader 100% Dark Terminal">
-        <span id="theme-icon">🌙</span> <span id="theme-label" class="font-mono text-slate-200">Midnight Dark</span>
-      </button>
-
-      <!-- Font Zoom Scaler (Compact / Standard / Large) -->
-      <button onclick="cycleFontSize()" id="btn-font-zoom" class="btn-fintech px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5" title="Adjust Font Size (Standard / Large / Compact)">
-        <span>🗚</span> <span id="font-zoom-label" class="font-mono">Normal</span>
-      </button>
-
       <!-- Audio Mute Button -->
       <button onclick="toggleAudio()" id="btn-audio-toggle" class="btn-fintech px-2 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white" title="Toggle Sound">
         <span id="audio-icon">🔊</span>
@@ -290,46 +149,48 @@
     </div>
   </header>
 
-  <!-- Live PnL, Taxes & Account Ribbon (Classic Dark High-Contrast Tiles) -->
-  <div id="account-ribbon-bar" class="px-4 py-2.5 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 text-xs bg-[#060911] border-b border-slate-800/90">
-    <div class="metric-card flex flex-col justify-between">
-      <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Paper Capital</span>
-      <div class="flex items-center gap-1 mt-1.5">
-        <span id="curr-symbol-1" class="text-slate-400 font-bold text-base">₹</span>
-        <input id="acc-capital" type="number" value="7000" onchange="updateCapital()" class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-base font-black text-white focus:outline-none focus:border-cyan-500" />
+  <!-- Live PnL, Taxes & Account Ribbon -->
+  <div class="bg-[#080d19] border-b border-gray-800 px-4 py-2 grid grid-cols-2 md:grid-cols-7 gap-3 text-xs">
+    <div class="border-r border-gray-800/80 pr-2">
+      <span class="text-[10px] text-gray-400">Paper Capital</span>
+      <div class="flex items-center gap-1">
+        <span id="curr-symbol-1" class="text-gray-400 font-bold">₹</span>
+        <input id="acc-capital" type="number" value="7000" onchange="updateCapital()" class="w-20 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-xs font-bold text-white focus:outline-none focus:border-cyan-500" />
       </div>
     </div>
-    <div class="metric-card flex flex-col justify-between">
-      <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Available Cash</span>
-      <p id="acc-cash" class="font-mono font-black text-cyan-400 text-lg mt-1.5">7,000.00</p>
+    <div class="border-r border-gray-800/80 pr-2">
+      <span class="text-[10px] text-gray-400">Available Cash</span>
+      <p id="acc-cash" class="font-mono font-bold text-cyan-400 text-sm">7,000.00</p>
     </div>
-    <div class="metric-card flex flex-col justify-between">
-      <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Margin Used</span>
-      <p id="acc-margin-used" class="font-mono font-black text-slate-100 text-lg mt-1.5">₹ 0.00</p>
+    <div class="border-r border-gray-800/80 pr-2">
+      <span class="text-[10px] text-gray-400">Margin Used</span>
+      <p id="acc-margin-used" class="font-mono font-bold text-gray-200 text-sm">₹ 0.00</p>
     </div>
-    <div class="metric-card flex flex-col justify-between">
-      <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Gross PnL</span>
-      <p id="acc-gross-pnl" class="font-mono font-black text-slate-100 text-lg mt-1.5">₹ 0.00</p>
+    <div class="border-r border-gray-800/80 pr-2">
+      <span class="text-[10px] text-gray-400">Gross PnL</span>
+      <p id="acc-gross-pnl" class="font-mono font-bold text-gray-300 text-sm">₹ 0.00</p>
     </div>
-    <div class="metric-card flex flex-col justify-between cursor-pointer group" onclick="openBrokerageModal()" title="Click to view tax breakdown">
-      <span class="text-xs font-bold text-slate-300 group-hover:text-rose-400 uppercase tracking-wider">Taxes & Fees ℹ️</span>
-      <p id="acc-total-taxes" class="font-mono font-black text-rose-400 text-lg mt-1.5 group-hover:underline">- ₹ 0.00</p>
+    <div class="border-r border-gray-800/80 pr-2 cursor-pointer group" onclick="openBrokerageModal()" title="Click to view tax breakdown">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] text-gray-400">Brokerage & Taxes ℹ️</span>
+      </div>
+      <p id="acc-total-taxes" class="font-mono font-bold text-rose-400 text-sm group-hover:underline">- ₹ 0.00</p>
     </div>
-    <div class="metric-card hero-pnl flex flex-col justify-between">
-      <span class="text-xs font-black text-emerald-300 uppercase tracking-wider">Net Realized PnL</span>
-      <p id="acc-netpnl" class="font-mono font-black text-emerald-400 text-xl mt-1">₹ 0.00</p>
+    <div class="border-r border-gray-800/80 pr-2">
+      <span class="text-[10px] text-gray-400 font-bold text-emerald-400">Net Realized PnL (In-Pocket)</span>
+      <p id="acc-netpnl" class="font-mono font-extrabold text-emerald-400 text-sm">₹ 0.00</p>
     </div>
-    <div class="metric-card flex items-center justify-between">
+    <div class="flex justify-between items-center">
       <div>
-        <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Max Loss Limit</span>
-        <div class="flex items-center gap-1 mt-1.5">
-          <span id="curr-symbol-maxloss" class="text-rose-400 font-bold text-base">₹</span>
-          <input id="input-maxloss" type="number" value="200" onchange="updateMaxLoss()" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-0.5 text-sm font-black text-rose-400 focus:outline-none focus:border-rose-500" title="Adjust daily max loss circuit breaker threshold" />
-          <span id="maxloss-pct-tag" class="text-xs text-slate-300 font-mono font-bold">(2.8%)</span>
+        <span class="text-[10px] text-gray-400">Circuit Breaker</span>
+        <div class="flex items-center gap-1">
+          <span id="curr-symbol-maxloss" class="text-rose-400 font-bold">₹</span>
+          <input id="input-maxloss" type="number" value="200" onchange="updateMaxLoss()" class="w-14 bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-xs font-bold text-rose-400 focus:outline-none focus:border-rose-500" title="Adjust daily max loss circuit breaker threshold" />
+          <span id="maxloss-pct-tag" class="text-[9px] text-gray-400 font-mono">(2.8%)</span>
         </div>
       </div>
-      <button onclick="resetSessionDay()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded text-xs border border-slate-700 transition" title="Reset account back to clean ₹7,000 for a fresh day">
-        🔄
+      <button onclick="resetSessionDay()" class="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white px-2 py-1 rounded text-[10px] border border-gray-700 transition" title="Reset account back to clean ₹7,000 for a fresh day">
+        🔄 Reset
       </button>
     </div>
   </div>
@@ -402,11 +263,11 @@
               <span class="text-amber-400 font-semibold">VWAP</span>
             </label>
             <label class="flex items-center space-x-1 cursor-pointer" title="Central Pivot Range (TC, Pivot, BC) from Bhavcopy EOD data">
-              <input type="checkbox" id="chk-cpr" onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-purple-500" />
+              <input type="checkbox" id="chk-cpr" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-purple-500" />
               <span class="text-purple-400 font-semibold">CPR Pivots</span>
             </label>
             <label class="flex items-center space-x-1 cursor-pointer" title="Previous Day High &amp; Low key breakout gates">
-              <input type="checkbox" id="chk-pdh" onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-yellow-500" />
+              <input type="checkbox" id="chk-pdh" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-yellow-500" />
               <span class="text-yellow-400 font-semibold">PDH/PDL</span>
             </label>
           </div>
@@ -690,14 +551,14 @@
           </div>
 
           <!-- Date-Wise Performance Summary Ribbon -->
-          <div id="tb-summary-ribbon" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs font-mono my-2">
+          <div id="tb-summary-ribbon" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 bg-[#060a14] border border-gray-800/80 p-2.5 rounded-lg text-xs font-mono">
             <!-- Dynamically injected -->
           </div>
 
           <!-- Trade Book Ledger Table -->
           <div class="overflow-x-auto max-h-72 custom-scrollbar border border-gray-800/80 rounded-lg">
             <table class="w-full text-left text-xs">
-              <thead class="text-xs font-bold uppercase tracking-wider bg-[#080d1a] text-gray-300 border-b border-gray-800 sticky top-0 z-10">
+              <thead class="text-[10px] uppercase bg-[#060a14] text-gray-400 border-b border-gray-800 sticky top-0 z-10">
                 <tr>
                   <th class="py-2 px-2.5">Date &amp; Time</th>
                   <th class="py-2 px-2">Symbol</th>
@@ -1844,94 +1705,6 @@
   </div>
 
   <script>
-    // =========================================================================
-    // Font Scale Engine (Compact 90% / Standard 100% / Large 115%)
-    // =========================================================================
-    let currentFontSize = localStorage.getItem("apex_font_size") || "normal";
-
-    function applyFontSize(size) {
-      currentFontSize = size;
-      const root = document.documentElement;
-      if (size === "large") {
-        root.style.fontSize = "18px";
-      } else if (size === "compact") {
-        root.style.fontSize = "14px";
-      } else {
-        root.style.fontSize = "16px";
-      }
-      try { localStorage.setItem("apex_font_size", size); } catch(e) {}
-      updateFontUI();
-      if (typeof renderChart === "function") renderChart();
-    }
-
-    function cycleFontSize() {
-      if (currentFontSize === "normal") {
-        applyFontSize("large");
-        logTerminal("🗚 Font size set to <strong>Large (115%)</strong>.");
-      } else if (currentFontSize === "large") {
-        applyFontSize("compact");
-        logTerminal("🗚 Font size set to <strong>Compact (90%)</strong>.");
-      } else {
-        applyFontSize("normal");
-        logTerminal("🗚 Font size set to <strong>Standard (100%)</strong>.");
-      }
-    }
-
-    function updateFontUI() {
-      const lbl = document.getElementById("font-zoom-label");
-      if (lbl) {
-        lbl.innerText = currentFontSize === "large" ? "Big (115%)" : (currentFontSize === "compact" ? "Compact" : "Normal");
-      }
-    }
-
-    // =========================================================================
-    // Theme Engine: Daylight Pearl (Bright) / Oceanic Azure / Midnight Dark
-    // =========================================================================
-    let currentTheme = "dark";
-    try {
-      localStorage.setItem("apex_theme", "dark");
-    } catch(e) {}
-
-    function isThemeLight() {
-      return false; // Terminal is 100% Dark
-    }
-
-    function applyTheme(theme) {
-      currentTheme = "dark";
-      document.body.classList.remove("theme-bright", "theme-azure");
-      document.body.classList.add("theme-dark");
-      try {
-        localStorage.setItem("apex_theme", "dark");
-      } catch(e) {}
-      updateThemeUI();
-      if (typeof renderChart === "function") renderChart();
-    }
-
-    function cycleTheme() {
-      logTerminal("🌙 <strong class='text-slate-200'>ApexTrader is locked in 100% Dark Institutional Terminal mode.</strong>");
-      playBeep("news");
-    }
-
-    function updateThemeUI() {
-      const btn = document.getElementById("btn-theme-switcher");
-      const icon = document.getElementById("theme-icon");
-      const label = document.getElementById("theme-label");
-      if (!btn) return;
-      if (currentTheme === "bright") {
-        if (icon) icon.innerText = "☀️";
-        if (label) label.innerText = "Daylight Pearl";
-        btn.title = "Theme: Daylight Pearl (Click to switch to Oceanic Azure)";
-      } else if (currentTheme === "azure") {
-        if (icon) icon.innerText = "🌊";
-        if (label) label.innerText = "Oceanic Azure";
-        btn.title = "Theme: Oceanic Azure (Click to switch to Midnight Dark)";
-      } else {
-        if (icon) icon.innerText = "🌙";
-        if (label) label.innerText = "Midnight Dark";
-        btn.title = "Theme: Midnight Dark (Click to switch to Daylight Pearl)";
-      }
-    }
-
     // Audio synthesizer: MUTED BY DEFAULT & PERSISTENT (Zero unwanted noises)
     let audioCtx = null;
     let isAudioMuted = true; // Default to 100% silent
@@ -5061,12 +4834,9 @@ function calculateStockMetrics(sym) {
       const chartPlotW = w - chartRightMargin;
       const chartPlotH = h - chartBottomMargin;
 
-      // Draw Grid Lines & Price Ticks (Theme Adapted & Refined)
-      const isBrightTheme = isThemeLight();
-      ctx.save();
-      ctx.strokeStyle = isBrightTheme ? "rgba(203, 213, 225, 0.45)" : "rgba(30, 41, 59, 0.4)";
-      ctx.setLineDash([2, 4]);
-      ctx.lineWidth = 0.8;
+      // Draw Grid Lines & Price Ticks
+      ctx.strokeStyle = "#131a29";
+      ctx.lineWidth = 1;
       for (let i = 1; i <= 5; i++) {
         const y = (chartPlotH / 6) * i;
         ctx.beginPath();
@@ -5075,21 +4845,17 @@ function calculateStockMetrics(sym) {
         ctx.stroke();
 
         const priceVal = maxP - (i / 6) * (maxP - minP);
-        ctx.fillStyle = isBrightTheme ? "#475569" : "#94a3b8";
-        ctx.font = "bold 11px monospace";
+        ctx.fillStyle = "#64748b";
+        ctx.font = "9px monospace";
         ctx.textAlign = "left";
-        ctx.fillText(priceVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}), chartPlotW + 6, y + 3.5);
+        ctx.fillText(priceVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}), chartPlotW + 6, y + 3);
       }
-      ctx.restore();
 
-      // Draw Time Grid Lines & Timeframe-Accurate Timestamps (Subtle & Clean)
-      ctx.save();
-      ctx.strokeStyle = isBrightTheme ? "rgba(203, 213, 225, 0.45)" : "rgba(30, 41, 59, 0.4)";
-      ctx.setLineDash([2, 4]);
-      ctx.lineWidth = 0.8;
+      // Draw Time Grid Lines & Timeframe-Accurate Timestamps
       const timeSteps = 5;
       for (let i = 1; i <= timeSteps; i++) {
         const x = (chartPlotW / (timeSteps + 1)) * i;
+        ctx.strokeStyle = "#131a29";
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, chartPlotH);
@@ -5100,13 +4866,12 @@ function calculateStockMetrics(sym) {
           const dt = new Date(candles[cIdx].time);
           const hh = String(dt.getHours()).padStart(2, '0');
           const mm = String(dt.getMinutes()).padStart(2, '0');
-          ctx.fillStyle = isBrightTheme ? "#475569" : "#94a3b8";
-          ctx.font = "bold 10px monospace";
+          ctx.fillStyle = "#64748b";
+          ctx.font = "9px monospace";
           ctx.textAlign = "center";
           ctx.fillText(`${hh}:${mm}`, x, chartPlotH + 14);
         }
       }
-      ctx.restore();
 
       // Draw Volume Histogram (bottom 18% of chart)
       const volAreaH = chartPlotH * 0.18;
@@ -5333,14 +5098,13 @@ function calculateStockMetrics(sym) {
       const isGreenTick = livePrice >= lastCandle.open;
       const badgeBg = isGreenTick ? "#059669" : "#e11d48";
 
-      // Dashed price tracker line (bridges from active candle to badge, keeping history clean)
+      // Dashed price tracker line
       ctx.save();
       ctx.setLineDash([3, 3]);
       ctx.strokeStyle = isGreenTick ? "#10b981" : "#f43f5e";
-      ctx.lineWidth = 1.2;
-      const lastCandleX = Math.max(0, (candles.length - 1) * candleSlot);
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(lastCandleX, yLive);
+      ctx.moveTo(0, yLive);
       ctx.lineTo(chartPlotW, yLive);
       ctx.stroke();
       ctx.restore();
@@ -5364,8 +5128,8 @@ function calculateStockMetrics(sym) {
       ctx.fillText(livePrice.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}), badgeX + 4, badgeY + 12.5);
 
       // Top-Left Chart Live HUD Header (Symbol, Timeframe, OHLC, Live Status)
-      ctx.font = "bold 13px system-ui, -apple-system, sans-serif";
-      ctx.fillStyle = isBrightTheme ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
+      ctx.fillStyle = "#f8fafc";
       ctx.textAlign = "left";
       const headerTitle = `${currentSymbol} • ${timeframeMinutes}m • ${currentMarket.toUpperCase()}`;
       ctx.fillText(headerTitle, 10, 16);
@@ -5405,7 +5169,7 @@ function calculateStockMetrics(sym) {
       ctx.fillStyle = regimeColor;
       ctx.fillText(`[ ${regimeTag} ]`, 20 + headerTitleWidth, 15.5);
 
-      ctx.font = "bold 11px monospace";
+      ctx.font = "10px monospace";
       const oStr = `O: ${lastCandle.open.toFixed(2)}`;
       const hStr = `H: ${lastCandle.high.toFixed(2)}`;
       const lStr = `L: ${lastCandle.low.toFixed(2)}`;
@@ -5414,16 +5178,15 @@ function calculateStockMetrics(sym) {
       const chgPct = (chgVal / lastCandle.open) * 100;
       const chgStr = `${chgVal >= 0 ? '+' : ''}${chgVal.toFixed(2)} (${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%)`;
 
-      ctx.fillStyle = isBrightTheme ? "#334155" : "#cbd5e1";
-      ctx.fillText(`${oStr}  ${hStr}  ${lStr}  `, 10, 32);
-      ctx.fillStyle = isGreenTick ? (isBrightTheme ? "#059669" : "#34d399") : (isBrightTheme ? "#dc2626" : "#fb7185");
-      ctx.fillText(`${cStr}  ${chgStr}`, 10 + ctx.measureText(`${oStr}  ${hStr}  ${lStr}  `).width, 32);
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText(`${oStr}  ${hStr}  ${lStr}  `, 10, 31);
+      ctx.fillStyle = isGreenTick ? "#34d399" : "#fb7185";
+      ctx.fillText(`${cStr}  ${chgStr}`, 10 + ctx.measureText(`${oStr}  ${hStr}  ${lStr}  `).width, 31);
 
       renderRsiSubChart(candles, minP, maxP);
     }
 
     function renderRsiSubChart(candles, minP, maxP) {
-      const isBrightTheme = isThemeLight();
       const rsiCanvas = document.getElementById("rsiCanvas");
       if (!rsiCanvas) return;
       const rsiCtx = rsiCanvas.getContext("2d");
@@ -5443,11 +5206,11 @@ function calculateStockMetrics(sym) {
       const plotW = rw - chartRightMargin;
 
       rsiCtx.clearRect(0, 0, rw, rh);
-      rsiCtx.strokeStyle = isBrightTheme ? "rgba(226, 232, 240, 0.9)" : "#1e293b";
+      rsiCtx.strokeStyle = "#1e293b";
       rsiCtx.strokeRect(0, 0, rw, rh);
 
       // 70 & 30 reference lines
-      rsiCtx.strokeStyle = isBrightTheme ? "rgba(203, 213, 225, 0.85)" : "#334155";
+      rsiCtx.strokeStyle = "#334155";
       rsiCtx.setLineDash([2, 2]);
       const y70 = rh * 0.3; // 70 level
       const y30 = rh * 0.7; // 30 level
@@ -5754,8 +5517,6 @@ function calculateStockMetrics(sym) {
     });
 
     // Initialize application & handle Kite 2FA login redirect
-    applyTheme("dark");
-    applyFontSize(currentFontSize);
     updateAudioUI();
     handleKiteRedirect();
     updateTradingModeUI();
@@ -5848,20 +5609,17 @@ function calculateStockMetrics(sym) {
       }
       if (!Array.isArray(zerodhaTradeBook)) zerodhaTradeBook = [];
 
-      // 2. Load Sandbox Simulator / Benchmark Trades (100% Calibrated High-Win Benchmark Suite)
+      // 2. Load Sandbox Simulator / Benchmark Trades
       try {
         const rawSim = localStorage.getItem("apex_simulator_trades");
         if (rawSim) {
           simulatorTradeBook = JSON.parse(rawSim);
-        }
-        // Auto-heal simulator cache: If empty, or contains stray negative test loss, re-seed with 100% win benchmark suite
-        const hasLoss = Array.isArray(simulatorTradeBook) && simulatorTradeBook.some(t => t.netPnl < 0);
-        if (!simulatorTradeBook || simulatorTradeBook.length <= 1 || hasLoss) {
+        } else {
           simulatorTradeBook = generateBenchmarkTradeBook();
           localStorage.setItem("apex_simulator_trades", JSON.stringify(simulatorTradeBook));
         }
       } catch (e) {
-        simulatorTradeBook = generateBenchmarkTradeBook();
+        simulatorTradeBook = [];
       }
       if (!Array.isArray(simulatorTradeBook)) simulatorTradeBook = [];
 
@@ -6375,10 +6133,10 @@ function calculateStockMetrics(sym) {
           dateStr: getIsoDate(d1),
           dateDisplay: getFormattedDate(d1),
           entryTimeStr: "10:14:30",
-          exitTimeStr: "10:32:10",
-          durationStr: "17m 40s",
+          exitTimeStr: "10:24:00",
+          durationStr: "9m 30s",
           entryTimestamp: mkDate(d1, 10, 14, 30).getTime(),
-          exitTimestamp: mkDate(d1, 10, 32, 10).getTime(),
+          exitTimestamp: mkDate(d1, 10, 24, 0).getTime(),
           symbol: "INFY",
           side: "BUY",
           market: "india",
@@ -6387,12 +6145,12 @@ function calculateStockMetrics(sym) {
           exposure: 18850.0,
           margin: 3770.0,
           entryPrice: 1885.0,
-          exitPrice: 1912.5,
-          reason: "TRAILING_PROFIT",
-          grossPnl: 275.00,
-          taxes: 18.25,
-          netPnl: 256.75,
-          capitalAfter: 7510.65
+          exitPrice: 1870.0,
+          reason: "STOP_LOSS",
+          grossPnl: -150.00,
+          taxes: 17.50,
+          netPnl: -167.50,
+          capitalAfter: 7086.40
         },
         {
           id: "TB-" + getIsoDate(d1) + "-03",
@@ -6497,10 +6255,10 @@ function calculateStockMetrics(sym) {
           dateStr: getIsoDate(d2),
           dateDisplay: getFormattedDate(d2),
           entryTimeStr: "11:20:00",
-          exitTimeStr: "11:48:30",
-          durationStr: "28m 30s",
+          exitTimeStr: "11:36:15",
+          durationStr: "16m 15s",
           entryTimestamp: mkDate(d2, 11, 20, 0).getTime(),
-          exitTimestamp: mkDate(d2, 11, 48, 30).getTime(),
+          exitTimestamp: mkDate(d2, 11, 36, 15).getTime(),
           symbol: "LT",
           side: "BUY",
           market: "india",
@@ -6509,12 +6267,12 @@ function calculateStockMetrics(sym) {
           exposure: 18100.0,
           margin: 3620.0,
           entryPrice: 3620.0,
-          exitPrice: 3666.0,
-          reason: "TRAILING_PROFIT",
-          grossPnl: 230.00,
-          taxes: 18.15,
-          netPnl: 211.85,
-          capitalAfter: 8797.65
+          exitPrice: 3588.0,
+          reason: "STOP_LOSS",
+          grossPnl: -160.00,
+          taxes: 16.40,
+          netPnl: -176.40,
+          capitalAfter: 8409.40
         },
         {
           id: "TB-" + getIsoDate(d2) + "-03",
@@ -6637,29 +6395,29 @@ function calculateStockMetrics(sym) {
       }
 
       summaryRibbon.innerHTML = `
-        <div class="summary-tile flex flex-col justify-between">
-          <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Audited Period</div>
-          <div class="font-black text-base sm:text-lg text-white truncate mt-1.5">${periodLabel}</div>
+        <div class="space-y-0.5">
+          <div class="text-[10px] text-gray-400 uppercase">Audited Period</div>
+          <div class="font-bold text-white truncate">${periodLabel}</div>
         </div>
-        <div class="summary-tile flex flex-col justify-between">
-          <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Trades (W / L)</div>
-          <div class="font-black text-base sm:text-lg text-white mt-1.5">${totalTrades} <span class="text-xs font-bold text-slate-300">(${wins}W / ${losses}L)</span></div>
+        <div class="space-y-0.5">
+          <div class="text-[10px] text-gray-400 uppercase">Trades (W / L)</div>
+          <div class="font-bold text-gray-200">${totalTrades} <span class="text-xs text-gray-400">(${wins}W / ${losses}L)</span></div>
         </div>
-        <div class="summary-tile flex flex-col justify-between">
-          <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Win Rate</div>
-          <div class="font-black text-base sm:text-lg ${Number(winRate) >= 60 ? 'text-emerald-400' : Number(winRate) >= 40 ? 'text-amber-400' : 'text-rose-400'} mt-1.5">${winRate}% <span class="text-xs font-bold text-slate-300">PF: ${profitFactor}</span></div>
+        <div class="space-y-0.5">
+          <div class="text-[10px] text-gray-400 uppercase">Win Rate</div>
+          <div class="font-bold ${Number(winRate) >= 60 ? 'text-emerald-400' : Number(winRate) >= 40 ? 'text-amber-400' : 'text-rose-400'}">${winRate}% <span class="text-[9px] text-gray-400">PF: ${profitFactor}</span></div>
         </div>
-        <div class="summary-tile flex flex-col justify-between">
-          <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Gross PnL</div>
-          <div class="font-black text-base sm:text-lg ${totalGross >= 0 ? 'text-emerald-400' : 'text-rose-400'} mt-1.5">${totalGross >= 0 ? '+' : ''}₹${totalGross.toFixed(2)}</div>
+        <div class="space-y-0.5">
+          <div class="text-[10px] text-gray-400 uppercase">Gross PnL</div>
+          <div class="font-bold ${totalGross >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${totalGross >= 0 ? '+' : ''}₹${totalGross.toFixed(2)}</div>
         </div>
-        <div class="summary-tile flex flex-col justify-between">
-          <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Zerodha Charges</div>
-          <div class="font-black text-base sm:text-lg text-rose-400 mt-1.5">-₹${totalTaxes.toFixed(2)}</div>
+        <div class="space-y-0.5">
+          <div class="text-[10px] text-gray-400 uppercase">Zerodha Charges</div>
+          <div class="font-bold text-rose-400">-₹${totalTaxes.toFixed(2)}</div>
         </div>
-        <div class="summary-tile hero-pnl flex flex-col justify-between">
-          <div class="text-xs font-black text-emerald-300 uppercase tracking-wider">Net In-Pocket PnL</div>
-          <div class="font-black text-xl ${totalNet >= 0 ? 'text-emerald-300' : 'text-rose-400'} mt-1">${totalNet >= 0 ? '+' : ''}₹${totalNet.toFixed(2)}</div>
+        <div class="space-y-0.5">
+          <div class="text-[10px] text-gray-400 uppercase">Net In-Pocket PnL</div>
+          <div class="font-bold text-sm ${totalNet >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${totalNet >= 0 ? '+' : ''}₹${totalNet.toFixed(2)}</div>
         </div>
       `;
 
@@ -6689,39 +6447,35 @@ function calculateStockMetrics(sym) {
           : `<span class="bg-emerald-950 text-emerald-400 border border-emerald-800 px-1.5 py-0.2 rounded text-[10px] font-bold">BUY</span>`;
 
         return `
-          <tr class="hover:bg-slate-800/40 transition text-xs border-b border-slate-800/60">
-            <td class="py-3 px-2.5">
-              <div class="text-white font-black text-xs">${t.dateDisplay || t.dateStr}</div>
-              <div class="text-[11px] text-slate-300 font-sans font-medium">${t.entryTimeStr} &rarr; ${t.exitTimeStr} (${t.durationStr || 'Intraday'})</div>
+          <tr class="hover:bg-gray-800/30 transition text-[11px]">
+            <td class="py-2 px-2.5">
+              <div class="text-white font-medium">${t.dateDisplay || t.dateStr}</div>
+              <div class="text-[10px] text-gray-400 font-sans">${t.entryTimeStr} &rarr; ${t.exitTimeStr} (${t.durationStr || 'Intraday'})</div>
             </td>
-            <td class="py-3 px-2">
-              <div class="inline-flex items-center gap-1.5">
-                <span class="px-2.5 py-1 rounded-md font-black text-xs bg-slate-800 border border-slate-600 text-white shadow-sm">${t.symbol}</span>
-                <span class="text-[10px] text-cyan-400 font-sans font-bold">${t.marketDisplay || (t.market === 'fno' ? 'NSE F&O' : 'NSE MIS')}</span>
-              </div>
+            <td class="py-2 px-2">
+              <div class="font-bold text-white">${t.symbol}</div>
+              <div class="text-[9px] text-cyan-400 font-sans">${t.marketDisplay || (t.market === 'fno' ? 'NSE F&O' : 'NSE MIS')}</div>
             </td>
-            <td class="py-3 px-2">${sideBadge}</td>
-            <td class="py-3 px-2">
-              <div class="text-white font-black text-xs">${t.qty} shs</div>
-              <div class="text-[11px] text-slate-300 font-medium">Exp: ₹${Math.round(t.exposure || (t.qty * t.entryPrice)).toLocaleString()} [Margin: ₹${Math.round(t.margin || (t.exposure / 5)).toLocaleString()}]</div>
+            <td class="py-2 px-2">${sideBadge}</td>
+            <td class="py-2 px-2">
+              <div class="text-white">${t.qty} shs</div>
+              <div class="text-[10px] text-gray-400">Exp: ₹${Math.round(t.exposure || (t.qty * t.entryPrice)).toLocaleString()} [Margin: ₹${Math.round(t.margin || (t.exposure / 5)).toLocaleString()}]</div>
             </td>
-            <td class="py-3 px-2 font-mono font-black text-xs text-white">₹${Number(t.entryPrice).toFixed(2)}</td>
-            <td class="py-3 px-2 font-mono font-black text-xs text-white">₹${Number(t.exitPrice).toFixed(2)}</td>
-            <td class="py-3 px-2">${reasonBadge}</td>
-            <td class="py-3 px-2 font-mono font-black text-xs ${t.grossPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+            <td class="py-2 px-2 font-mono">₹${Number(t.entryPrice).toFixed(2)}</td>
+            <td class="py-2 px-2 font-mono">₹${Number(t.exitPrice).toFixed(2)}</td>
+            <td class="py-2 px-2">${reasonBadge}</td>
+            <td class="py-2 px-2 font-mono ${t.grossPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
               ${t.grossPnl >= 0 ? '+' : ''}₹${Number(t.grossPnl).toFixed(2)}
             </td>
-            <td class="py-3 px-2 font-mono text-xs">
-              <button onclick="openTradeContractNote('${t.id}')" class="text-rose-400 hover:text-white underline decoration-dotted transition font-mono font-black" title="Click to view Zerodha Virtual Contract Note for this trade">
+            <td class="py-2 px-2 font-mono text-[10px]">
+              <button onclick="openTradeContractNote('${t.id}')" class="text-rose-400 hover:text-white underline decoration-dotted transition font-mono font-semibold" title="Click to view Zerodha Virtual Contract Note for this trade">
                 -₹${Number(t.taxes).toFixed(2)} 🧾
               </button>
             </td>
-            <td class="py-3 px-2">
-              <span class="px-3 py-1 rounded-md font-mono font-black text-xs ${t.netPnl >= 0 ? 'bg-emerald-950/80 border border-emerald-500 text-emerald-300' : 'bg-rose-950/80 border border-rose-500 text-rose-300'} shadow-sm">
-                ${t.netPnl >= 0 ? '+' : ''}₹${Number(t.netPnl).toFixed(2)}
-              </span>
+            <td class="py-2 px-2 font-mono font-bold text-xs ${t.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+              ${t.netPnl >= 0 ? '+' : ''}₹${Number(t.netPnl).toFixed(2)}
             </td>
-            <td class="py-3 px-2 text-right font-mono font-black text-xs text-slate-100">
+            <td class="py-2 px-2 text-right font-mono text-gray-300">
               ₹${Number(t.capitalAfter || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </td>
           </tr>
@@ -6769,21 +6523,20 @@ function calculateStockMetrics(sym) {
 
     function clearTradeBookPrompt() {
       if (currentTradeBookMode === "ZERODHA") {
-        const code = prompt("⚠️ PROTECTED REAL MARKET AUDIT JOURNAL\n\nTo safeguard today's real trading ledger from accidental loss, type 'RESET' to confirm reset:");
-        if (code === "RESET") {
+        if (confirm("Clear Zerodha Real Market Journal for a fresh audited session?")) {
           zerodhaTradeBook = [];
           saveTradeBook();
           renderTradeBookUI();
           renderAccountRibbon();
-          logTerminal("📖 <strong class=\"text-emerald-400\">[ZERODHA JOURNAL RESET]</strong> Real market ledger cleared for fresh audited session.");
+          logTerminal("📖 <strong class=\"text-emerald-400\">[ZERODHA JOURNAL RESET]</strong> Real market ledger cleared for a fresh trading session.");
         }
       } else {
-        if (confirm("Restore Simulator Benchmark suite (100% win institutional baseline across all sessions)?")) {
+        if (confirm("Reset simulator benchmark records?")) {
           simulatorTradeBook = generateBenchmarkTradeBook();
           saveTradeBook();
           renderTradeBookUI();
           renderAccountRibbon();
-          logTerminal("📖 <strong class=\"text-cyan-400\">[SIMULATOR RESET]</strong> 100% win benchmark sandbox restored.");
+          logTerminal("📖 <strong class=\"text-cyan-400\">[SIMULATOR RESET]</strong> Benchmark sandbox restored.");
         }
       }
     }
