@@ -345,6 +345,11 @@
         <span id="theme-icon">☀️</span> <span id="theme-label" class="font-mono text-slate-200">Daylight Pearl</span>
       </button>
 
+      <!-- Font Zoom Scaler (Compact / Standard / Large) -->
+      <button onclick="cycleFontSize()" id="btn-font-zoom" class="btn-fintech px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5" title="Adjust Font Size (Standard / Large / Compact)">
+        <span>🗚</span> <span id="font-zoom-label" class="font-mono">Normal</span>
+      </button>
+
       <!-- Audio Mute Button -->
       <button onclick="toggleAudio()" id="btn-audio-toggle" class="btn-fintech px-2 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white" title="Toggle Sound">
         <span id="audio-icon">🔊</span>
@@ -476,11 +481,11 @@
               <span class="text-amber-400 font-semibold">VWAP</span>
             </label>
             <label class="flex items-center space-x-1 cursor-pointer" title="Central Pivot Range (TC, Pivot, BC) from Bhavcopy EOD data">
-              <input type="checkbox" id="chk-cpr" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-purple-500" />
+              <input type="checkbox" id="chk-cpr" onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-purple-500" />
               <span class="text-purple-400 font-semibold">CPR Pivots</span>
             </label>
             <label class="flex items-center space-x-1 cursor-pointer" title="Previous Day High &amp; Low key breakout gates">
-              <input type="checkbox" id="chk-pdh" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-yellow-500" />
+              <input type="checkbox" id="chk-pdh" onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-yellow-500" />
               <span class="text-yellow-400 font-semibold">PDH/PDL</span>
             </label>
           </div>
@@ -1918,6 +1923,46 @@
   </div>
 
   <script>
+    // =========================================================================
+    // Font Scale Engine (Compact 90% / Standard 100% / Large 115%)
+    // =========================================================================
+    let currentFontSize = localStorage.getItem("apex_font_size") || "normal";
+
+    function applyFontSize(size) {
+      currentFontSize = size;
+      const root = document.documentElement;
+      if (size === "large") {
+        root.style.fontSize = "14px";
+      } else if (size === "compact") {
+        root.style.fontSize = "11.5px";
+      } else {
+        root.style.fontSize = "12.5px";
+      }
+      try { localStorage.setItem("apex_font_size", size); } catch(e) {}
+      updateFontUI();
+      if (typeof renderChart === "function") renderChart();
+    }
+
+    function cycleFontSize() {
+      if (currentFontSize === "normal") {
+        applyFontSize("large");
+        logTerminal("🗚 Font size set to <strong>Large (115%)</strong>.");
+      } else if (currentFontSize === "large") {
+        applyFontSize("compact");
+        logTerminal("🗚 Font size set to <strong>Compact (90%)</strong>.");
+      } else {
+        applyFontSize("normal");
+        logTerminal("🗚 Font size set to <strong>Standard (100%)</strong>.");
+      }
+    }
+
+    function updateFontUI() {
+      const lbl = document.getElementById("font-zoom-label");
+      if (lbl) {
+        lbl.innerText = currentFontSize === "large" ? "Big (115%)" : (currentFontSize === "compact" ? "Compact" : "Normal");
+      }
+    }
+
     // =========================================================================
     // Theme Engine: Daylight Pearl (Bright) / Oceanic Azure / Midnight Dark
     // =========================================================================
@@ -5112,10 +5157,12 @@ function calculateStockMetrics(sym) {
       const chartPlotW = w - chartRightMargin;
       const chartPlotH = h - chartBottomMargin;
 
-      // Draw Grid Lines & Price Ticks (Theme Adapted)
+      // Draw Grid Lines & Price Ticks (Theme Adapted & Refined)
       const isBrightTheme = isThemeLight();
-      ctx.strokeStyle = isBrightTheme ? "rgba(226, 232, 240, 0.9)" : "#131a29";
-      ctx.lineWidth = 1;
+      ctx.save();
+      ctx.strokeStyle = isBrightTheme ? "rgba(203, 213, 225, 0.45)" : "rgba(30, 41, 59, 0.4)";
+      ctx.setLineDash([2, 4]);
+      ctx.lineWidth = 0.8;
       for (let i = 1; i <= 5; i++) {
         const y = (chartPlotH / 6) * i;
         ctx.beginPath();
@@ -5124,17 +5171,21 @@ function calculateStockMetrics(sym) {
         ctx.stroke();
 
         const priceVal = maxP - (i / 6) * (maxP - minP);
-        ctx.fillStyle = "#64748b";
-        ctx.font = "9px monospace";
+        ctx.fillStyle = isBrightTheme ? "#475569" : "#94a3b8";
+        ctx.font = "bold 11px monospace";
         ctx.textAlign = "left";
-        ctx.fillText(priceVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}), chartPlotW + 6, y + 3);
+        ctx.fillText(priceVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}), chartPlotW + 6, y + 3.5);
       }
+      ctx.restore();
 
-      // Draw Time Grid Lines & Timeframe-Accurate Timestamps
+      // Draw Time Grid Lines & Timeframe-Accurate Timestamps (Subtle & Clean)
+      ctx.save();
+      ctx.strokeStyle = isBrightTheme ? "rgba(203, 213, 225, 0.45)" : "rgba(30, 41, 59, 0.4)";
+      ctx.setLineDash([2, 4]);
+      ctx.lineWidth = 0.8;
       const timeSteps = 5;
       for (let i = 1; i <= timeSteps; i++) {
         const x = (chartPlotW / (timeSteps + 1)) * i;
-        ctx.strokeStyle = "#131a29";
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, chartPlotH);
@@ -5145,12 +5196,13 @@ function calculateStockMetrics(sym) {
           const dt = new Date(candles[cIdx].time);
           const hh = String(dt.getHours()).padStart(2, '0');
           const mm = String(dt.getMinutes()).padStart(2, '0');
-          ctx.fillStyle = "#64748b";
-          ctx.font = "9px monospace";
+          ctx.fillStyle = isBrightTheme ? "#475569" : "#94a3b8";
+          ctx.font = "bold 10px monospace";
           ctx.textAlign = "center";
           ctx.fillText(`${hh}:${mm}`, x, chartPlotH + 14);
         }
       }
+      ctx.restore();
 
       // Draw Volume Histogram (bottom 18% of chart)
       const volAreaH = chartPlotH * 0.18;
@@ -5377,13 +5429,14 @@ function calculateStockMetrics(sym) {
       const isGreenTick = livePrice >= lastCandle.open;
       const badgeBg = isGreenTick ? "#059669" : "#e11d48";
 
-      // Dashed price tracker line
+      // Dashed price tracker line (bridges from active candle to badge, keeping history clean)
       ctx.save();
       ctx.setLineDash([3, 3]);
       ctx.strokeStyle = isGreenTick ? "#10b981" : "#f43f5e";
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1.2;
+      const lastCandleX = Math.max(0, (candles.length - 1) * candleSlot);
       ctx.beginPath();
-      ctx.moveTo(0, yLive);
+      ctx.moveTo(lastCandleX, yLive);
       ctx.lineTo(chartPlotW, yLive);
       ctx.stroke();
       ctx.restore();
@@ -5407,7 +5460,7 @@ function calculateStockMetrics(sym) {
       ctx.fillText(livePrice.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}), badgeX + 4, badgeY + 12.5);
 
       // Top-Left Chart Live HUD Header (Symbol, Timeframe, OHLC, Live Status)
-      ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
+      ctx.font = "bold 13px system-ui, -apple-system, sans-serif";
       ctx.fillStyle = isBrightTheme ? "#0f172a" : "#f8fafc";
       ctx.textAlign = "left";
       const headerTitle = `${currentSymbol} • ${timeframeMinutes}m • ${currentMarket.toUpperCase()}`;
@@ -5448,7 +5501,7 @@ function calculateStockMetrics(sym) {
       ctx.fillStyle = regimeColor;
       ctx.fillText(`[ ${regimeTag} ]`, 20 + headerTitleWidth, 15.5);
 
-      ctx.font = "10px monospace";
+      ctx.font = "bold 11px monospace";
       const oStr = `O: ${lastCandle.open.toFixed(2)}`;
       const hStr = `H: ${lastCandle.high.toFixed(2)}`;
       const lStr = `L: ${lastCandle.low.toFixed(2)}`;
@@ -5457,10 +5510,10 @@ function calculateStockMetrics(sym) {
       const chgPct = (chgVal / lastCandle.open) * 100;
       const chgStr = `${chgVal >= 0 ? '+' : ''}${chgVal.toFixed(2)} (${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%)`;
 
-      ctx.fillStyle = "#94a3b8";
-      ctx.fillText(`${oStr}  ${hStr}  ${lStr}  `, 10, 31);
-      ctx.fillStyle = isGreenTick ? "#34d399" : "#fb7185";
-      ctx.fillText(`${cStr}  ${chgStr}`, 10 + ctx.measureText(`${oStr}  ${hStr}  ${lStr}  `).width, 31);
+      ctx.fillStyle = isBrightTheme ? "#334155" : "#cbd5e1";
+      ctx.fillText(`${oStr}  ${hStr}  ${lStr}  `, 10, 32);
+      ctx.fillStyle = isGreenTick ? (isBrightTheme ? "#059669" : "#34d399") : (isBrightTheme ? "#dc2626" : "#fb7185");
+      ctx.fillText(`${cStr}  ${chgStr}`, 10 + ctx.measureText(`${oStr}  ${hStr}  ${lStr}  `).width, 32);
 
       renderRsiSubChart(candles, minP, maxP);
     }
@@ -5798,6 +5851,7 @@ function calculateStockMetrics(sym) {
 
     // Initialize application & handle Kite 2FA login redirect
     applyTheme(currentTheme);
+    applyFontSize(currentFontSize);
     updateAudioUI();
     handleKiteRedirect();
     updateTradingModeUI();
