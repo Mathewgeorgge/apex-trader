@@ -2347,7 +2347,7 @@
 
 
     function openBrokerageModal() {
-      document.getElementById("brokerage-modal").classList.remove("hidden");
+      openLiveSessionContractNote();
     }
 
     function closeBrokerageModal() {
@@ -4618,6 +4618,10 @@ function calculateStockMetrics(sym) {
           ? `<span class="bg-rose-950/90 text-rose-300 border border-rose-700/80 px-1.5 py-0.5 rounded font-bold text-[10px]">SELL</span>`
           : `<span class="bg-emerald-950/90 text-emerald-300 border border-emerald-700/80 px-1.5 py-0.5 rounded font-bold text-[10px]">BUY</span>`;
 
+        // Accurate Net ROI on capital/margin (avoids misleading positive % when Net PnL is negative!)
+        const costBasis = p.cost > 0 ? p.cost : (p.avg * p.qty / 5);
+        const netRoiPct = (costBasis > 0) ? ((c.netPnl / costBasis) * 100) : 0.0;
+
         tr.innerHTML = `
           <td class="py-2 px-2 font-bold text-white">${p.symbol}</td>
           <td class="py-2 px-2">${sideBadge}</td>
@@ -4627,15 +4631,19 @@ function calculateStockMetrics(sym) {
               ? `<div class="text-[9px] text-cyan-400 font-normal">₹${Math.round(p.exposure || (p.qty * p.avg)).toLocaleString('en-IN')} <span class="text-gray-400 font-semibold">(5x MIS)</span></div>`
               : `<div class="text-[9px] text-gray-400 font-mono">${p.curr}${Math.round(p.exposure || (p.qty * p.avg)).toLocaleString()}</div>`}
           </td>
-          <td class="py-2 px-2 text-gray-300">${p.curr}${p.avg.toLocaleString()}</td>
-          <td class="py-2 px-2 text-white">${p.curr}${p.ltp.toLocaleString()}</td>
+          <td class="py-2 px-2 text-gray-300 font-mono">₹${Number(p.avg).toFixed(2)}</td>
+          <td class="py-2 px-2 text-white font-mono">₹${Number(p.ltp).toFixed(2)}</td>
           <td class="py-2 px-2">${trailBadge}</td>
-          <td class="py-2 px-2 font-bold ${c.grossPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
-            ${c.grossPnl >= 0 ? '+' : ''}${p.curr}${c.grossPnl.toFixed(2)}
+          <td class="py-2 px-2 font-mono font-bold ${c.grossPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+            ${c.grossPnl >= 0 ? '+' : ''}₹${c.grossPnl.toFixed(2)}
           </td>
-          <td class="py-2 px-2 text-rose-400 font-mono">-${p.curr}${c.total.toFixed(2)}</td>
-          <td class="py-2 px-2 font-bold ${c.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
-            ${c.netPnl >= 0 ? '+' : ''}${p.curr}${c.netPnl.toFixed(2)} (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%)
+          <td class="py-2 px-2 text-rose-400 font-mono">
+            <button onclick="openActivePositionContractNote('${p.symbol}')" class="text-rose-400 hover:text-white underline decoration-dotted transition font-mono font-semibold" title="Click to view official Zerodha Virtual Contract Note for active ${p.symbol}">
+              -₹${c.total.toFixed(2)} 🧾
+            </button>
+          </td>
+          <td class="py-2 px-2 font-mono font-bold ${c.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+            ${c.netPnl >= 0 ? '+' : ''}₹${c.netPnl.toFixed(2)} <span class="text-[10px] font-normal ${netRoiPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}">(${netRoiPct >= 0 ? '+' : ''}${netRoiPct.toFixed(2)}%)</span>
           </td>
           <td class="py-2 px-2 text-right">
             <button onclick="closeSinglePosition('${p.symbol}')" class="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800 text-[10px] px-2 py-0.5 rounded font-semibold transition">
@@ -5569,6 +5577,183 @@ function calculateStockMetrics(sym) {
 
       tradeBook.unshift(record);
       saveTradeBook();
+    }
+
+    
+    function openActivePositionContractNote(symbol) {
+      const p = positions.find(item => item.symbol === symbol);
+      if (!p) return;
+      const posType = p.type || "BUY";
+      const c = calculateTradeCharges(p.avg, p.ltp, p.qty, p.market || currentMarket, posType);
+
+      document.getElementById("vcn-modal-subtitle").innerText = `Virtual Contract Note for Active Position: ${p.symbol} (${posType} ${p.qty} shs @ ₹${Number(p.avg).toFixed(2)}) • NSE MIS 5x`;
+      document.getElementById("vcn-sebi").innerText = "₹" + Number(c.sebi || 0).toFixed(2);
+      document.getElementById("vcn-exchange").innerText = "₹" + Number(c.exchange || 0).toFixed(2);
+      document.getElementById("vcn-stamp").innerText = "₹" + Number(c.stamp || 0).toFixed(2);
+      document.getElementById("vcn-stt").innerText = "₹" + Number(c.stt || 0).toFixed(2);
+      document.getElementById("vcn-gst").innerText = "₹" + Number(c.gst || 0).toFixed(2);
+      document.getElementById("vcn-brokerage").innerText = "₹" + Number(c.brokerage || 0).toFixed(2);
+      document.getElementById("vcn-total").innerText = "₹" + Number(c.total || 0).toFixed(2);
+
+      const entrySide = posType;
+      const exitSide = (entrySide === "BUY") ? "SELL" : "BUY";
+      const buyLeg = c.buyLeg || calculateOrderCharges(c.buyP || p.avg, p.qty, p.market || currentMarket, "BUY");
+      const sellLeg = c.sellLeg || calculateOrderCharges(c.sellP || p.ltp, p.qty, p.market || currentMarket, "SELL");
+
+      const entryCharges = (entrySide === "BUY") ? buyLeg.total : sellLeg.total;
+      const exitCharges = (entrySide === "BUY") ? sellLeg.total : buyLeg.total;
+
+      const d = new Date(p.entryTime || Date.now());
+      const entryTimeStr = getFormattedTime(d);
+      const nowTimeStr = getFormattedTime(new Date());
+
+      const tbody = document.getElementById("vcn-orders-tbody");
+      tbody.innerHTML = `
+        <tr class="hover:bg-gray-800/40">
+          <td class="py-2 px-2 text-gray-400 font-sans">${entryTimeStr}</td>
+          <td class="py-2 px-2">
+            <span class="${entrySide === 'BUY' ? 'bg-blue-950 text-blue-300 border border-blue-800' : 'bg-rose-950 text-rose-300 border border-rose-800'} px-1.5 py-0.2 rounded text-[10px] font-bold font-sans">${entrySide}</span>
+            <span class="font-bold text-white ml-1">${p.symbol}</span>
+            <span class="text-cyan-400 text-[10px] font-sans">[FILLED]</span>
+          </td>
+          <td class="py-2 px-2 font-mono">${p.qty}</td>
+          <td class="py-2 px-2 font-mono">₹${Number(p.avg).toFixed(2)}</td>
+          <td class="py-2 px-2 text-right font-mono font-bold text-rose-300">₹${entryCharges.toFixed(2)}</td>
+        </tr>
+        <tr class="hover:bg-gray-800/40">
+          <td class="py-2 px-2 text-gray-400 font-sans">${nowTimeStr}</td>
+          <td class="py-2 px-2">
+            <span class="${exitSide === 'BUY' ? 'bg-blue-950 text-blue-300 border border-blue-800' : 'bg-rose-950 text-rose-300 border border-rose-800'} px-1.5 py-0.2 rounded text-[10px] font-bold font-sans">${exitSide}</span>
+            <span class="font-bold text-white ml-1">${p.symbol}</span>
+            <span class="text-amber-400 text-[10px] font-sans">[LIVE LTP]</span>
+          </td>
+          <td class="py-2 px-2 font-mono">${p.qty}</td>
+          <td class="py-2 px-2 font-mono">₹${Number(p.ltp).toFixed(2)}</td>
+          <td class="py-2 px-2 text-right font-mono font-bold text-rose-300">₹${exitCharges.toFixed(2)}</td>
+        </tr>
+      `;
+      document.getElementById("vcn-order-count").innerText = "2 orders (1 Executed + 1 Live Exit)";
+      document.getElementById("virtual-contract-note-modal").classList.remove("hidden");
+    }
+
+    function openLiveSessionContractNote() {
+      let totalSebi = 0;
+      let totalExchange = 0;
+      let totalStamp = 0;
+      let totalStt = 0;
+      let totalGst = 0;
+      let totalBrokerage = 0;
+      let grandTotal = 0;
+      let orderRowsHtml = "";
+      let orderCount = 0;
+
+      // 1. Add all active open positions
+      positions.forEach(p => {
+        const posType = p.type || "BUY";
+        const c = calculateTradeCharges(p.avg, p.ltp, p.qty, p.market || currentMarket, posType);
+        totalSebi += (c.sebi || 0);
+        totalExchange += (c.exchange || 0);
+        totalStamp += (c.stamp || 0);
+        totalStt += (c.stt || 0);
+        totalGst += (c.gst || 0);
+        totalBrokerage += (c.brokerage || 0);
+        grandTotal += (c.total || 0);
+
+        const entrySide = posType;
+        const exitSide = (entrySide === "BUY") ? "SELL" : "BUY";
+        const buyLeg = c.buyLeg || calculateOrderCharges(c.buyP || p.avg, p.qty, p.market || currentMarket, "BUY");
+        const sellLeg = c.sellLeg || calculateOrderCharges(c.sellP || p.ltp, p.qty, p.market || currentMarket, "SELL");
+
+        const entryCharges = (entrySide === "BUY") ? buyLeg.total : sellLeg.total;
+        const exitCharges = (entrySide === "BUY") ? sellLeg.total : buyLeg.total;
+
+        orderRowsHtml += `
+          <tr class="hover:bg-gray-800/40 bg-indigo-950/20">
+            <td class="py-1.5 px-2 text-cyan-400 font-sans">Active Entry</td>
+            <td class="py-1.5 px-2">
+              <span class="${entrySide === 'BUY' ? 'bg-blue-950 text-blue-300 border border-blue-800' : 'bg-rose-950 text-rose-300 border border-rose-800'} px-1.5 py-0.2 rounded text-[10px] font-bold font-sans">${entrySide}</span>
+              <span class="font-bold text-white ml-1">${p.symbol}</span>
+              <span class="text-cyan-400 text-[9px] font-sans">[LIVE]</span>
+            </td>
+            <td class="py-1.5 px-2 font-mono">${p.qty}</td>
+            <td class="py-1.5 px-2 font-mono">₹${Number(p.avg).toFixed(2)}</td>
+            <td class="py-1.5 px-2 text-right font-mono font-bold text-rose-300">₹${entryCharges.toFixed(2)}</td>
+          </tr>
+          <tr class="hover:bg-gray-800/40 bg-indigo-950/20">
+            <td class="py-1.5 px-2 text-gray-400 font-sans">Est. Exit</td>
+            <td class="py-1.5 px-2">
+              <span class="${exitSide === 'BUY' ? 'bg-blue-950 text-blue-300 border border-blue-800' : 'bg-rose-950 text-rose-300 border border-rose-800'} px-1.5 py-0.2 rounded text-[10px] font-bold font-sans">${exitSide}</span>
+              <span class="font-bold text-white ml-1">${p.symbol}</span>
+              <span class="text-gray-500 text-[9px] font-sans">[EST]</span>
+            </td>
+            <td class="py-1.5 px-2 font-mono">${p.qty}</td>
+            <td class="py-1.5 px-2 font-mono">₹${Number(p.ltp).toFixed(2)}</td>
+            <td class="py-1.5 px-2 text-right font-mono font-bold text-rose-300">₹${exitCharges.toFixed(2)}</td>
+          </tr>
+        `;
+        orderCount += 2;
+      });
+
+      // 2. Add today's realized closed trades from tradeBook
+      const todayIso = getIsoDate(new Date());
+      const todayTrades = (typeof tradeBook !== 'undefined' && Array.isArray(tradeBook)) ? tradeBook.filter(t => t.dateStr === todayIso) : [];
+      todayTrades.forEach(t => {
+        const c = t.chargesBreakdown || calculateTradeCharges(t.entryPrice, t.exitPrice, t.qty, t.market || "india", t.side || "BUY");
+        totalSebi += (c.sebi || 0);
+        totalExchange += (c.exchange || 0);
+        totalStamp += (c.stamp || 0);
+        totalStt += (c.stt || 0);
+        totalGst += (c.gst || 0);
+        totalBrokerage += (c.brokerage || 0);
+        grandTotal += (c.total || t.taxes || 0);
+
+        const entrySide = t.side || "BUY";
+        const exitSide = (entrySide === "BUY") ? "SELL" : "BUY";
+        const buyLeg = c.buyLeg || calculateOrderCharges(c.buyP || t.entryPrice, t.qty, t.market || "india", "BUY");
+        const sellLeg = c.sellLeg || calculateOrderCharges(c.sellP || t.exitPrice, t.qty, t.market || "india", "SELL");
+
+        const entryCharges = (entrySide === "BUY") ? buyLeg.total : sellLeg.total;
+        const exitCharges = (entrySide === "BUY") ? sellLeg.total : buyLeg.total;
+
+        orderRowsHtml += `
+          <tr class="hover:bg-gray-800/40">
+            <td class="py-1.5 px-2 text-gray-400 font-sans">${t.entryTimeStr || '09:15:00'}</td>
+            <td class="py-1.5 px-2">
+              <span class="${entrySide === 'BUY' ? 'bg-blue-950 text-blue-300 border border-blue-800' : 'bg-rose-950 text-rose-300 border border-rose-800'} px-1.5 py-0.2 rounded text-[10px] font-bold font-sans">${entrySide}</span>
+              <span class="font-bold text-white ml-1">${t.symbol}</span>
+              <span class="text-gray-500 text-[9px] font-sans">NSE</span>
+            </td>
+            <td class="py-1.5 px-2 font-mono">${t.qty}</td>
+            <td class="py-1.5 px-2 font-mono">₹${Number(t.entryPrice).toFixed(2)}</td>
+            <td class="py-1.5 px-2 text-right font-mono font-bold text-rose-300">₹${entryCharges.toFixed(2)}</td>
+          </tr>
+          <tr class="hover:bg-gray-800/40">
+            <td class="py-1.5 px-2 text-gray-400 font-sans">${t.exitTimeStr || '09:45:00'}</td>
+            <td class="py-1.5 px-2">
+              <span class="${exitSide === 'BUY' ? 'bg-blue-950 text-blue-300 border border-blue-800' : 'bg-rose-950 text-rose-300 border border-rose-800'} px-1.5 py-0.2 rounded text-[10px] font-bold font-sans">${exitSide}</span>
+              <span class="font-bold text-white ml-1">${t.symbol}</span>
+              <span class="text-gray-500 text-[9px] font-sans">NSE</span>
+            </td>
+            <td class="py-1.5 px-2 font-mono">${t.qty}</td>
+            <td class="py-1.5 px-2 font-mono">₹${Number(t.exitPrice).toFixed(2)}</td>
+            <td class="py-1.5 px-2 text-right font-mono font-bold text-rose-300">₹${exitCharges.toFixed(2)}</td>
+          </tr>
+        `;
+        orderCount += 2;
+      });
+
+      document.getElementById("vcn-modal-subtitle").innerText = `Live Session Contract Note • Zerodha Broking Ltd. (NSE) • ${positions.length} Active Positions + ${todayTrades.length} Realized Trades`;
+      document.getElementById("vcn-sebi").innerText = "₹" + totalSebi.toFixed(2);
+      document.getElementById("vcn-exchange").innerText = "₹" + totalExchange.toFixed(2);
+      document.getElementById("vcn-stamp").innerText = "₹" + totalStamp.toFixed(2);
+      document.getElementById("vcn-stt").innerText = "₹" + totalStt.toFixed(2);
+      document.getElementById("vcn-gst").innerText = "₹" + totalGst.toFixed(2);
+      document.getElementById("vcn-brokerage").innerText = "₹" + totalBrokerage.toFixed(2);
+      document.getElementById("vcn-total").innerText = "₹" + grandTotal.toFixed(2);
+
+      document.getElementById("vcn-orders-tbody").innerHTML = orderRowsHtml || `<tr><td colspan="5" class="py-4 text-center text-gray-500 text-xs">No active or realized orders in current session.</td></tr>`;
+      document.getElementById("vcn-order-count").innerText = `${orderCount} orders executed`;
+      document.getElementById("virtual-contract-note-modal").classList.remove("hidden");
     }
 
     function openTradeContractNote(tradeId) {
