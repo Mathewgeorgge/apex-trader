@@ -5559,7 +5559,7 @@ function calculateStockMetrics(sym) {
           scoredCandidates.sort((a, b) => b.score - a.score);
 
           const topPick = scoredCandidates[0];
-          if (topPick && topPick.score >= 78) {
+          if (topPick && topPick.score >= 72) {
             const isShort = topPick.side === "SELL";
             logTerminal(`${isShort ? '📉' : '🚀'} <strong class="${isShort ? 'text-rose-400' : 'text-emerald-400'}">[HIGH-CONVICTION SETUP]</strong> ${isShort ? 'Bearish breakdown (SHORT)' : 'Bullish breakout (LONG)'} on <strong>${topPick.sym}</strong> [Score <strong>${topPick.score}/100</strong> • 4/4 Risk Gates Cleared]. Routing <strong>${topPick.side}</strong>...`);
             triggerImmediateTrade(topPick.sym, false, topPick.side);
@@ -5593,20 +5593,6 @@ function calculateStockMetrics(sym) {
           if ((p.market === "india" || currentMarket === "india" || p.market === "fno" || currentMarket === "fno") && isNSEMarketHoursIST() && istExitMins >= (15 * 60 + 15)) {
             exitsToExecute.push({ sym: p.symbol, reason: "EOD_MIS_SQUAREOFF", ltp: liveLtp, net: netGain, gross: grossGain });
             return;
-          }
-
-          // Guaranteed Breakeven Profit Shield: Once in net gain, protect capital so winners never become losses
-          if (netGain > 0) {
-            const bePrice = Math.round((isShort ? (p.avg - (charges.breakeven || 0.5)) : (p.avg + (charges.breakeven || 0.5))) * 100) / 100;
-            if (!isShort && bePrice > p.trailingSL) {
-              p.trailingSL = bePrice;
-              p.trailStatus = "LOCKED";
-              p.profitLocked = Math.max(0, netGain * 0.4);
-            } else if (isShort && bePrice < p.trailingSL) {
-              p.trailingSL = bePrice;
-              p.trailStatus = "LOCKED";
-              p.profitLocked = Math.max(0, netGain * 0.4);
-            }
           }
 
           if (!isShort) {
