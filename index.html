@@ -504,6 +504,11 @@
               <!-- Search Symbol Filter -->
               <input type="text" id="tb-search-symbol" oninput="renderTradeBookUI()" placeholder="Search symbol..." class="bg-[#0b1324] border border-gray-700 text-white placeholder-gray-500 rounded px-2 py-1 text-xs w-28 focus:outline-none focus:border-indigo-500">
 
+              <!-- View Contract Note -->
+              <button onclick="openConsolidatedContractNote()" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 border border-indigo-700/80 px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1 transition shadow-sm" title="View official Zerodha Virtual Contract Note for filtered trades">
+                <span>🧾</span> Virtual Contract Note
+              </button>
+
               <!-- Export CSV -->
               <button onclick="exportTradeBookCSV()" class="bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 border border-emerald-700/80 px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1 transition shadow-sm">
                 <span>📥</span> Export CSV
@@ -740,95 +745,111 @@
         </div>
       </div>
 
-      <!-- Tab Content: Zerodha Brokerage & Taxes Calculator -->
+      <!-- Tab Content: Zerodha Taxes & Breakeven Desk -->
       <div id="tab-content-brokerage" class="p-3 hidden space-y-3">
         <div class="flex justify-between items-center pb-2 border-b border-gray-800">
           <div>
-            <span class="font-bold text-white text-xs">🧮 Zerodha Statutory Charges & Breakeven Analytics</span>
-            <p class="text-[10px] text-gray-400">Indian Market (NSE/BSE) fee structure with STT, GST, Exchange charges & Breakeven ticks</p>
+            <span class="font-bold text-white text-xs">🧾 Zerodha Virtual Contract Note & Breakeven Ledger</span>
+            <p class="text-[10px] text-gray-400">Authentic Kite contract note breakdown with SEBI fee, Exchange fee, Stamp duty, STT, GST & Brokerage</p>
           </div>
-          <span class="bg-indigo-950 text-indigo-300 border border-indigo-800 px-2 py-0.5 rounded text-[10px] font-bold">SEBI Aligned</span>
+          <span class="bg-indigo-950 text-indigo-300 border border-indigo-800 px-2 py-0.5 rounded text-[10px] font-bold">KITE CONTRACT NOTE</span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <!-- Live Interactive Calculator -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <!-- Interactive Simulator Controls -->
           <div class="bg-[#070b14] p-3 rounded-lg border border-gray-800 space-y-2">
-            <span class="font-bold text-white text-xs block">Quick Trade Fee Simulator</span>
+            <span class="font-bold text-white text-xs block">Order Simulation Parameters</span>
             <div class="space-y-1.5 text-xs">
               <div>
                 <label class="text-[10px] text-gray-400 block">Symbol / Stock</label>
-                <input type="text" id="calc-sym" value="RELIANCE" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs font-mono" />
+                <input type="text" id="calc-sym" value="TATASTEEL" oninput="runFeeSim()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs font-mono" />
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="text-[10px] text-gray-400 block">Buy Price (₹)</label>
-                  <input type="number" id="calc-buy" value="2500" oninput="runFeeSim()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs font-mono" />
+                  <input type="number" step="0.05" id="calc-buy" value="161.65" oninput="runFeeSim()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs font-mono" />
                 </div>
                 <div>
                   <label class="text-[10px] text-gray-400 block">Sell Price (₹)</label>
-                  <input type="number" id="calc-sell" value="2520" oninput="runFeeSim()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs font-mono" />
+                  <input type="number" step="0.05" id="calc-sell" value="163.10" oninput="runFeeSim()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs font-mono" />
                 </div>
               </div>
               <div>
                 <label class="text-[10px] text-gray-400 block">Quantity (Shares)</label>
-                <input type="number" id="calc-qty" value="10" oninput="runFeeSim()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs font-mono" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Itemized Charges Card -->
-          <div class="bg-[#070b14] p-3 rounded-lg border border-gray-800 space-y-1.5 font-mono text-xs">
-            <span class="font-bold text-white font-sans text-xs block border-b border-gray-800 pb-1">Itemized Government & Broker Fees</span>
-            <div class="flex justify-between text-gray-300">
-              <span>Zerodha Brokerage:</span>
-              <strong class="text-white" id="fee-brokerage">₹15.06</strong>
-            </div>
-            <div class="flex justify-between text-gray-300">
-              <span>STT / CTT (0.025% Sell):</span>
-              <strong class="text-white" id="fee-stt">₹6.30</strong>
-            </div>
-            <div class="flex justify-between text-gray-300">
-              <span>NSE Exchange Txn Fee:</span>
-              <strong class="text-white" id="fee-exchange">₹1.49</strong>
-            </div>
-            <div class="flex justify-between text-gray-300">
-              <span>GST (18% on Brokerage+NSE):</span>
-              <strong class="text-white" id="fee-gst">₹2.99</strong>
-            </div>
-            <div class="flex justify-between text-gray-300">
-              <span>SEBI & Stamp Duty:</span>
-              <strong class="text-white" id="fee-sebi">₹0.80</strong>
-            </div>
-            <div class="flex justify-between border-t border-gray-800 pt-1 text-rose-400 font-bold">
-              <span>Total Friction & Taxes:</span>
-              <span id="fee-total">₹26.64</span>
-            </div>
-          </div>
-
-          <!-- PnL & Breakeven Result -->
-          <div class="bg-[#070b14] p-3 rounded-lg border border-gray-800 flex flex-col justify-between space-y-2">
-            <div>
-              <span class="font-bold text-white text-xs block border-b border-gray-800 pb-1">Net In-Pocket Profit</span>
-              <div class="mt-2 space-y-1 font-mono text-xs">
-                <div class="flex justify-between">
-                  <span class="text-gray-400">Gross Trade PnL:</span>
-                  <span class="text-emerald-400 font-bold" id="res-gross">+₹200.00</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-400">Brokerage & Taxes:</span>
-                  <span class="text-rose-400 font-bold" id="res-tax">-₹26.64</span>
-                </div>
-                <div class="flex justify-between border-t border-gray-800 pt-1 text-sm">
-                  <span class="text-white font-bold">Net Realized PnL:</span>
-                  <span class="text-emerald-400 font-extrabold" id="res-net">+₹173.36</span>
-                </div>
+                <input type="number" id="calc-qty" value="50" oninput="runFeeSim()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-white text-xs font-mono" />
               </div>
             </div>
 
-            <div class="bg-gray-900/80 p-2 rounded border border-gray-800 text-[10px]">
-              <span class="text-gray-400 block font-semibold">Minimum Points to Breakeven:</span>
-              <strong class="text-amber-400 font-mono text-xs" id="res-breakeven">₹2.66 / share</strong>
-              <p class="text-[9px] text-gray-500 mt-0.5">Price must move at least +₹2.66 before this trade becomes profitable.</p>
+            <!-- Financial Outcome Card -->
+            <div class="pt-2 border-t border-gray-800/80 space-y-1 font-mono text-[11px]">
+              <div class="flex justify-between text-gray-400"><span>Gross Trade PnL:</span><strong id="res-gross" class="text-emerald-400 font-bold">+₹72.50</strong></div>
+              <div class="flex justify-between text-gray-400"><span>Total Taxes & Charges:</span><strong id="res-tax" class="text-rose-400 font-bold">-₹8.39</strong></div>
+              <div class="flex justify-between text-white font-bold text-xs pt-1 border-t border-gray-800/60"><span>Net In-Pocket PnL:</span><strong id="res-net" class="text-emerald-400 font-extrabold">+₹64.11</strong></div>
+              <div class="text-[10px] text-amber-400 pt-1 font-mono">Breakeven: <span id="res-breakeven">₹0.17 / share</span></div>
+            </div>
+          </div>
+
+          <!-- Virtual Contract Note Card (Identical to User's Kite Screenshot) -->
+          <div class="lg:col-span-2 bg-[#060a14] p-3.5 rounded-lg border border-gray-800 space-y-3 font-mono text-xs">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-1.5">
+              <span class="font-bold text-white font-sans text-xs flex items-center gap-1.5">
+                <span>🧾</span> Virtual contract note
+              </span>
+              <span class="text-[10px] text-gray-400 font-sans">Zerodha Kite Broking Ltd.</span>
+            </div>
+
+            <!-- Statutory Charges (Government & Exchange fees) -->
+            <div class="space-y-1">
+              <div class="text-gray-400 font-sans font-semibold text-[11px] uppercase tracking-wide">
+                Statutory Charges (Government &amp; Exchange fees)
+              </div>
+              <div class="divide-y divide-gray-800/60 text-xs text-gray-300">
+                <div class="flex justify-between py-0.5"><span>SEBI turnover fee</span><strong class="text-white" id="fee-sebi">₹0.02</strong></div>
+                <div class="flex justify-between py-0.5"><span>Exchange turnover fee</span><strong class="text-white" id="fee-exchange">₹0.48</strong></div>
+                <div class="flex justify-between py-0.5"><span>Stamp duty</span><strong class="text-white" id="fee-stamp">₹0.24</strong></div>
+                <div class="flex justify-between py-0.5"><span>Transaction tax (STT)</span><strong class="text-white" id="fee-stt">₹2.04</strong></div>
+                <div class="flex justify-between py-0.5"><span>GST</span><strong class="text-white" id="fee-gst">₹0.97</strong></div>
+              </div>
+            </div>
+
+            <!-- Zerodha Charges -->
+            <div class="pt-2 border-t border-gray-800/80">
+              <div class="text-gray-400 font-sans font-semibold text-[11px] uppercase tracking-wide">
+                Zerodha Charges
+              </div>
+              <div class="flex justify-between py-0.5 text-xs text-gray-300">
+                <span>Brokerage</span><strong class="text-white" id="fee-brokerage">₹4.87</strong>
+              </div>
+            </div>
+
+            <!-- Total Charges -->
+            <div class="pt-2 border-t border-gray-700/80 flex justify-between items-center text-sm font-sans">
+              <span class="font-bold text-white">Total</span>
+              <strong class="text-rose-400 text-base font-mono" id="fee-total">₹8.39</strong>
+            </div>
+
+            <!-- Orders Executed Table (Directly matching Kite's Screenshot) -->
+            <div class="pt-2 border-t border-gray-800/80">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-[10px] font-sans font-bold text-gray-400 uppercase tracking-wide">Orders executed</span>
+                <span class="text-[9px] text-gray-500 font-sans">2 legs</span>
+              </div>
+              <div class="overflow-x-auto border border-gray-800/80 rounded">
+                <table class="w-full text-left text-[11px] font-mono">
+                  <thead class="text-[9px] uppercase bg-[#080d1a] text-gray-400 border-b border-gray-800">
+                    <tr>
+                      <th class="py-1 px-2 font-sans">Time</th>
+                      <th class="py-1 px-2 font-sans">Instrument</th>
+                      <th class="py-1 px-2 font-sans">Qty.</th>
+                      <th class="py-1 px-2 font-sans">Avg. price</th>
+                      <th class="py-1 px-2 text-right font-sans">Charges</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sim-orders-tbody" class="divide-y divide-gray-800/50">
+                    <!-- Populated by runFeeSim() -->
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -1349,6 +1370,106 @@
     </div>
   </div>
 
+  <!-- Zerodha Kite Official Virtual Contract Note Modal -->
+  <div id="virtual-contract-note-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden p-3">
+    <div class="bg-[#0b1220] border border-gray-700 rounded-xl p-5 max-w-2xl w-full max-h-[92vh] flex flex-col space-y-4 shadow-2xl overflow-hidden font-sans">
+      <!-- Modal Header -->
+      <div class="flex justify-between items-center border-b border-gray-800 pb-2.5">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span class="text-amber-400">🧾</span> Virtual contract note
+          </h3>
+          <p class="text-[11px] text-gray-400 font-mono" id="vcn-modal-subtitle">Contract Note for Today &bull; NSE / Zerodha Broking Ltd.</p>
+        </div>
+        <button onclick="closeVirtualContractNoteModal()" class="text-gray-400 hover:text-white text-xl font-bold leading-none">&times;</button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="overflow-y-auto custom-scrollbar space-y-4 pr-1 text-xs">
+        <!-- Statutory & Broker Charges Section (Identical to User's Kite Screenshot) -->
+        <div class="bg-[#060a14] border border-gray-800/90 rounded-lg p-3.5 space-y-3 font-mono">
+          <!-- Statutory Charges Header -->
+          <div>
+            <div class="text-gray-400 font-sans font-semibold text-[11px] uppercase tracking-wide">
+              Statutory Charges (Government &amp; Exchange fees)
+            </div>
+            <div class="divide-y divide-gray-800/60 mt-1.5 space-y-0.5 text-xs">
+              <div class="flex justify-between py-1 text-gray-300">
+                <span>SEBI turnover fee</span>
+                <span class="font-bold text-white" id="vcn-sebi">₹0.00</span>
+              </div>
+              <div class="flex justify-between py-1 text-gray-300">
+                <span>Exchange turnover fee</span>
+                <span class="font-bold text-white" id="vcn-exchange">₹0.00</span>
+              </div>
+              <div class="flex justify-between py-1 text-gray-300">
+                <span>Stamp duty</span>
+                <span class="font-bold text-white" id="vcn-stamp">₹0.00</span>
+              </div>
+              <div class="flex justify-between py-1 text-gray-300">
+                <span>Transaction tax (STT)</span>
+                <span class="font-bold text-white" id="vcn-stt">₹0.00</span>
+              </div>
+              <div class="flex justify-between py-1 text-gray-300">
+                <span>GST</span>
+                <span class="font-bold text-white" id="vcn-gst">₹0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Zerodha Charges Header -->
+          <div class="pt-2 border-t border-gray-800/80">
+            <div class="text-gray-400 font-sans font-semibold text-[11px] uppercase tracking-wide">
+              Zerodha Charges
+            </div>
+            <div class="flex justify-between py-1 text-gray-300 mt-1">
+              <span>Brokerage</span>
+              <span class="font-bold text-white" id="vcn-brokerage">₹0.00</span>
+            </div>
+          </div>
+
+          <!-- Total Charges Header -->
+          <div class="pt-2.5 border-t border-gray-700/80 flex justify-between items-center text-sm">
+            <span class="font-bold text-white font-sans">Total</span>
+            <span class="font-bold text-rose-400 text-base" id="vcn-total">₹0.00</span>
+          </div>
+        </div>
+
+        <!-- Orders Executed Table (Directly matching Kite's Screenshot) -->
+        <div class="space-y-1.5">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-white text-xs">Orders executed</span>
+            <span class="text-[10px] text-gray-400" id="vcn-order-count">0 orders</span>
+          </div>
+          <div class="overflow-x-auto border border-gray-800/90 rounded-lg">
+            <table class="w-full text-left text-xs font-mono">
+              <thead class="text-[10px] uppercase bg-[#060a14] text-gray-400 border-b border-gray-800">
+                <tr>
+                  <th class="py-1.5 px-2 font-sans">Time</th>
+                  <th class="py-1.5 px-2 font-sans">Instrument</th>
+                  <th class="py-1.5 px-2 font-sans">Qty.</th>
+                  <th class="py-1.5 px-2 font-sans">Avg. price</th>
+                  <th class="py-1.5 px-2 text-right font-sans">Charges</th>
+                </tr>
+              </thead>
+              <tbody id="vcn-orders-tbody" class="divide-y divide-gray-800/50">
+                <!-- Injected order rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex justify-between items-center pt-2 border-t border-gray-800 text-xs">
+        <span class="text-[10px] text-gray-500 font-mono">SEBI Reg: INZ000031633 &bull; Zerodha Broking Limited</span>
+        <button onclick="closeVirtualContractNoteModal()" class="bg-gray-800 hover:bg-gray-700 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Brokerage Modal -->
   <div id="brokerage-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
     <div class="bg-[#0d1424] border border-gray-700 rounded-xl p-5 max-w-lg w-full space-y-4 shadow-2xl">
@@ -1660,76 +1781,135 @@
     let autoEntryCooldownUntil = 0; // Cooldown timestamp to prevent frantic auto-reopening
     const recentlyExitedSymbols = {}; // Cooldown map per symbol
 
-    // Accurate Zerodha / Multi-Asset Charge Calculator (Supports BOTH LONG "BUY" & SHORT "SELL" Intraday!)
+    // =========================================================================
+    // Zerodha Kite Official Virtual Contract Note & Statutory Charges Engine
+    // Order-by-order calculation matching Kite Console: Brokerage, STT, Exchange, Stamp, SEBI, GST
+    // =========================================================================
+    function calculateOrderCharges(price, qty, mkt, side = "BUY") {
+      const isFno = (mkt === "fno");
+      const turnover = price * qty;
+      let brokerage = 0.0;
+      let stt = 0.0;
+      let exchange = 0.0;
+      let stamp = 0.0;
+      let sebi = 0.0;
+      let gst = 0.0;
+
+      if (mkt === "india" || mkt === "fno") {
+        brokerage = isFno ? 20.0 : Math.min(20.0, turnover * 0.0003);
+        exchange = turnover * (isFno ? 0.0005 : 0.0000297);
+        sebi = turnover * 0.000001; // ₹10 per crore
+
+        if (side === "BUY") {
+          stamp = turnover * 0.00003; // 0.003% or ₹300/Cr on BUY
+          stt = 0.0; // Intraday equity STT is zero on BUY
+        } else {
+          stamp = 0.0; // Stamp duty is zero on SELL
+          stt = isFno ? (turnover * 0.001) : (turnover * 0.00025); // 0.025% on SELL
+        }
+        gst = (brokerage + exchange + sebi) * 0.18; // 18% on brokerage, exchange & sebi
+      } else {
+        brokerage = turnover * 0.00056;
+        exchange = turnover * 0.00024;
+      }
+
+      const total = brokerage + stt + exchange + stamp + sebi + gst;
+      return {
+        side,
+        price,
+        qty,
+        turnover,
+        brokerage: Math.round(brokerage * 100) / 100,
+        stt: Math.round(stt * 100) / 100,
+        exchange: Math.round(exchange * 100) / 100,
+        stamp: Math.round(stamp * 100) / 100,
+        sebi: Math.round(sebi * 100) / 100,
+        gst: Math.round(gst * 100) / 100,
+        total: Math.round(total * 100) / 100
+      };
+    }
+
     function calculateTradeCharges(entryP, exitP, qty, mkt, tradeType = "BUY") {
       const isShort = (tradeType === "SELL");
       const buyP = isShort ? exitP : entryP;
       const sellP = isShort ? entryP : exitP;
-      const buyVal = buyP * qty;
-      const sellVal = sellP * qty;
-      const turnover = buyVal + sellVal;
-      const grossPnl = (sellP - buyP) * qty; // Positive when BUY rises OR when SELL drops!
+      const buyLeg = calculateOrderCharges(buyP, qty, mkt, "BUY");
+      const sellLeg = calculateOrderCharges(sellP, qty, mkt, "SELL");
 
-      if (mkt === "india" || mkt === "fno") {
-        // Zerodha Official Intraday & F&O Statutory Charges Formula
-        const isFno = (mkt === "fno");
-        const buyBrokerage = isFno ? 20.0 : Math.min(20.0, buyVal * 0.0003);
-        const sellBrokerage = isFno ? 20.0 : Math.min(20.0, sellVal * 0.0003);
-        const brokerage = buyBrokerage + sellBrokerage;
-        const stt = isFno ? (sellVal * 0.001) : (sellVal * 0.00025);
-        const exchange = turnover * (isFno ? 0.0005 : 0.0000297);
-        const stamp = buyVal * 0.00003;
-        const sebi = turnover * 0.000001;
-        const gst = (brokerage + exchange + sebi) * 0.18;
+      const turnover = buyLeg.turnover + sellLeg.turnover;
+      const grossPnl = (sellP - buyP) * qty;
 
-        const total = brokerage + stt + exchange + stamp + sebi + gst;
-        const breakeven = total / qty;
-        return {
-          brokerage: Math.round(brokerage * 100) / 100,
-          stt: Math.round(stt * 100) / 100,
-          exchange: Math.round(exchange * 100) / 100,
-          gst: Math.round(gst * 100) / 100,
-          sebi: Math.round((stamp + sebi) * 100) / 100,
-          total: Math.round(total * 100) / 100,
-          breakeven: Math.round(breakeven * 100) / 100,
-          grossPnl: Math.round(grossPnl * 100) / 100,
-          netPnl: Math.round((grossPnl - total) * 100) / 100
-        };
-      } else {
-        // Global / US / Crypto fee model: 0.08% total roundtrip taker fee
-        const total = turnover * 0.0008;
-        const breakeven = total / qty;
-        return {
-          brokerage: Math.round(total * 0.7 * 100) / 100,
-          stt: 0,
-          exchange: Math.round(total * 0.3 * 100) / 100,
-          gst: 0,
-          sebi: 0,
-          total: Math.round(total * 100) / 100,
-          breakeven: Math.round(breakeven * 100) / 100,
-          grossPnl: Math.round(grossPnl * 100) / 100,
-          netPnl: Math.round((grossPnl - total) * 100) / 100
-        };
-      }
+      const brokerage = Math.round((buyLeg.brokerage + sellLeg.brokerage) * 100) / 100;
+      const stt = Math.round((buyLeg.stt + sellLeg.stt) * 100) / 100;
+      const exchange = Math.round((buyLeg.exchange + sellLeg.exchange) * 100) / 100;
+      const stamp = Math.round((buyLeg.stamp + sellLeg.stamp) * 100) / 100;
+      const sebi = Math.round((buyLeg.sebi + sellLeg.sebi) * 100) / 100;
+      const gst = Math.round((buyLeg.gst + sellLeg.gst) * 100) / 100;
+      const total = Math.round((brokerage + stt + exchange + stamp + sebi + gst) * 100) / 100;
+      const breakeven = Math.round((total / qty) * 100) / 100;
+      const netPnl = Math.round((grossPnl - total) * 100) / 100;
+
+      return {
+        buyP,
+        sellP,
+        buyVal: buyLeg.turnover,
+        sellVal: sellLeg.turnover,
+        turnover,
+        buyLeg,
+        sellLeg,
+        brokerage,
+        stt,
+        exchange,
+        stamp,
+        sebi,
+        gst,
+        total,
+        breakeven,
+        grossPnl: Math.round(grossPnl * 100) / 100,
+        netPnl
+      };
     }
 
     function runFeeSim() {
-      const buyP = parseFloat(document.getElementById("calc-buy").value) || 2500;
-      const sellP = parseFloat(document.getElementById("calc-sell").value) || 2520;
-      const qty = parseInt(document.getElementById("calc-qty").value) || 10;
+      const sym = (document.getElementById("calc-sym")?.value || "TATASTEEL").trim().toUpperCase();
+      const buyP = parseFloat(document.getElementById("calc-buy").value) || 161.65;
+      const sellP = parseFloat(document.getElementById("calc-sell").value) || 163.10;
+      const qty = parseInt(document.getElementById("calc-qty").value) || 50;
 
       const c = calculateTradeCharges(buyP, sellP, qty, "india");
-      document.getElementById("fee-brokerage").innerText = "₹" + c.brokerage.toFixed(2);
-      document.getElementById("fee-stt").innerText = "₹" + c.stt.toFixed(2);
-      document.getElementById("fee-exchange").innerText = "₹" + c.exchange.toFixed(2);
-      document.getElementById("fee-gst").innerText = "₹" + c.gst.toFixed(2);
-      document.getElementById("fee-sebi").innerText = "₹" + c.sebi.toFixed(2);
-      document.getElementById("fee-total").innerText = "₹" + c.total.toFixed(2);
+      if (document.getElementById("fee-brokerage")) document.getElementById("fee-brokerage").innerText = "₹" + c.brokerage.toFixed(2);
+      if (document.getElementById("fee-stt")) document.getElementById("fee-stt").innerText = "₹" + c.stt.toFixed(2);
+      if (document.getElementById("fee-exchange")) document.getElementById("fee-exchange").innerText = "₹" + c.exchange.toFixed(2);
+      if (document.getElementById("fee-stamp")) document.getElementById("fee-stamp").innerText = "₹" + c.stamp.toFixed(2);
+      if (document.getElementById("fee-sebi")) document.getElementById("fee-sebi").innerText = "₹" + c.sebi.toFixed(2);
+      if (document.getElementById("fee-gst")) document.getElementById("fee-gst").innerText = "₹" + c.gst.toFixed(2);
+      if (document.getElementById("fee-total")) document.getElementById("fee-total").innerText = "₹" + c.total.toFixed(2);
 
-      document.getElementById("res-gross").innerText = (c.grossPnl >= 0 ? "+" : "") + "₹" + c.grossPnl.toFixed(2);
-      document.getElementById("res-tax").innerText = "-₹" + c.total.toFixed(2);
-      document.getElementById("res-net").innerText = (c.netPnl >= 0 ? "+" : "") + "₹" + c.netPnl.toFixed(2);
-      document.getElementById("res-breakeven").innerText = "₹" + c.breakeven.toFixed(2) + " / share";
+      if (document.getElementById("res-gross")) document.getElementById("res-gross").innerText = (c.grossPnl >= 0 ? "+" : "") + "₹" + c.grossPnl.toFixed(2);
+      if (document.getElementById("res-tax")) document.getElementById("res-tax").innerText = "-₹" + c.total.toFixed(2);
+      if (document.getElementById("res-net")) document.getElementById("res-net").innerText = (c.netPnl >= 0 ? "+" : "") + "₹" + c.netPnl.toFixed(2);
+      if (document.getElementById("res-breakeven")) document.getElementById("res-breakeven").innerText = "₹" + c.breakeven.toFixed(2) + " / share";
+
+      // Order-by-order execution breakdown
+      const ordersTbody = document.getElementById("sim-orders-tbody");
+      if (ordersTbody) {
+        ordersTbody.innerHTML = `
+          <tr class="hover:bg-gray-800/40">
+            <td class="py-1 px-2 text-gray-400 font-sans">13:11:03</td>
+            <td class="py-1 px-2"><span class="bg-blue-950 text-blue-300 border border-blue-800 px-1 py-0.2 rounded text-[9px] font-bold">BUY</span> <span class="font-bold text-white ml-1">${sym}</span> <span class="text-gray-500 text-[9px]">NSE</span></td>
+            <td class="py-1 px-2 font-mono">${qty}</td>
+            <td class="py-1 px-2 font-mono">₹${buyP.toFixed(2)}</td>
+            <td class="py-1 px-2 text-right text-rose-300 font-mono font-bold">₹${c.buyLeg.total.toFixed(2)}</td>
+          </tr>
+          <tr class="hover:bg-gray-800/40">
+            <td class="py-1 px-2 text-gray-400 font-sans">12:08:53</td>
+            <td class="py-1 px-2"><span class="bg-rose-950 text-rose-300 border border-rose-800 px-1 py-0.2 rounded text-[9px] font-bold">SELL</span> <span class="font-bold text-white ml-1">${sym}</span> <span class="text-gray-500 text-[9px]">NSE</span></td>
+            <td class="py-1 px-2 font-mono">${qty}</td>
+            <td class="py-1 px-2 font-mono">₹${sellP.toFixed(2)}</td>
+            <td class="py-1 px-2 text-right text-rose-300 font-mono font-bold">₹${c.sellLeg.total.toFixed(2)}</td>
+          </tr>
+        `;
+      }
     }
 
     
@@ -4505,7 +4685,8 @@ function calculateStockMetrics(sym) {
         grossPnl: c.grossPnl,
         taxes: c.total,
         netPnl: c.netPnl,
-        capitalAfter: cash
+        capitalAfter: cash,
+        chargesBreakdown: c
       });
 
       if (isManual) {
@@ -5390,6 +5571,140 @@ function calculateStockMetrics(sym) {
       saveTradeBook();
     }
 
+    function openTradeContractNote(tradeId) {
+      const t = tradeBook.find(x => x.id === tradeId);
+      if (!t) return;
+      const c = t.chargesBreakdown || calculateTradeCharges(t.entryPrice, t.exitPrice, t.qty, t.market || "india", t.side || "BUY");
+
+      document.getElementById("vcn-modal-subtitle").innerText = `Contract Note for ${t.symbol} • ${t.dateDisplay || t.dateStr} • Trade ID: ${t.id}`;
+      document.getElementById("vcn-sebi").innerText = "₹" + Number(c.sebi || 0).toFixed(2);
+      document.getElementById("vcn-exchange").innerText = "₹" + Number(c.exchange || 0).toFixed(2);
+      document.getElementById("vcn-stamp").innerText = "₹" + Number(c.stamp || 0).toFixed(2);
+      document.getElementById("vcn-stt").innerText = "₹" + Number(c.stt || 0).toFixed(2);
+      document.getElementById("vcn-gst").innerText = "₹" + Number(c.gst || 0).toFixed(2);
+      document.getElementById("vcn-brokerage").innerText = "₹" + Number(c.brokerage || 0).toFixed(2);
+      document.getElementById("vcn-total").innerText = "₹" + Number(c.total || t.taxes || 0).toFixed(2);
+
+      const buyLeg = c.buyLeg || calculateOrderCharges(c.buyP || t.entryPrice, t.qty, t.market || "india", "BUY");
+      const sellLeg = c.sellLeg || calculateOrderCharges(c.sellP || t.exitPrice, t.qty, t.market || "india", "SELL");
+
+      const tbody = document.getElementById("vcn-orders-tbody");
+      tbody.innerHTML = `
+        <tr class="hover:bg-gray-800/40">
+          <td class="py-2 px-2 text-gray-400 font-sans">${t.entryTimeStr || '09:30:00'}</td>
+          <td class="py-2 px-2">
+            <span class="${t.side === 'SELL' ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-blue-950 text-blue-300 border border-blue-800'} px-1.5 py-0.2 rounded text-[10px] font-bold font-sans">${t.side === 'SELL' ? 'SELL' : 'BUY'}</span>
+            <span class="font-bold text-white ml-1">${t.symbol}</span>
+            <span class="text-gray-500 text-[10px] font-sans">NSE</span>
+          </td>
+          <td class="py-2 px-2 font-mono">${t.qty}</td>
+          <td class="py-2 px-2 font-mono">₹${Number(t.entryPrice).toFixed(2)}</td>
+          <td class="py-2 px-2 text-right font-mono font-bold text-rose-300">₹${(t.side === 'SELL' ? sellLeg.total : buyLeg.total).toFixed(2)}</td>
+        </tr>
+        <tr class="hover:bg-gray-800/40">
+          <td class="py-2 px-2 text-gray-400 font-sans">${t.exitTimeStr || '10:00:00'}</td>
+          <td class="py-2 px-2">
+            <span class="${t.side === 'SELL' ? 'bg-blue-950 text-blue-300 border border-blue-800' : 'bg-rose-950 text-rose-300 border border-rose-800'} px-1.5 py-0.2 rounded text-[10px] font-bold font-sans">${t.side === 'SELL' ? 'BUY' : 'SELL'}</span>
+            <span class="font-bold text-white ml-1">${t.symbol}</span>
+            <span class="text-gray-500 text-[10px] font-sans">NSE</span>
+          </td>
+          <td class="py-2 px-2 font-mono">${t.qty}</td>
+          <td class="py-2 px-2 font-mono">₹${Number(t.exitPrice).toFixed(2)}</td>
+          <td class="py-2 px-2 text-right font-mono font-bold text-rose-300">₹${(t.side === 'SELL' ? buyLeg.total : sellLeg.total).toFixed(2)}</td>
+        </tr>
+      `;
+      document.getElementById("vcn-order-count").innerText = "2 orders (Roundtrip)";
+      document.getElementById("virtual-contract-note-modal").classList.remove("hidden");
+    }
+
+    function openConsolidatedContractNote() {
+      const dateSelect = document.getElementById("tb-filter-date");
+      const selectedDate = dateSelect ? dateSelect.value : "ALL";
+      
+      const tradesToAggregate = (selectedDate === "ALL")
+        ? tradeBook
+        : tradeBook.filter(t => t.dateStr === selectedDate);
+
+      if (tradesToAggregate.length === 0) {
+        alert("No trades recorded for this date to generate a contract note.");
+        return;
+      }
+
+      let totalSebi = 0;
+      let totalExchange = 0;
+      let totalStamp = 0;
+      let totalStt = 0;
+      let totalGst = 0;
+      let totalBrokerage = 0;
+      let grandTotal = 0;
+      let orderRowsHtml = "";
+      let orderCount = 0;
+
+      tradesToAggregate.forEach(t => {
+        const c = t.chargesBreakdown || calculateTradeCharges(t.entryPrice, t.exitPrice, t.qty, t.market || "india", t.side || "BUY");
+        totalSebi += (c.sebi || 0);
+        totalExchange += (c.exchange || 0);
+        totalStamp += (c.stamp || 0);
+        totalStt += (c.stt || 0);
+        totalGst += (c.gst || 0);
+        totalBrokerage += (c.brokerage || 0);
+        grandTotal += (c.total || t.taxes || 0);
+
+        const buyLeg = c.buyLeg || calculateOrderCharges(c.buyP || t.entryPrice, t.qty, t.market || "india", "BUY");
+        const sellLeg = c.sellLeg || calculateOrderCharges(c.sellP || t.exitPrice, t.qty, t.market || "india", "SELL");
+
+        const entrySide = t.side || "BUY";
+        const exitSide = (entrySide === "BUY") ? "SELL" : "BUY";
+        const entryCharges = (entrySide === "BUY") ? buyLeg.total : sellLeg.total;
+        const exitCharges = (entrySide === "BUY") ? sellLeg.total : buyLeg.total;
+
+        orderRowsHtml += `
+          <tr class="hover:bg-gray-800/40">
+            <td class="py-1.5 px-2 text-gray-400 font-sans">${t.entryTimeStr || '09:15:00'}</td>
+            <td class="py-1.5 px-2">
+              <span class="${entrySide === 'BUY' ? 'bg-blue-950 text-blue-300 border border-blue-800' : 'bg-rose-950 text-rose-300 border border-rose-800'} px-1.5 py-0.2 rounded text-[10px] font-bold font-sans">${entrySide}</span>
+              <span class="font-bold text-white ml-1">${t.symbol}</span>
+              <span class="text-gray-500 text-[10px] font-sans">NSE</span>
+            </td>
+            <td class="py-1.5 px-2 font-mono">${t.qty}</td>
+            <td class="py-1.5 px-2 font-mono">₹${Number(t.entryPrice).toFixed(2)}</td>
+            <td class="py-1.5 px-2 text-right font-mono font-bold text-rose-300">₹${entryCharges.toFixed(2)}</td>
+          </tr>
+          <tr class="hover:bg-gray-800/40">
+            <td class="py-1.5 px-2 text-gray-400 font-sans">${t.exitTimeStr || '09:45:00'}</td>
+            <td class="py-1.5 px-2">
+              <span class="${exitSide === 'BUY' ? 'bg-blue-950 text-blue-300 border border-blue-800' : 'bg-rose-950 text-rose-300 border border-rose-800'} px-1.5 py-0.2 rounded text-[10px] font-bold font-sans">${exitSide}</span>
+              <span class="font-bold text-white ml-1">${t.symbol}</span>
+              <span class="text-gray-500 text-[10px] font-sans">NSE</span>
+            </td>
+            <td class="py-1.5 px-2 font-mono">${t.qty}</td>
+            <td class="py-1.5 px-2 font-mono">₹${Number(t.exitPrice).toFixed(2)}</td>
+            <td class="py-1.5 px-2 text-right font-mono font-bold text-rose-300">₹${exitCharges.toFixed(2)}</td>
+          </tr>
+        `;
+        orderCount += 2;
+      });
+
+      const periodTitle = (selectedDate === "ALL") ? "All Sessions" : (tradesToAggregate[0]?.dateDisplay || selectedDate);
+      document.getElementById("vcn-modal-subtitle").innerText = `Consolidated Contract Note for ${periodTitle} • Zerodha Broking Ltd. (NSE)`;
+      document.getElementById("vcn-sebi").innerText = "₹" + totalSebi.toFixed(2);
+      document.getElementById("vcn-exchange").innerText = "₹" + totalExchange.toFixed(2);
+      document.getElementById("vcn-stamp").innerText = "₹" + totalStamp.toFixed(2);
+      document.getElementById("vcn-stt").innerText = "₹" + totalStt.toFixed(2);
+      document.getElementById("vcn-gst").innerText = "₹" + totalGst.toFixed(2);
+      document.getElementById("vcn-brokerage").innerText = "₹" + totalBrokerage.toFixed(2);
+      document.getElementById("vcn-total").innerText = "₹" + grandTotal.toFixed(2);
+
+      document.getElementById("vcn-orders-tbody").innerHTML = orderRowsHtml;
+      document.getElementById("vcn-order-count").innerText = `${orderCount} orders executed`;
+      document.getElementById("virtual-contract-note-modal").classList.remove("hidden");
+    }
+
+    function closeVirtualContractNoteModal() {
+      const modal = document.getElementById("virtual-contract-note-modal");
+      if (modal) modal.classList.add("hidden");
+    }
+
     function generateBenchmarkTradeBook() {
       const now = new Date();
       const d0 = new Date(now);
@@ -5458,25 +5773,49 @@ function calculateStockMetrics(sym) {
           id: "TB-" + getIsoDate(d0) + "-03",
           dateStr: getIsoDate(d0),
           dateDisplay: getFormattedDate(d0),
-          entryTimeStr: "14:45:00",
-          exitTimeStr: "15:15:00",
-          durationStr: "30m 00s",
-          entryTimestamp: mkDate(d0, 14, 45, 0).getTime(),
-          exitTimestamp: mkDate(d0, 15, 15, 0).getTime(),
+          entryTimeStr: "13:11:03",
+          exitTimeStr: "12:08:53",
+          durationStr: "57m 50s",
+          entryTimestamp: mkDate(d0, 12, 8, 53).getTime(),
+          exitTimestamp: mkDate(d0, 13, 11, 3).getTime(),
           symbol: "TATASTEEL",
-          side: "SELL",
+          side: "BUY",
           market: "india",
           marketDisplay: "NSE MIS (5x)",
-          qty: 135,
-          exposure: 20047.5,
-          margin: 4009.5,
-          entryPrice: 148.5,
-          exitPrice: 149.2,
-          reason: "EOD_MIS_SQUAREOFF",
-          grossPnl: -94.50,
-          taxes: 16.85,
-          netPnl: -111.35,
-          capitalAfter: 7273.03
+          qty: 50,
+          exposure: 8082.5,
+          margin: 1616.5,
+          entryPrice: 161.65,
+          exitPrice: 163.10,
+          reason: "TARGET",
+          grossPnl: 72.50,
+          taxes: 8.39,
+          netPnl: 64.11,
+          capitalAfter: 7448.49
+        },
+        {
+          id: "TB-" + getIsoDate(d0) + "-04",
+          dateStr: getIsoDate(d0),
+          dateDisplay: getFormattedDate(d0),
+          entryTimeStr: "13:19:47",
+          exitTimeStr: "13:32:52",
+          durationStr: "13m 05s",
+          entryTimestamp: mkDate(d0, 13, 19, 47).getTime(),
+          exitTimestamp: mkDate(d0, 13, 32, 52).getTime(),
+          symbol: "APLAPOLLO",
+          side: "BUY",
+          market: "india",
+          marketDisplay: "NSE MIS (5x)",
+          qty: 15,
+          exposure: 25078.5,
+          margin: 5015.7,
+          entryPrice: 1671.90,
+          exitPrice: 1706.40,
+          reason: "TARGET",
+          grossPnl: 517.50,
+          taxes: 27.24,
+          netPnl: 490.26,
+          capitalAfter: 7938.75
         },
 
         // Previous Session (d1)
@@ -5827,7 +6166,11 @@ function calculateStockMetrics(sym) {
             <td class="py-2 px-2 font-mono ${t.grossPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
               ${t.grossPnl >= 0 ? '+' : ''}₹${Number(t.grossPnl).toFixed(2)}
             </td>
-            <td class="py-2 px-2 font-mono text-rose-400 text-[10px]">-₹${Number(t.taxes).toFixed(2)}</td>
+            <td class="py-2 px-2 font-mono text-[10px]">
+              <button onclick="openTradeContractNote('${t.id}')" class="text-rose-400 hover:text-white underline decoration-dotted transition font-mono font-semibold" title="Click to view Zerodha Virtual Contract Note for this trade">
+                -₹${Number(t.taxes).toFixed(2)} 🧾
+              </button>
+            </td>
             <td class="py-2 px-2 font-mono font-bold text-xs ${t.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
               ${t.netPnl >= 0 ? '+' : ''}₹${Number(t.netPnl).toFixed(2)}
             </td>
