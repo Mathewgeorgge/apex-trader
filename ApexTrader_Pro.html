@@ -1813,6 +1813,7 @@
     let activeBasket = new Set(); // Multi-stock symbols enabled for trading
     const MAX_OPEN_POSITIONS = 2; // Optimal risk limit: max 2 concurrent positions for ₹7,000 capital
     let autoEntryCooldownUntil = 0; // Cooldown timestamp to prevent frantic auto-reopening
+    let sessionArmedAt = 0; // Timestamp of latest fresh session arm
     const recentlyExitedSymbols = {}; // Cooldown map per symbol
 
     // =========================================================================
@@ -4377,7 +4378,8 @@ function calculateStockMetrics(sym) {
       if (isRunning) {
         // Clear any leftover cooldown when user explicitly hits START
         autoEntryCooldownUntil = 0;
-        // If starting fresh with 0 positions while an old session breached the circuit breaker, auto-reset PnL shield
+        // Always stamp fresh session start so old historical test losses don't trip circuit breaker
+        sessionArmedAt = Date.now();
         if (positions.length === 0 && (grossRealizedPnl - totalTaxesPaid) <= -Math.abs(maxDailyLoss)) {
           grossRealizedPnl = 0;
           totalTaxesPaid = 0;
@@ -4386,6 +4388,8 @@ function calculateStockMetrics(sym) {
           renderAccountRibbon();
           logTerminal(`🔄 <strong class="text-cyan-400">[FRESH SESSION ARMED]</strong> Cleared prior daily circuit breaker — starting clean with <strong>₹${capital.toLocaleString()}</strong> capital.`);
         }
+        // Instant First-Tick Execution: Scan basket and place top trade within 350ms of hitting START!
+        setTimeout(() => { if (isRunning && positions.length < MAX_OPEN_POSITIONS) scanAndExecuteSetup(); }, 350);
 
         btn.innerHTML = "<span>⏹</span> STOP ALGO BOT";
         btn.className = "w-full bg-rose-950/80 hover:bg-rose-900 border border-rose-700/80 text-rose-200 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-red";
@@ -4581,7 +4585,11 @@ function calculateStockMetrics(sym) {
       // Synchronize realized PnL directly from today's trades in the active trade book
       const todayIso = getIsoDate(new Date());
       const activeBook = (typeof currentTradeBookMode !== 'undefined' && currentTradeBookMode === "SIMULATOR") ? (simulatorTradeBook || []) : (zerodhaTradeBook || tradeBook || []);
-      const todayTrades = activeBook.filter(t => t.dateStr === todayIso);
+      const todayTrades = activeBook.filter(t => {
+        if (t.dateStr !== todayIso) return false;
+        if (sessionArmedAt && t.exitTimestamp && t.exitTimestamp < sessionArmedAt) return false;
+        return true;
+      });
       if (todayTrades.length > 0) {
         grossRealizedPnl = todayTrades.reduce((sum, t) => sum + (Number(t.grossPnl) || 0), 0);
         totalTaxesPaid = todayTrades.reduce((sum, t) => sum + (Number(t.taxes) || 0), 0);
@@ -5271,6 +5279,43 @@ function calculateStockMetrics(sym) {
       if (rsiEl) rsiEl.innerText = lastRsi.toFixed(1);
     }
 
+    function scanAndExecuteSetup() {
+      if (!isRunning || positions.length >= MAX_OPEN_POSITIONS || Date.now() < autoEntryCooldownUntil) return;
+
+      const now = Date.now();
+      const isLiveNSE = isNSEMarketHoursIST() && (dataFeedMode === "LIVE" || (dataFeedMode === "AUTO" && isLiveZerodhaFeedActive));
+      const requiredScore = isLiveNSE ? 72 : 55; // 72 on Live Market NSE; 55 in Sim/Paper mode for active execution
+
+      const candidateSymbols = Object.keys(marketCatalog[currentMarket].symbols).filter(s => {
+        const symObj = marketCatalog[currentMarket].symbols[s];
+        if (!symObj) return false;
+        if (currentMarket === "india" && (s === "NIFTY 50" || s === "BANK NIFTY")) return false;
+        const nowD = new Date();
+        const istD = new Date(nowD.getTime() + (nowD.getTimezoneOffset() * 60000) + (5.5 * 3600000));
+        const istMins = istD.getHours() * 60 + istD.getMinutes();
+        if ((currentMarket === "india" || currentMarket === "fno") && isNSEMarketHoursIST() && istMins >= (15 * 60)) return false;
+        const sizing = computeAffordableOrderQty(symObj, cash);
+        const canAfford = sizing.qty > 0 && sizing.cost <= cash;
+        const isPositionOpen = positions.some(p => p.symbol === s);
+        const isCoolingDown = (recentlyExitedSymbols[s] && recentlyExitedSymbols[s] > now);
+        const isInBasket = (activeBasket.size === 0 || activeBasket.has(s));
+        return !isPositionOpen && !isCoolingDown && isInBasket && canAfford;
+      });
+
+      if (candidateSymbols.length > 0) {
+        const scoredCandidates = candidateSymbols.map(s => calculateStockMetrics(s)).filter(Boolean);
+        scoredCandidates.sort((a, b) => b.score - a.score);
+
+        const topPick = scoredCandidates[0];
+        if (topPick && topPick.score >= requiredScore) {
+          const isShort = topPick.side === "SELL";
+          logTerminal(`${isShort ? '📉' : '🚀'} <strong class="${isShort ? 'text-rose-400' : 'text-emerald-400'}">[HIGH-CONVICTION SETUP]</strong> ${isShort ? 'Bearish breakdown (SHORT)' : 'Bullish breakout (LONG)'} on <strong>${topPick.sym}</strong> [Score <strong>${topPick.score}/100</strong> • 4/4 Risk Gates Cleared]. Routing <strong>${topPick.side}</strong>...`);
+          triggerImmediateTrade(topPick.sym, false, topPick.side);
+          autoEntryCooldownUntil = Date.now() + (isLiveNSE ? 45000 : 15000); // 15s in sim, 45s on real market
+        }
+      }
+    }
+
     // High-Frequency Market Ticking Engine Loop (Uses REAL Zerodha Feed when live; runs GARCH Simulator in SIM or AUTO after-hours!)
     setInterval(() => {
       const usingRealLiveFeed = shouldUseRealLiveTicks();
@@ -5295,39 +5340,11 @@ function calculateStockMetrics(sym) {
       if (document.getElementById("ticker-tatasteel")) document.getElementById("ticker-tatasteel").innerText = "₹" + marketCatalog["india"].symbols["TATASTEEL"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
 
       // Multi-Stock Intelligent Breakout Scanner:
-      // Evaluates ONCE per cycle (outside market loops), respecting active user cooldowns & smart ₹7k lot sizing
       if (isRunning && positions.length < MAX_OPEN_POSITIONS && Date.now() >= autoEntryCooldownUntil) {
-        const now = Date.now();
-        const candidateSymbols = Object.keys(marketCatalog[currentMarket].symbols).filter(s => {
-          const symObj = marketCatalog[currentMarket].symbols[s];
-          if (!symObj) return false;
-          // In Cash Equity market, filter out non-tradable spot indices (trade equities or F&O options)
-          if (currentMarket === "india" && (s === "NIFTY 50" || s === "BANK NIFTY")) return false;
-          // Gate 6: Block new intraday entries after 15:00 IST (3:00 PM)
-          const nowD = new Date();
-          const istD = new Date(nowD.getTime() + (nowD.getTimezoneOffset() * 60000) + (5.5 * 3600000));
-          const istMins = istD.getHours() * 60 + istD.getMinutes();
-          if ((currentMarket === "india" || currentMarket === "fno") && isNSEMarketHoursIST() && istMins >= (15 * 60)) return false;
-          const sizing = computeAffordableOrderQty(symObj, cash);
-          const canAfford = sizing.qty > 0 && sizing.cost <= cash;
-          const isPositionOpen = positions.some(p => p.symbol === s);
-          const isCoolingDown = (recentlyExitedSymbols[s] && recentlyExitedSymbols[s] > now);
-          const isInBasket = (activeBasket.size === 0 || activeBasket.has(s));
-          return !isPositionOpen && !isCoolingDown && isInBasket && canAfford;
-        });
-
-        // High-Probability Institutional Scanner (Only fires on pristine 72+ score setups!)
-        if (candidateSymbols.length > 0 && Math.random() < 0.20) {
-          const scoredCandidates = candidateSymbols.map(s => calculateStockMetrics(s)).filter(Boolean);
-          scoredCandidates.sort((a, b) => b.score - a.score);
-
-          const topPick = scoredCandidates[0];
-          if (topPick && topPick.score >= 72) {
-            const isShort = topPick.side === "SELL";
-            logTerminal(`${isShort ? '📉' : '🚀'} <strong class="${isShort ? 'text-rose-400' : 'text-emerald-400'}">[HIGH-CONVICTION SETUP]</strong> ${isShort ? 'Bearish breakdown (SHORT)' : 'Bullish breakout (LONG)'} on <strong>${topPick.sym}</strong> [Score <strong>${topPick.score}/100</strong> • 4/4 Risk Gates Cleared]. Routing <strong>${topPick.side}</strong>...`);
-            triggerImmediateTrade(topPick.sym, false, topPick.side);
-            autoEntryCooldownUntil = Date.now() + 45000; // 45-second spacing between automated entries
-          }
+        const isLiveNSE = isNSEMarketHoursIST() && (dataFeedMode === "LIVE" || (dataFeedMode === "AUTO" && isLiveZerodhaFeedActive));
+        const shouldScan = isLiveNSE ? (Math.random() < 0.35) : true;
+        if (shouldScan) {
+          scanAndExecuteSetup();
         }
       }
 
@@ -5669,6 +5686,7 @@ function calculateStockMetrics(sym) {
       if (entry.market === "india" || entry.market === "fno" || currentMarket === "india" || zerodhaConfig.connected) {
         zerodhaTradeBook.unshift(record);
         tradeBook = zerodhaTradeBook;
+        if (dataFeedMode === "SIM") simulatorTradeBook.unshift(record);
       } else {
         simulatorTradeBook.unshift(record);
       }
