@@ -4397,7 +4397,7 @@ function calculateStockMetrics(sym) {
         autoEntryCooldownUntil = 0;
         // Always stamp fresh session start so old historical test losses don't trip circuit breaker
         sessionArmedAt = Date.now();
-        if (positions.length === 0 && (grossRealizedPnl - totalTaxesPaid) <= -Math.abs(maxDailyLoss)) {
+        if (positions.length === 0) {
           grossRealizedPnl = 0;
           totalTaxesPaid = 0;
           netRealizedPnl = 0;
@@ -4405,8 +4405,6 @@ function calculateStockMetrics(sym) {
           renderAccountRibbon();
           logTerminal(`🔄 <strong class="text-cyan-400">[FRESH SESSION ARMED]</strong> Cleared prior daily circuit breaker — starting clean with <strong>₹${capital.toLocaleString()}</strong> capital.`);
         }
-        // Instant First-Tick Execution: Scan basket and place top trade within 350ms of hitting START!
-        setTimeout(() => { if (isRunning && positions.length < MAX_OPEN_POSITIONS) scanAndExecuteSetup(); }, 350);
 
         btn.innerHTML = "<span>⏹</span> STOP ALGO BOT";
         btn.className = "w-full bg-rose-950/80 hover:bg-rose-900 border border-rose-700/80 text-rose-200 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-red";
@@ -4417,6 +4415,10 @@ function calculateStockMetrics(sym) {
         playBeep("buy");
         saveSessionState();
         logTerminal(`<strong>[BOT STARTED]</strong> Strategy: <em>${document.getElementById("sel-algo-strategy").value}</em> on market <strong>${currentMarket.toUpperCase()}</strong>. 6 Risk Gates Active.`);
+        logTerminal(`🔍 <strong class="text-cyan-400">[SCANNING BASKET]</strong> Evaluating ${activeBasket.size || 20} assets across CPR, 20 EMA, VWAP, Delivery Confluence & 4 Risk Gates...`);
+
+        // Disciplined 3.5s analysis buffer: gives trader visual confirmation of 4-gate scanning before trigger
+        setTimeout(() => { if (isRunning && positions.length < MAX_OPEN_POSITIONS) scanAndExecuteSetup(true); }, 3500);
       } else {
         btn.innerHTML = "<span>▶</span> START ALGO BOT";
         btn.className = "w-full bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-200 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-green";
@@ -4604,14 +4606,12 @@ function calculateStockMetrics(sym) {
       const activeBook = (typeof currentTradeBookMode !== 'undefined' && currentTradeBookMode === "SIMULATOR") ? (simulatorTradeBook || []) : (zerodhaTradeBook || tradeBook || []);
       const todayTrades = activeBook.filter(t => {
         if (t.dateStr !== todayIso) return false;
-        if (sessionArmedAt && t.exitTimestamp && t.exitTimestamp < sessionArmedAt) return false;
+        if (sessionArmedAt && (t.exitTimestamp || 0) < sessionArmedAt) return false;
         return true;
       });
-      if (todayTrades.length > 0) {
-        grossRealizedPnl = todayTrades.reduce((sum, t) => sum + (Number(t.grossPnl) || 0), 0);
-        totalTaxesPaid = todayTrades.reduce((sum, t) => sum + (Number(t.taxes) || 0), 0);
-        netRealizedPnl = todayTrades.reduce((sum, t) => sum + (Number(t.netPnl) || 0), 0);
-      }
+      grossRealizedPnl = todayTrades.reduce((sum, t) => sum + (Number(t.grossPnl) || 0), 0);
+      totalTaxesPaid = todayTrades.reduce((sum, t) => sum + (Number(t.taxes) || 0), 0);
+      netRealizedPnl = todayTrades.reduce((sum, t) => sum + (Number(t.netPnl) || 0), 0);
 
       const totalGross = grossRealizedPnl + unrealizedGross;
       const totalTaxes = totalTaxesPaid + unrealizedTaxes;
@@ -5296,12 +5296,12 @@ function calculateStockMetrics(sym) {
       if (rsiEl) rsiEl.innerText = lastRsi.toFixed(1);
     }
 
-    function scanAndExecuteSetup() {
+    function scanAndExecuteSetup(isInitialScan = false) {
       if (!isRunning || positions.length >= MAX_OPEN_POSITIONS || Date.now() < autoEntryCooldownUntil) return;
 
       const now = Date.now();
       const isLiveNSE = isNSEMarketHoursIST() && (dataFeedMode === "LIVE" || (dataFeedMode === "AUTO" && isLiveZerodhaFeedActive));
-      const requiredScore = isLiveNSE ? 72 : 55; // 72 on Live Market NSE; 55 in Sim/Paper mode for active execution
+      const requiredScore = isLiveNSE ? 72 : 60; // Strict 72 on Live Market NSE; 60 in Sim/Paper mode for disciplined entry
 
       const candidateSymbols = Object.keys(marketCatalog[currentMarket].symbols).filter(s => {
         const symObj = marketCatalog[currentMarket].symbols[s];
@@ -5329,6 +5329,8 @@ function calculateStockMetrics(sym) {
           logTerminal(`${isShort ? '📉' : '🚀'} <strong class="${isShort ? 'text-rose-400' : 'text-emerald-400'}">[HIGH-CONVICTION SETUP]</strong> ${isShort ? 'Bearish breakdown (SHORT)' : 'Bullish breakout (LONG)'} on <strong>${topPick.sym}</strong> [Score <strong>${topPick.score}/100</strong> • 4/4 Risk Gates Cleared]. Routing <strong>${topPick.side}</strong>...`);
           triggerImmediateTrade(topPick.sym, false, topPick.side);
           autoEntryCooldownUntil = Date.now() + (isLiveNSE ? 45000 : 15000); // 15s in sim, 45s on real market
+        } else if (topPick && isInitialScan) {
+          logTerminal(`⏳ <span class="text-slate-400">[BASKET SCAN COMPLETE]</span> Top candidate <strong>${topPick.sym}</strong> scored <strong>${topPick.score}/100</strong> (Required: ${requiredScore}/100). All 4 Conviction Gates armed & monitoring tick flow.`);
         }
       }
     }
