@@ -350,7 +350,7 @@
             </div>
             <div class="flex justify-between">
               <span>Zerodha Brokerage:</span>
-              <strong class="text-yellow-400">₹20 / Trade (Flat)</strong>
+              <strong class="text-yellow-400" id="hud-brokerage-tag">0.03% or ₹20 max (MIS)</strong>
             </div>
             <div class="flex justify-between">
               <span>Risk:Reward Profile:</span>
@@ -472,7 +472,7 @@
                     <th class="py-1.5 px-2">Current</th>
                     <th class="py-1.5 px-2">Trailing SL / Lock</th>
                     <th class="py-1.5 px-2">Gross PnL</th>
-                    <th class="py-1.5 px-2">Taxes</th>
+                    <th class="py-1.5 px-2" title="Official Zerodha Brokerage + STT + Exchange + Stamp + SEBI + GST">Taxes &amp; Brok</th>
                     <th class="py-1.5 px-2">Net PnL</th>
                     <th class="py-1.5 px-2 text-right">Action</th>
                   </tr>
@@ -2965,6 +2965,8 @@
 
       const curr = getCurrSymbol();
       if (document.getElementById('curr-symbol-1')) document.getElementById('curr-symbol-1').innerText = curr;
+      const brokTag = document.getElementById('hud-brokerage-tag');
+      if (brokTag) brokTag.innerText = (currentMarket === 'fno') ? 'Flat ₹20/order (F&O)' : '0.03% or ₹20 max (MIS)';
       if (document.getElementById('curr-symbol-maxloss')) document.getElementById('curr-symbol-maxloss').innerText = curr;
       if (document.getElementById('depth-market-tag')) document.getElementById('depth-market-tag').innerText = (currentMarket === 'fno') ? 'NSE F&O' : (currentMarket === 'india' ? 'NSE INDIA' : currentMarket.toUpperCase());
 
@@ -4949,7 +4951,8 @@
       }
 
       playBeep("sell");
-      logTerminal(`[${isManual ? 'SQUARE OFF' : 'AUTO EXIT'}] Closed <strong>${sym}</strong> @ ${p.curr}${finalExitPrice.toLocaleString()} | Gross PnL: <span class="${c.grossPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${p.curr}${c.grossPnl.toFixed(2)}</span> | Brokerage: <span class="text-rose-400">-${p.curr}${c.total.toFixed(2)}</span> | <strong>Net In-Pocket: ${p.curr}${c.netPnl.toFixed(2)}</strong>`);
+      const govtTaxes = Math.max(0, Math.round((c.total - c.brokerage) * 100) / 100);
+      logTerminal(`[${isManual ? 'SQUARE OFF' : 'AUTO EXIT'}] Closed <strong>${sym}</strong> @ ${p.curr}${finalExitPrice.toLocaleString()} | Gross PnL: <span class="${c.grossPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${p.curr}${c.grossPnl.toFixed(2)}</span> | Brokerage: <span class="text-amber-400">-${p.curr}${c.brokerage.toFixed(2)}</span> | Govt Taxes &amp; Fees: <span class="text-rose-400">-${p.curr}${govtTaxes.toFixed(2)}</span> | <strong>Net Realized: ${p.curr}${c.netPnl.toFixed(2)}</strong>`);
 
       // Record to Date-Wise Master Trade Book
       const exitReasonFinal = exitReason || (isManual ? "MANUAL_SQUAREOFF" : "AUTO_EXIT");
