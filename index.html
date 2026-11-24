@@ -3001,20 +3001,9 @@
     }
 
     function switchMarket(mkt) {
-      capital = 7000;
-      positions = [];
-      marginUsed = 0.0;
-      cash = 7000;
-      grossRealizedPnl = 0.0;
-      netRealizedPnl = 0.0;
-      totalTaxesPaid = 0.0;
-      maxDailyLoss = 200; // 2.8% risk shield for 7,000 account
-      if (document.getElementById('acc-capital')) document.getElementById('acc-capital').value = 7000;
-      if (document.getElementById('input-maxloss')) document.getElementById('input-maxloss').value = 200;
-      if (document.getElementById('maxloss-pct-tag')) document.getElementById('maxloss-pct-tag').innerText = '(2.8%)';
-
       populateMarketSymbols(mkt);
       if (mkt === 'fno') switchSubTab('optionchain');
+      saveSessionState();
     }
 
 
@@ -3977,9 +3966,9 @@
           const card = document.createElement("div");
           card.className = "bg-[#070b14] border border-cyan-800/60 p-2.5 rounded-lg flex items-center justify-between cursor-pointer hover:border-cyan-400 transition shadow hover:scale-[1.01]";
           card.onclick = () => { 
-            if (!loadSessionState()) { switchMarket('india'); }
             changeChartSymbol(m.sym); 
-            document.getElementById("sel-chart-symbol").value = m.sym; 
+            const sel = document.getElementById("sel-chart-symbol");
+            if (sel) sel.value = m.sym; 
           };
           card.innerHTML = `
             <div>
@@ -4034,9 +4023,9 @@
         tile.style = bgStyle;
         tile.className = "border p-2.5 rounded-lg flex flex-col justify-between cursor-pointer transition-all duration-300 shadow hover:scale-[1.03]";
         tile.onclick = () => {
-          if (!loadSessionState()) { switchMarket('india'); }
           changeChartSymbol(m.sym);
-          document.getElementById("sel-chart-symbol").value = m.sym;
+          const sel = document.getElementById("sel-chart-symbol");
+          if (sel) sel.value = m.sym;
         };
 
         tile.innerHTML = `
@@ -4306,10 +4295,13 @@
           currentMarket: (currentMarket === 'fno') ? 'fno' : 'india',
           currentSymbol,
           selectedStrategy: document.getElementById("sel-algo-strategy") ? document.getElementById("sel-algo-strategy").value : "straddle_920",
+          activeBasket: Array.from(activeBasket || []),
           savedAt: Date.now()
         };
         localStorage.setItem("apex_persistent_session", JSON.stringify(state));
-      } catch(e) {}
+      } catch(e) {
+        console.error("saveSessionState error:", e);
+      }
     }
 
     async function handleKiteRedirect() {
@@ -4378,43 +4370,82 @@
         const state = JSON.parse(raw);
         if (!state) return false;
 
-        // Session valid for 48 hours
-        if (Date.now() - (state.savedAt || 0) > 48 * 3600 * 1000) return false;
+        // Session valid for 7 days across page reloads & continuous testing
+        if (Date.now() - (state.savedAt || 0) > 7 * 24 * 3600 * 1000) return false;
 
-        capital = (state.capital !== undefined) ? state.capital : 7000;
-        grossRealizedPnl = state.grossRealizedPnl || 0;
-        netRealizedPnl = state.netRealizedPnl || 0;
-        totalTaxesPaid = state.totalTaxesPaid || 0;
-        maxDailyLoss = state.maxDailyLoss || 200;
+        capital = (typeof state.capital === 'number' && !isNaN(state.capital)) ? state.capital : 7000;
+        grossRealizedPnl = (typeof state.grossRealizedPnl === 'number') ? state.grossRealizedPnl : 0;
+        netRealizedPnl = (typeof state.netRealizedPnl === 'number') ? state.netRealizedPnl : 0;
+        totalTaxesPaid = (typeof state.totalTaxesPaid === 'number') ? state.totalTaxesPaid : 0;
+        maxDailyLoss = (typeof state.maxDailyLoss === 'number' && !isNaN(state.maxDailyLoss)) ? state.maxDailyLoss : 200;
 
-        // Always enforce 100% Indian market (never let old crypto session bleed through)
+        // Active market
         const targetMkt = (state.currentMarket === 'fno') ? 'fno' : 'india';
-        const targetSym = (state.currentSymbol && marketCatalog[targetMkt] && marketCatalog[targetMkt].symbols[state.currentSymbol]) ? state.currentSymbol : "NIFTY 50";
+        currentMarket = targetMkt;
 
-        // Filter positions strictly to active market universe, official NSE F&O lot multiples & Zerodha RMS margin rules
+        // 100% Position Preservation: NEVER discard or drop open trades on refresh!
         const rawPositions = Array.isArray(state.positions) ? state.positions : [];
-        positions = rawPositions.filter(p => {
-          const symObj = marketCatalog[targetMkt] && marketCatalog[targetMkt].symbols[p.symbol];
-          if (!symObj) return false;
-          if (targetMkt === 'fno' && symObj.lot && (p.qty % symObj.lot !== 0)) return false;
-          if (targetMkt === 'fno' && capital < 125000 && p.type === 'SELL') return false;
-          return true;
+        positions = rawPositions.map(p => {
+          const posMkt = p.market || targetMkt;
+          // Ensure catalog has symbol entry or create fallback entry so pricing never crashes
+          if (marketCatalog[posMkt] && !marketCatalog[posMkt].symbols[p.symbol]) {
+            marketCatalog[posMkt].symbols[p.symbol] = {
+              ltp: p.ltp || p.avg,
+              prevClose: p.avg,
+              lot: p.qty || 1,
+              name: p.symbol,
+              sector: "EQUITY"
+            };
+          }
+          return {
+            symbol: p.symbol,
+            qty: Number(p.qty) || 1,
+            avg: Number(p.avg) || 0,
+            ltp: Number(p.ltp) || Number(p.avg) || 0,
+            cost: Number(p.cost) || (Number(p.qty) * Number(p.avg) / 5),
+            exposure: Number(p.exposure) || (Number(p.qty) * Number(p.avg)),
+            leverage: Number(p.leverage) || (posMkt === "india" ? 5.0 : 1.0),
+            curr: p.curr || "₹",
+            market: posMkt,
+            type: p.type || "BUY",
+            peakPrice: Number(p.peakPrice) || Number(p.avg),
+            initialSL: Number(p.initialSL) || (p.type === "SELL" ? Number(p.avg) * 1.012 : Number(p.avg) * 0.988),
+            trailingSL: Number(p.trailingSL) || Number(p.initialSL) || (p.type === "SELL" ? Number(p.avg) * 1.012 : Number(p.avg) * 0.988),
+            targetPrice: Number(p.targetPrice) || (p.type === "SELL" ? Number(p.avg) * 0.974 : Number(p.avg) * 1.026),
+            breakevenPrice: Number(p.breakevenPrice) || Number(p.avg),
+            trailTriggerPct: Number(p.trailTriggerPct) || 0.016,
+            trailDistPct: Number(p.trailDistPct) || 0.008,
+            profitLocked: Number(p.profitLocked) || 0.0,
+            trailStatus: p.trailStatus || "ARMED",
+            entryTime: Number(p.entryTime) || (state.savedAt || Date.now())
+          };
         });
+
         marginUsed = positions.reduce((sum, p) => sum + (p.cost || (p.qty * p.avg) || 0), 0);
-        cash = Math.max(0, capital - marginUsed + netRealizedPnl);
+        cash = (typeof state.cash === 'number' && !isNaN(state.cash)) ? state.cash : Math.max(0, capital - marginUsed + netRealizedPnl);
 
         if (document.getElementById('acc-capital')) document.getElementById('acc-capital').value = capital;
         if (document.getElementById('input-maxloss')) document.getElementById('input-maxloss').value = maxDailyLoss;
+        const pct = capital > 0 ? ((maxDailyLoss / capital) * 100).toFixed(1) : "2.8";
+        if (document.getElementById('maxloss-pct-tag')) document.getElementById('maxloss-pct-tag').innerText = `(${pct}%)`;
 
         if (state.selectedStrategy && document.getElementById("sel-algo-strategy")) {
           document.getElementById("sel-algo-strategy").value = state.selectedStrategy;
         }
 
-        renderAccountRibbon();
-        renderPositions();
+        if (Array.isArray(state.activeBasket) && state.activeBasket.length > 0) {
+          activeBasket.clear();
+          state.activeBasket.forEach(s => activeBasket.add(s));
+        }
+
+        const targetSym = (state.currentSymbol && marketCatalog[targetMkt] && marketCatalog[targetMkt].symbols[state.currentSymbol]) 
+          ? state.currentSymbol 
+          : (positions.length > 0 ? positions[0].symbol : (Object.keys(marketCatalog[targetMkt].symbols)[0] || "NIFTY 50"));
 
         // Guaranteed Dropdown & Chart Canvas Population:
         populateMarketSymbols(targetMkt, targetSym);
+        renderAccountRibbon();
+        renderPositions();
 
         // If the bot was running when refreshed, KEEP IT RUNNING AUTOMATICALLY!
         if (state.isRunning) {
@@ -4435,9 +4466,12 @@
             statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-bold border border-emerald-800";
           }
           logTerminal(`🔄 <strong class="text-emerald-400 font-bold">[SESSION RESTORED]</strong> Refreshed seamlessly! Bot resumed trading with ${positions.length} active position(s) and Net PnL of ₹${netRealizedPnl.toFixed(2)} intact.`);
+        } else if (positions.length > 0) {
+          logTerminal(`🔄 <strong class="text-cyan-400 font-bold">[SESSION RESTORED]</strong> Refreshed seamlessly! Loaded ${positions.length} active position(s) and Net PnL of ₹${netRealizedPnl.toFixed(2)} intact.`);
         }
         return true;
       } catch(e) {
+        console.error("loadSessionState error:", e);
         return false;
       }
     }
@@ -4702,6 +4736,7 @@
       renderAccountRibbon();
       updateMarketSessionBadge();
       renderPositions();
+      saveSessionState();
     }
 
     function triggerKillSwitch() {
@@ -4809,6 +4844,7 @@
       document.getElementById("maxloss-pct-tag").innerText = `(${pct}%)`;
       const curr = getCurrSymbol();
       logTerminal(`[RISK SHIELD] Circuit breaker adjusted to max daily loss: <strong class="text-rose-400">${curr}${maxDailyLoss.toFixed(2)}</strong> (${pct}% of capital).`);
+      saveSessionState();
     }
 
     function updateCapital() {
@@ -4818,6 +4854,7 @@
       document.getElementById("maxloss-pct-tag").innerText = `(${pct}%)`;
       renderAccountRibbon();
       updateMarketSessionBadge();
+      saveSessionState();
     }
 
     function logTerminal(html) {
@@ -4832,7 +4869,10 @@
 
     function renderPositions() {
       const tbody = document.getElementById("pos-table-body");
+      if (!tbody) return;
       tbody.innerHTML = "";
+      const badgePos = document.getElementById("badge-pos-count");
+      if (badgePos) badgePos.innerText = positions.length;
       if (positions.length === 0) {
         tbody.innerHTML = `<tr><td colspan="10" class="py-6 text-center text-gray-500 text-xs">No active positions. Click "START ALGO BOT" to begin automated paper trading.</td></tr>`;
         return;
@@ -5503,9 +5543,11 @@
       // Intelligent Two-Way Quantitative Profit & Risk Execution Loop (LONG "BUY" + SHORT "SELL")
       const exitsToExecute = [];
       positions.forEach(p => {
-        const mktSyms = marketCatalog[currentMarket].symbols;
-        if (mktSyms[p.symbol]) {
-          const liveLtp = mktSyms[p.symbol].ltp;
+        const pMkt = p.market || currentMarket;
+        const symCatalog = (marketCatalog[pMkt] && marketCatalog[pMkt].symbols) || (marketCatalog[currentMarket] && marketCatalog[currentMarket].symbols) || {};
+        const symData = symCatalog[p.symbol];
+        if (symData) {
+          const liveLtp = symData.ltp;
           p.ltp = liveLtp;
           const posType = p.type || "BUY";
           const isShort = posType === "SELL";
@@ -5548,6 +5590,7 @@
                   const est = calculateTradeCharges(p.avg, p.trailingSL, p.qty, p.market || currentMarket, "BUY");
                   p.profitLocked = Math.max(0, est.netPnl);
                   p.trailStatus = "LOCKED";
+                  saveSessionState();
                   if (p.trailingSL - oldSL > (p.avg * 0.003)) {
                     logTerminal(`<span class="text-emerald-400 font-bold">📈 [PROFIT RATCHETED]</span> Trailing SL for ${p.symbol} locked at ${p.curr}${p.trailingSL.toLocaleString()} • <strong>Guaranteed Net: +${p.curr}${p.profitLocked.toFixed(2)}</strong>!`);
                     playBeep("news");
@@ -5588,6 +5631,7 @@
                   const est = calculateTradeCharges(p.avg, p.trailingSL, p.qty, p.market || currentMarket, "SELL");
                   p.profitLocked = Math.max(0, est.netPnl);
                   p.trailStatus = "LOCKED";
+                  saveSessionState();
                   if (oldSL - p.trailingSL > (p.avg * 0.003)) {
                     logTerminal(`<span class="text-emerald-400 font-bold">📉 [SHORT PROFIT RATCHETED]</span> Trailing SL for SHORT ${p.symbol} locked at ${p.curr}${p.trailingSL.toLocaleString()} • <strong>Guaranteed Net: +${p.curr}${p.profitLocked.toFixed(2)}</strong>!`);
                     playBeep("news");
@@ -5632,7 +5676,7 @@
       renderAccountRibbon();
       updateMarketSessionBadge();
       if (activeSubTab === 'positions') renderPositions();
-      if (Math.random() < 0.25) saveSessionState();
+      if (positions.length > 0 || Math.random() < 0.25) saveSessionState();
       if (activeSubTab === 'breadth') renderMarketHeatmap();
       if (activeSubTab === 'optionchain') renderOptionChain();
     }, 1100);
@@ -5685,12 +5729,37 @@
       renderChart();
     });
 
+    // Guaranteed Sync on Page Refresh, Reload, Navigation, or Tab Hide
+    window.addEventListener("beforeunload", () => {
+      saveSessionState();
+    });
+    window.addEventListener("pagehide", () => {
+      saveSessionState();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        saveSessionState();
+      }
+    });
+
+    // Strategy Selection Change Sync
+    const selAlgoStratEl = document.getElementById("sel-algo-strategy");
+    if (selAlgoStratEl) {
+      selAlgoStratEl.addEventListener("change", () => {
+        saveSessionState();
+        updateAICopilotMsg();
+      });
+    }
+
     // Initialize application & handle Kite 2FA login redirect
     updateAudioUI();
     handleKiteRedirect();
     updateTradingModeUI();
     updateFeedModeUI();
     updateKiteUI();
+    // Load historical trade books FIRST so loadSessionState and renderAccountRibbon see full PnL ledger
+    loadTradeBook();
+    renderTradeBookUI();
     if (!loadSessionState()) {
       populateMarketSymbols('india', 'NIFTY 50');
     }
@@ -5700,8 +5769,6 @@
     renderNewsFeed();
     runFeeSim();
     if (typeof renderBhavcopyTables === "function") renderBhavcopyTables();
-    loadTradeBook();
-    renderTradeBookUI();
 
     // =========================================================================
     
