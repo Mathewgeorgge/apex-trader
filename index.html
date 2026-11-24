@@ -299,13 +299,27 @@
           <canvas id="mainChartCanvas" height="300" class="w-full"></canvas>
         </div>
 
-        <!-- Sub-Chart: RSI (14) -->
-        <div class="bg-[#040711] rounded-lg p-1.5 border border-gray-800/80 h-16 relative">
-          <div class="absolute top-1 left-2 text-[9px] text-gray-400 z-10 flex items-center space-x-3">
-            <span>RSI (14) Momentum: <strong id="rsi-val" class="text-cyan-400 font-mono">58.4</strong></span>
-            <span class="text-gray-500">Overbought: 70 | Oversold: 30</span>
+        <!-- Sub-Chart: RSI (14) Large High-Precision Oscillator Panel -->
+        <div class="bg-[#040711] rounded-lg p-2 border border-gray-800/80 h-44 relative flex flex-col justify-between shadow-inner">
+          <div class="flex flex-wrap items-center justify-between text-[10px] text-gray-400 z-10 px-1 pb-1 gap-2">
+            <div class="flex items-center space-x-2">
+              <span class="flex items-center gap-1 font-bold text-white">
+                <span class="text-cyan-400">📊 RSI (14) Momentum:</span>
+                <strong id="rsi-val" class="text-cyan-400 font-mono text-xs font-extrabold bg-cyan-950/80 border border-cyan-700/60 px-1.5 py-0.5 rounded shadow">50.0</strong>
+              </span>
+              <span id="rsi-zone-badge" class="text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">Neutral Midline (50)</span>
+            </div>
+            <div class="flex items-center gap-2.5 text-[9px] font-mono">
+              <span class="text-rose-400 font-bold flex items-center gap-1"><span class="w-2 h-0.5 bg-rose-500 inline-block"></span>70 OB</span>
+              <span class="text-amber-400 font-bold flex items-center gap-1"><span class="w-2 h-0.5 bg-amber-500 inline-block"></span>60 Bull</span>
+              <span class="text-sky-400 font-bold flex items-center gap-1"><span class="w-2 h-0.5 bg-sky-400 inline-block"></span>50 Mid</span>
+              <span class="text-indigo-400 font-bold flex items-center gap-1"><span class="w-2 h-0.5 bg-indigo-400 inline-block"></span>40 Bear</span>
+              <span class="text-emerald-400 font-bold flex items-center gap-1"><span class="w-2 h-0.5 bg-emerald-500 inline-block"></span>30 OS</span>
+            </div>
           </div>
-          <canvas id="rsiCanvas" height="60" class="w-full"></canvas>
+          <div class="flex-1 relative w-full min-h-[115px]">
+            <canvas id="rsiCanvas" class="w-full h-full absolute inset-0"></canvas>
+          </div>
         </div>
 
       </div>
@@ -5506,85 +5520,203 @@
       const rsiCanvas = document.getElementById("rsiCanvas");
       if (!rsiCanvas) return;
       const rsiCtx = rsiCanvas.getContext("2d");
-      const rect = rsiCanvas.parentElement.getBoundingClientRect();
+      const rsiParent = rsiCanvas.parentElement;
+      const rect = rsiParent ? rsiParent.getBoundingClientRect() : rsiCanvas.getBoundingClientRect();
       if (!rect.width) return;
 
       const dpr = window.devicePixelRatio || 1;
-      rsiCanvas.width = rect.width * dpr;
-      rsiCanvas.height = 60 * dpr;
-      rsiCanvas.style.width = `${rect.width}px`;
-      rsiCanvas.style.height = `60px`;
+      const rw = rect.width;
+      // High-precision enlarged height (130px) for clear calculation
+      const rh = rect.height && rect.height > 80 ? rect.height : 130;
+
+      rsiCanvas.width = rw * dpr;
+      rsiCanvas.height = rh * dpr;
+      rsiCanvas.style.width = `${rw}px`;
+      rsiCanvas.style.height = `${rh}px`;
       rsiCtx.scale(dpr, dpr);
 
-      const rw = rect.width;
-      const rh = 60;
       const chartRightMargin = 68;
       const plotW = rw - chartRightMargin;
 
       rsiCtx.clearRect(0, 0, rw, rh);
-      rsiCtx.strokeStyle = "#1e293b";
-      rsiCtx.strokeRect(0, 0, rw, rh);
+      rsiCtx.fillStyle = "#040711";
+      rsiCtx.fillRect(0, 0, rw, rh);
 
-      // 70 & 30 reference lines
-      rsiCtx.strokeStyle = "#334155";
-      rsiCtx.setLineDash([2, 2]);
-      const y70 = rh * 0.3; // 70 level
-      const y30 = rh * 0.7; // 30 level
-      rsiCtx.beginPath();
-      rsiCtx.moveTo(0, y70); rsiCtx.lineTo(plotW, y70);
-      rsiCtx.moveTo(0, y30); rsiCtx.lineTo(plotW, y30);
-      rsiCtx.stroke();
+      // Y Coordinate mapping (reserve 8px top/bottom padding for clean boundary margins)
+      const topPad = 8;
+      const botPad = 8;
+      const usableH = rh - topPad - botPad;
+      const getY = (val) => topPad + usableH * (1 - (val / 100));
+
+      const y70 = getY(70);
+      const y60 = getY(60);
+      const y50 = getY(50);
+      const y40 = getY(40);
+      const y30 = getY(30);
+
+      // 1. Shaded Corridor Bands for Instant Visual Calculation
+      // Overbought Zone (>70): Soft Rose Tint
+      rsiCtx.fillStyle = "rgba(244, 63, 94, 0.08)";
+      rsiCtx.fillRect(0, 0, plotW, y70);
+
+      // Bullish Momentum Corridor (50 - 70): Soft Sky Cyan Tint
+      rsiCtx.fillStyle = "rgba(14, 165, 233, 0.035)";
+      rsiCtx.fillRect(0, y70, plotW, y50 - y70);
+
+      // Bearish Pullback Corridor (30 - 50): Soft Indigo Tint
+      rsiCtx.fillStyle = "rgba(99, 102, 241, 0.035)";
+      rsiCtx.fillRect(0, y50, plotW, y30 - y50);
+
+      // Oversold Reversal Zone (<30): Soft Emerald Tint
+      rsiCtx.fillStyle = "rgba(16, 185, 129, 0.08)";
+      rsiCtx.fillRect(0, y30, plotW, rh - y30);
+
+      // 2. Clearly Marked Horizontal Lines (30, 40, 50, 60, 70) with Distinct Colors
+      const rsiLevels = [
+        { val: 70, y: y70, color: "rgba(244, 63, 94, 0.70)", labelColor: "#f43f5e", dash: [4, 3], label: "70 OB", isMid: false },
+        { val: 60, y: y60, color: "rgba(251, 191, 36, 0.55)", labelColor: "#fbbf24", dash: [3, 3], label: "60", isMid: false },
+        { val: 50, y: y50, color: "rgba(56, 189, 248, 0.90)", labelColor: "#38bdf8", dash: [6, 3], label: "50 MID", isMid: true },
+        { val: 40, y: y40, color: "rgba(129, 140, 248, 0.55)", labelColor: "#818cf8", dash: [3, 3], label: "40", isMid: false },
+        { val: 30, y: y30, color: "rgba(16, 185, 129, 0.70)", labelColor: "#10b981", dash: [4, 3], label: "30 OS", isMid: false }
+      ];
+
+      rsiLevels.forEach(lvl => {
+        // Guideline across plot
+        rsiCtx.strokeStyle = lvl.color;
+        rsiCtx.lineWidth = lvl.isMid ? 1.5 : 1.0;
+        rsiCtx.setLineDash(lvl.dash);
+        rsiCtx.beginPath();
+        rsiCtx.moveTo(0, lvl.y);
+        rsiCtx.lineTo(plotW, lvl.y);
+        rsiCtx.stroke();
+
+        // Right margin axis label
+        rsiCtx.setLineDash([]);
+        rsiCtx.fillStyle = lvl.labelColor;
+        rsiCtx.font = lvl.isMid ? "bold 10px monospace" : "9px monospace";
+        rsiCtx.fillText(lvl.label, plotW + 6, lvl.y + 3.5);
+      });
       rsiCtx.setLineDash([]);
 
-      rsiCtx.fillStyle = "#64748b";
-      rsiCtx.font = "9px monospace";
-      rsiCtx.fillText("70", plotW + 6, y70 + 3);
-      rsiCtx.fillText("30", plotW + 6, y30 + 3);
-
-      // Standard RSI (14) Momentum Calculation
+      // 3. Mathematical Wilder's Smoothing RSI(14) Calculation
       let rsiValues = [];
       let gains = 0, losses = 0;
       for (let i = 1; i < candles.length; i++) {
-        const diff = candles[i].close - candles[i - 1].close;
+        const diff = (candles[i].close || 0) - (candles[i - 1].close || 0);
+        const curGain = diff > 0 ? diff : 0;
+        const curLoss = diff < 0 ? Math.abs(diff) : 0;
         if (i <= 14) {
-          if (diff >= 0) gains += diff;
-          else losses += Math.abs(diff);
+          gains += curGain;
+          losses += curLoss;
           if (i === 14) {
-            const avgG = gains / 14;
-            const avgL = losses / 14;
-            const rs = avgL === 0 ? 100 : avgG / avgL;
+            gains /= 14;
+            losses /= 14;
+            const rs = losses === 0 ? 100 : gains / losses;
             rsiValues.push(100 - (100 / (1 + rs)));
           } else {
             rsiValues.push(50);
           }
         } else {
-          const prevRsi = rsiValues[rsiValues.length - 1];
-          const curGain = diff > 0 ? diff : 0;
-          const curLoss = diff < 0 ? Math.abs(diff) : 0;
-          const rsiStep = prevRsi + (curGain > curLoss ? 2.5 : -2.5);
-          rsiValues.push(Math.max(18, Math.min(82, rsiStep)));
+          gains = (gains * 13 + curGain) / 14;
+          losses = (losses * 13 + curLoss) / 14;
+          const rs = losses === 0 ? 100 : gains / losses;
+          rsiValues.push(100 - (100 / (1 + rs)));
         }
       }
       while (rsiValues.length < candles.length) {
         rsiValues.unshift(50);
       }
 
-      rsiCtx.strokeStyle = "#06b6d4";
-      rsiCtx.lineWidth = 1.5;
-      rsiCtx.beginPath();
-      let lastRsi = 50;
+      // 4. Draw Thick High-Visibility Vibrant RSI Oscillator Line
       const slotW = plotW / candles.length;
+      rsiCtx.strokeStyle = "#38bdf8";
+      rsiCtx.lineWidth = 2.0;
+      rsiCtx.shadowColor = "rgba(56, 189, 248, 0.4)";
+      rsiCtx.shadowBlur = 6;
+      rsiCtx.beginPath();
+
+      let lastX = 0;
+      let lastY = y50;
+      let lastRsi = 50;
+
       candles.forEach((c, idx) => {
         const x = idx * slotW + slotW / 2;
-        const rsiVal = rsiValues[idx] || 50;
-        const y = rh - (Math.max(5, Math.min(95, rsiVal)) / 100) * rh;
+        const rsiVal = rsiValues[idx] != null ? rsiValues[idx] : 50;
+        const y = getY(Math.max(2, Math.min(98, rsiVal)));
         if (idx === 0) rsiCtx.moveTo(x, y);
         else rsiCtx.lineTo(x, y);
+        lastX = x;
+        lastY = y;
         lastRsi = rsiVal;
       });
       rsiCtx.stroke();
+      rsiCtx.shadowBlur = 0;
+
+      // 5. Live Glowing Marker Dot & Live Price Pill on Right Axis
+      const dotColor = lastRsi >= 70 ? "#f43f5e" : (lastRsi <= 30 ? "#10b981" : (lastRsi >= 60 ? "#fbbf24" : (lastRsi <= 40 ? "#818cf8" : "#38bdf8")));
+      rsiCtx.fillStyle = dotColor;
+      rsiCtx.beginPath();
+      rsiCtx.arc(lastX, lastY, 4, 0, Math.PI * 2);
+      rsiCtx.fill();
+      rsiCtx.strokeStyle = "#ffffff";
+      rsiCtx.lineWidth = 1.2;
+      rsiCtx.stroke();
+
+      // Live Axis Price Tag Pill
+      const pillW = 42;
+      const pillH = 14;
+      const pillX = plotW + 2;
+      const pillY = Math.max(2, Math.min(rh - pillH - 2, lastY - pillH / 2));
+      rsiCtx.fillStyle = dotColor;
+      rsiCtx.beginPath();
+      rsiCtx.roundRect ? rsiCtx.roundRect(pillX, pillY, pillW, pillH, 3) : rsiCtx.rect(pillX, pillY, pillW, pillH);
+      rsiCtx.fill();
+      rsiCtx.fillStyle = "#040711";
+      rsiCtx.font = "bold 9px monospace";
+      rsiCtx.fillText(lastRsi.toFixed(1), pillX + 6, pillY + 10.5);
+
+      // 6. Update Top Header Badges with Detailed Zone Calculation
       const rsiEl = document.getElementById("rsi-val");
-      if (rsiEl) rsiEl.innerText = lastRsi.toFixed(1);
+      if (rsiEl) {
+        rsiEl.innerText = lastRsi.toFixed(1);
+        rsiEl.className = `font-mono text-xs font-extrabold px-1.5 py-0.5 rounded shadow border ${
+          lastRsi >= 70 ? 'text-rose-300 bg-rose-950 border-rose-700' :
+          lastRsi >= 60 ? 'text-amber-300 bg-amber-950 border-amber-700' :
+          lastRsi <= 30 ? 'text-emerald-300 bg-emerald-950 border-emerald-700' :
+          lastRsi <= 40 ? 'text-indigo-300 bg-indigo-950 border-indigo-700' :
+          'text-cyan-300 bg-cyan-950 border-cyan-700'
+        }`;
+      }
+
+      const zoneBadge = document.getElementById("rsi-zone-badge");
+      if (zoneBadge) {
+        let text = "Neutral (50 Midline)";
+        let cls = "bg-slate-800 text-slate-300 border-slate-700";
+        if (lastRsi >= 70) {
+          text = "⚠️ Overbought (>70)";
+          cls = "bg-rose-950 text-rose-300 border-rose-700";
+        } else if (lastRsi >= 60) {
+          text = "🔥 Strong Bullish (60-70)";
+          cls = "bg-amber-950 text-amber-300 border-amber-700";
+        } else if (lastRsi > 50) {
+          text = "📈 Bullish Bias (50-60)";
+          cls = "bg-cyan-950 text-cyan-300 border-cyan-700";
+        } else if (lastRsi === 50) {
+          text = "⚖️ Exact Midline (50)";
+          cls = "bg-sky-950 text-sky-300 border-sky-700";
+        } else if (lastRsi >= 40) {
+          text = "📉 Bearish Bias (40-50)";
+          cls = "bg-indigo-950 text-indigo-300 border-indigo-700";
+        } else if (lastRsi > 30) {
+          text = "❄️ Strong Bearish (30-40)";
+          cls = "bg-purple-950 text-purple-300 border-purple-700";
+        } else {
+          text = "🚀 Oversold Reversal (<30)";
+          cls = "bg-emerald-950 text-emerald-300 border-emerald-700";
+        }
+        zoneBadge.innerText = text;
+        zoneBadge.className = `text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${cls}`;
+      }
     }
 
     function scanAndExecuteSetup(isInitialScan = false) {
