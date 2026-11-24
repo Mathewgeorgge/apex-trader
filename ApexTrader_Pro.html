@@ -278,11 +278,11 @@
               <span class="text-amber-400 font-semibold">VWAP</span>
             </label>
             <label class="flex items-center space-x-1 cursor-pointer" title="Central Pivot Range (TC, Pivot, BC) from Bhavcopy EOD data">
-              <input type="checkbox" id="chk-cpr" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-purple-500" />
+              <input type="checkbox" id="chk-cpr" onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-purple-500" />
               <span class="text-purple-400 font-semibold">CPR Pivots</span>
             </label>
             <label class="flex items-center space-x-1 cursor-pointer" title="Previous Day High &amp; Low key breakout gates">
-              <input type="checkbox" id="chk-pdh" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-yellow-500" />
+              <input type="checkbox" id="chk-pdh" onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-yellow-500" />
               <span class="text-yellow-400 font-semibold">PDH/PDL</span>
             </label>
           </div>
@@ -3586,7 +3586,153 @@
         tradeOptionDirect(peSym, currentFnoUnderlying === "BANK NIFTY" ? 315.0 : 128.00, 'BUY');
       }, 600);
     }
-function calculateStockMetrics(sym) {
+    function calculateSymbolRSI(candles) {
+      if (!candles || candles.length < 15) return 50.0;
+      let gains = 0, losses = 0;
+      for (let i = 1; i < candles.length; i++) {
+        const diff = (candles[i].close || 0) - (candles[i - 1].close || 0);
+        if (i <= 14) {
+          if (diff >= 0) gains += diff;
+          else losses += Math.abs(diff);
+          if (i === 14) {
+            gains /= 14;
+            losses /= 14;
+          }
+        } else {
+          const curGain = diff > 0 ? diff : 0;
+          const curLoss = diff < 0 ? Math.abs(diff) : 0;
+          gains = (gains * 13 + curGain) / 14;
+          losses = (losses * 13 + curLoss) / 14;
+        }
+      }
+      if (losses === 0) return 100.0;
+      const rs = gains / losses;
+      return Math.round((100 - (100 / (1 + rs))) * 10) / 10;
+    }
+
+    function evaluateStrategyTrigger(sym, strategyKey) {
+      const symObj = marketCatalog[currentMarket]?.symbols?.[sym];
+      if (!symObj || !symObj.history || symObj.history.length < 15) {
+        return { isTriggered: false, sym, reason: "Insufficient candle history", rsi: 50.0 };
+      }
+
+      const candles = symObj.history;
+      const ltp = symObj.ltp;
+      const lastCandle = candles[candles.length - 1];
+      const prevCandle = candles[candles.length - 2] || lastCandle;
+
+      // 1. Precise Wilder's RSI(14)
+      const rsi = calculateSymbolRSI(candles);
+
+      // 2. 20 EMA
+      let ema = candles[0].close;
+      const k = 2 / (Math.min(20, candles.length) + 1);
+      for (let i = 1; i < candles.length; i++) {
+        ema = (candles[i].close || ltp) * k + ema * (1 - k);
+      }
+
+      // 3. Intraday VWAP
+      let cumVol = 0, cumTypical = 0;
+      candles.forEach(c => {
+        const typ = (c.high + c.low + c.close) / 3;
+        cumVol += (c.volume || 1);
+        cumTypical += typ * (c.volume || 1);
+      });
+      const vwap = cumVol > 0 ? cumTypical / cumVol : ltp;
+
+      // 4. Volume Ratio vs 10-period SMA
+      const lastVol = lastCandle.volume || 1000;
+      const avgVol = candles.slice(-11, -1).reduce((s, c) => s + (c.volume || 0), 0) / 10 || 1000;
+      const volRatio = Math.round((lastVol / avgVol) * 10) / 10;
+
+      // 5. CPR Pivots & Anti-Chop Gate
+      const piv = (typeof getSymbolPivots === "function") ? getSymbolPivots(sym) : null;
+      const insideCprChop = piv ? (ltp >= piv.bc && ltp <= piv.tc) : false;
+
+      // Anti-Chop: Trapped inside Central Pivot Range = NO ENTRY
+      if (insideCprChop) {
+        return { isTriggered: false, sym, rsi, ltp, ema, vwap, volRatio, reason: "Inside CPR Congestion/Chop zone" };
+      }
+
+      let isTriggered = false;
+      let side = null;
+      let reason = "";
+
+      if (strategyKey === "rsi_scalp") {
+        // RSI Extreme Scalper: Requires genuinely oversold (RSI <= 32) or overbought (RSI >= 68)
+        if (rsi <= 32 && (lastCandle.close >= lastCandle.open || ltp > prevCandle.low)) {
+          isTriggered = true;
+          side = "BUY";
+          reason = `RSI Extreme Oversold (${rsi.toFixed(1)} <= 32) + Bullish Reversal Wick`;
+        } else if (rsi >= 68 && (lastCandle.close <= lastCandle.open || ltp < prevCandle.high)) {
+          isTriggered = true;
+          side = "SELL";
+          reason = `RSI Extreme Overbought (${rsi.toFixed(1)} >= 68) + Bearish Rejection Wick`;
+        } else {
+          reason = `RSI (${rsi.toFixed(1)}) is Neutral (Requires <=32 for BUY or >=68 for SELL)`;
+        }
+      } else if (strategyKey === "supertrend_ema") {
+        // Supertrend + 20 EMA Cross / Dynamic Bounce
+        const isBullishCandle = lastCandle.close >= lastCandle.open;
+        const isBearishCandle = lastCandle.close <= lastCandle.open;
+        const bouncedAboveEma = ltp > ema && prevCandle.low <= ema && isBullishCandle;
+        const freshCrossAbove = prevCandle.close <= ema && ltp > ema;
+        const bouncedBelowEma = ltp < ema && prevCandle.high >= ema && isBearishCandle;
+        const freshCrossBelow = prevCandle.close >= ema && ltp < ema;
+
+        if ((bouncedAboveEma || freshCrossAbove) && volRatio >= 1.2) {
+          isTriggered = true;
+          side = "BUY";
+          reason = `20 EMA Dynamic Support Bounce (${ltp.toFixed(2)} > EMA ${ema.toFixed(2)}) + ${volRatio}x Vol`;
+        } else if ((bouncedBelowEma || freshCrossBelow) && volRatio >= 1.2) {
+          isTriggered = true;
+          side = "SELL";
+          reason = `20 EMA Dynamic Resistance Breakdown (${ltp.toFixed(2)} < EMA ${ema.toFixed(2)}) + ${volRatio}x Vol`;
+        } else {
+          reason = `Awaiting 20 EMA test/cross (LTP ${ltp.toFixed(2)} vs EMA ${ema.toFixed(2)})`;
+        }
+      } else if (strategyKey === "vwap_breakout") {
+        // VWAP Institutional Momentum
+        if (ltp > vwap && prevCandle.close <= vwap && volRatio >= 1.35) {
+          isTriggered = true;
+          side = "BUY";
+          reason = `Institutional VWAP Breakout (${ltp.toFixed(2)} > VWAP ${vwap.toFixed(2)}) + ${volRatio}x Vol`;
+        } else if (ltp < vwap && prevCandle.close >= vwap && volRatio >= 1.35) {
+          isTriggered = true;
+          side = "SELL";
+          reason = `Institutional VWAP Breakdown (${ltp.toFixed(2)} < VWAP ${vwap.toFixed(2)}) + ${volRatio}x Vol`;
+        } else {
+          reason = `Awaiting VWAP Breakout with volume (LTP ${ltp.toFixed(2)} vs VWAP ${vwap.toFixed(2)})`;
+        }
+      } else {
+        // Default Multi-Gate Confluence Breakout
+        if (ltp > vwap && ltp > ema && volRatio >= 1.35 && lastCandle.close > lastCandle.open) {
+          isTriggered = true;
+          side = "BUY";
+          reason = `Confluence Expansion (Above VWAP & 20 EMA + ${volRatio}x Vol)`;
+        } else if (ltp < vwap && ltp < ema && volRatio >= 1.35 && lastCandle.close < lastCandle.open) {
+          isTriggered = true;
+          side = "SELL";
+          reason = `Confluence Breakdown (Below VWAP & 20 EMA + ${volRatio}x Vol)`;
+        } else {
+          reason = "Awaiting Volume & Trend Confluence Alignment";
+        }
+      }
+
+      return {
+        isTriggered,
+        sym,
+        side,
+        reason,
+        rsi,
+        ltp,
+        ema,
+        vwap,
+        volRatio
+      };
+    }
+
+    function calculateStockMetrics(sym) {
       const symObj = marketCatalog[currentMarket].symbols[sym];
       if (!symObj) return null;
       const ltp = symObj.ltp;
@@ -3651,36 +3797,37 @@ function calculateStockMetrics(sym) {
         else if (ltp < piv.pivot) cprBear = true;
       }
 
-      // 2. High-Expectancy Base Score
+      // 2. High-Expectancy Base Score (calibrated to start at 20 so only genuine setups exceed 70)
       const bullMom = Math.max(pctChange, recentPct * 1.5);
       const bearMom = Math.max(-pctChange, -recentPct * 1.5);
 
-      let longScore = 30 + (bullMom > 0 ? bullMom * 15 : -15);
-      let shortScore = 30 + (bearMom > 0 ? bearMom * 15 : -15);
+      let longScore = 20 + (bullMom > 0 ? bullMom * 12 : -15);
+      let shortScore = 20 + (bearMom > 0 ? bearMom * 12 : -15);
 
-      // Volume surge confirmation (+18 pts)
-      if (volRatio >= 1.35) { longScore += 12; shortScore += 12; }
+      // Volume surge confirmation (+16 pts max)
+      if (volRatio >= 1.35) { longScore += 10; shortScore += 10; }
       if (volRatio >= 1.75) { longScore += 6; shortScore += 6; }
+      if (volRatio < 0.90) { longScore -= 15; shortScore -= 15; } // Severe penalty for zero institutional volume
 
       // Technical confluence bonuses
-      if (emaBull) longScore += 14;
-      if (emaBear) shortScore += 14;
-      if (vwapBull) longScore += 12;
-      if (vwapBear) shortScore += 12;
-      if (cprBull) longScore += 10;
-      if (cprBear) shortScore += 10;
-      if (isBullishRegime) longScore += 10;
-      if (isBearishRegime) shortScore += 10;
+      if (emaBull) longScore += 12;
+      if (emaBear) shortScore += 12;
+      if (vwapBull) longScore += 10;
+      if (vwapBear) shortScore += 10;
+      if (cprBull) longScore += 8;
+      if (cprBear) shortScore += 8;
+      if (isBullishRegime) longScore += 8;
+      if (isBearishRegime) shortScore += 8;
 
       // 3. Ingest Bhavcopy Delivery Accumulation Knowledge:
       if (bData && bData.delivPer) {
         if (bData.delivPer >= 60) {
           // Massive institutional delivery accumulation (Smart Money buying!)
-          longScore += 16;
-          shortScore -= 24; // Strictly forbid shorting stocks under heavy delivery accumulation
+          longScore += 14;
+          shortScore -= 25; // Strictly forbid shorting stocks under heavy delivery accumulation
         } else if (bData.delivPer >= 52) {
           longScore += 8;
-          shortScore -= 10;
+          shortScore -= 12;
         }
       }
 
@@ -3688,7 +3835,7 @@ function calculateStockMetrics(sym) {
       const prof5y = (typeof NSE_5YEAR_EMPIRICAL_PROFILES !== "undefined") ? NSE_5YEAR_EMPIRICAL_PROFILES[sym] : null;
       if (prof5y && bData && bData.delivPer) {
         if (bData.delivPer > prof5y.avgDeliv * 1.15) {
-          longScore += 12; // Institutional Delivery Accumulation spike above 5Y baseline!
+          longScore += 10; // Institutional Delivery Accumulation spike above 5Y baseline!
         }
       }
 
@@ -3696,23 +3843,23 @@ function calculateStockMetrics(sym) {
       const fnoBhav = (typeof bhavcopyData !== "undefined" && bhavcopyData.fno) ? bhavcopyData.fno[sym] : null;
       if (fnoBhav) {
         if (fnoBhav.buildup === "LONG_BUILDUP" || fnoBhav.buildup === "SHORT_COVERING") {
-          longScore += 18;
+          longScore += 14;
           shortScore -= 18;
         } else if (fnoBhav.buildup === "SHORT_BUILDUP" || fnoBhav.buildup === "LONG_UNWINDING") {
-          shortScore += 18;
+          shortScore += 14;
           longScore -= 18;
         }
       }
 
       // 5. Heavy Penalty if Inside CPR Congestion Zone (prevents choppy whipsaws!)
       if (insideCprChop) {
-        longScore -= 25;
-        shortScore -= 25;
+        longScore -= 30;
+        shortScore -= 30;
       }
 
-      // Heavy penalties for taking counter-trend trades against EMA or VWAP (-22 pts)
-      if (emaBear || vwapBear) longScore -= 22;
-      if (emaBull || vwapBull) shortScore -= 22;
+      // Heavy penalties for taking counter-trend trades against EMA or VWAP (-25 pts)
+      if (emaBear || vwapBear) longScore -= 25;
+      if (emaBull || vwapBull) shortScore -= 25;
 
       longScore = Math.max(10, Math.min(99, Math.round(longScore)));
       shortScore = Math.max(10, Math.min(99, Math.round(shortScore)));
@@ -4414,11 +4561,21 @@ function calculateStockMetrics(sym) {
         statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-300 font-bold border border-emerald-800";
         playBeep("buy");
         saveSessionState();
-        logTerminal(`<strong>[BOT STARTED]</strong> Strategy: <em>${document.getElementById("sel-algo-strategy").value}</em> on market <strong>${currentMarket.toUpperCase()}</strong>. 6 Risk Gates Active.`);
-        logTerminal(`🔍 <strong class="text-cyan-400">[SCANNING BASKET]</strong> Evaluating ${activeBasket.size || 20} assets across CPR, 20 EMA, VWAP, Delivery Confluence & 4 Risk Gates...`);
+        const stratVal = document.getElementById("sel-algo-strategy")?.value || "rsi_scalp";
+        const stratMap = {
+          "rsi_scalp": "RSI Extreme Scalper (<30 Buy / >70 Sell)",
+          "supertrend_ema": "Supertrend (10,3) + 20 EMA Cross",
+          "vwap_breakout": "VWAP Institutional Momentum",
+          "option_breakout": "Option Momentum Buyer",
+          "straddle_920": "9:20 AM Short Straddle",
+          "news_breakout": "News Catalyst Sentiment Breakout"
+        };
+        const stratTitle = stratMap[stratVal] || stratVal;
+        logTerminal(`<strong>[AUTOPILOT ARMED]</strong> Strategy: <em>${stratTitle}</em> on market <strong>${currentMarket.toUpperCase()}</strong>. 6 Risk Gates Active.`);
+        logTerminal(`🔍 <strong class="text-cyan-400">[PATIENT BASKET SCAN]</strong> Scanning ${activeBasket.size || 20} assets for strict trigger conditions. Zero forced entries.`);
 
-        // Disciplined 3.5s analysis buffer: gives trader visual confirmation of 4-gate scanning before trigger
-        setTimeout(() => { if (isRunning && positions.length < MAX_OPEN_POSITIONS) scanAndExecuteSetup(true); }, 3500);
+        // Patient analysis buffer: confirms live market setup without forcing an immediate entry
+        setTimeout(() => { if (isRunning && positions.length < MAX_OPEN_POSITIONS) scanAndExecuteSetup(true); }, 2500);
       } else {
         btn.innerHTML = "<span>▶</span> START ALGO BOT";
         btn.className = "w-full bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-200 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-green";
@@ -4438,6 +4595,9 @@ function calculateStockMetrics(sym) {
       if (!mktObj) return;
       const ltp = mktObj.ltp;
       const curr = getCurrSymbol();
+      if (isManual) {
+        logTerminal(`⚡ <strong class="text-indigo-400">[MANUAL TEST SIGNAL]</strong> Executing immediate test order on <strong>${sym}</strong> as requested by user.`);
+      }
       const existing = positions.find(p => p.symbol === sym);
 
       if (existing) {
@@ -5032,7 +5192,7 @@ function calculateStockMetrics(sym) {
         ctx.setLineDash([]);
       }
 
-      // Overlay CPR (Central Pivot Range) from Bhavcopy EOD
+      // Overlay CPR (Central Pivot Range) from Bhavcopy EOD (clean lines only, no cloud clutter)
       if (document.getElementById("chk-cpr") && document.getElementById("chk-cpr").checked) {
         const piv = getSymbolPivots(currentSymbol);
         if (piv && piv.tc >= minP && piv.bc <= maxP) {
@@ -5040,11 +5200,6 @@ function calculateStockMetrics(sym) {
           const yP = chartPlotH - ((piv.pivot - minP) / (maxP - minP)) * chartPlotH;
           const yBC = chartPlotH - ((piv.bc - minP) / (maxP - minP)) * chartPlotH;
 
-          // Shaded CPR Cloud
-          ctx.fillStyle = "rgba(168, 85, 247, 0.08)";
-          ctx.fillRect(0, Math.min(yTC, yBC), chartPlotW, Math.abs(yBC - yTC));
-
-          // TC (Top Central)
           ctx.save();
           ctx.setLineDash([2, 4]);
           ctx.strokeStyle = "#c084fc";
@@ -5053,15 +5208,13 @@ function calculateStockMetrics(sym) {
           ctx.moveTo(0, yTC); ctx.lineTo(chartPlotW, yTC);
           ctx.stroke();
 
-          // Central Pivot (P)
           ctx.setLineDash([4, 4]);
           ctx.strokeStyle = "#a855f7";
-          ctx.lineWidth = 1.3;
+          ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.moveTo(0, yP); ctx.lineTo(chartPlotW, yP);
           ctx.stroke();
 
-          // BC (Bottom Central)
           ctx.setLineDash([2, 4]);
           ctx.strokeStyle = "#818cf8";
           ctx.lineWidth = 1;
@@ -5069,48 +5222,31 @@ function calculateStockMetrics(sym) {
           ctx.moveTo(0, yBC); ctx.lineTo(chartPlotW, yBC);
           ctx.stroke();
           ctx.restore();
-
-          // Labels on right edge
-          ctx.fillStyle = "#c084fc";
-          ctx.font = "bold 9px monospace";
-          ctx.fillText("TC " + piv.tc.toFixed(1), chartPlotW + 4, yTC + 3);
-          ctx.fillStyle = "#a855f7";
-          ctx.fillText("PIVOT " + piv.pivot.toFixed(1), chartPlotW + 4, yP + 3);
-          ctx.fillStyle = "#818cf8";
-          ctx.fillText("BC " + piv.bc.toFixed(1), chartPlotW + 4, yBC + 3);
         }
       }
 
-      // Overlay PDH & PDL (Previous Day High & Low) Breakout Gates
+      // Overlay PDH & PDL (Previous Day High & Low) Breakout Gates (clean lines only)
       if (document.getElementById("chk-pdh") && document.getElementById("chk-pdh").checked) {
         const piv = getSymbolPivots(currentSymbol);
         if (piv) {
           ctx.save();
           ctx.setLineDash([5, 4]);
-          ctx.lineWidth = 1.2;
+          ctx.lineWidth = 1.1;
 
-          // PDH
           if (piv.pdh >= minP && piv.pdh <= maxP) {
             const yPDH = chartPlotH - ((piv.pdh - minP) / (maxP - minP)) * chartPlotH;
             ctx.strokeStyle = "#eab308";
             ctx.beginPath();
             ctx.moveTo(0, yPDH); ctx.lineTo(chartPlotW, yPDH);
             ctx.stroke();
-            ctx.fillStyle = "#eab308";
-            ctx.font = "bold 9px monospace";
-            ctx.fillText("PDH " + piv.pdh.toFixed(1), chartPlotW + 4, yPDH + 3);
           }
 
-          // PDL
           if (piv.pdl >= minP && piv.pdl <= maxP) {
             const yPDL = chartPlotH - ((piv.pdl - minP) / (maxP - minP)) * chartPlotH;
             ctx.strokeStyle = "#f59e0b";
             ctx.beginPath();
             ctx.moveTo(0, yPDL); ctx.lineTo(chartPlotW, yPDL);
             ctx.stroke();
-            ctx.fillStyle = "#f59e0b";
-            ctx.font = "bold 9px monospace";
-            ctx.fillText("PDL " + piv.pdl.toFixed(1), chartPlotW + 4, yPDL + 3);
           }
           ctx.restore();
         }
@@ -5152,47 +5288,11 @@ function calculateStockMetrics(sym) {
       ctx.textAlign = "left";
       ctx.fillText(livePrice.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}), badgeX + 4, badgeY + 12.5);
 
-      // Top-Left Chart Live HUD Header (Symbol, Timeframe, OHLC, Live Status)
+      // Clean Institutional Minimal HUD Header
       ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
-      ctx.fillStyle = "#f8fafc";
+      ctx.fillStyle = "#cbd5e1";
       ctx.textAlign = "left";
-      const headerTitle = `${currentSymbol} • ${timeframeMinutes}m • ${currentMarket.toUpperCase()}`;
-      ctx.fillText(headerTitle, 10, 16);
-      const headerTitleWidth = ctx.measureText(headerTitle).width;
-
-      // Live Institutional Market Microstructure Regime Badge (or REAL Zerodha Live Feed Indicator)
-      const symData = (marketCatalog[currentMarket] && marketCatalog[currentMarket].symbols) ? marketCatalog[currentMarket].symbols[currentSymbol] : null;
-      let regimeTag = "CONSOLIDATION / RANGE";
-      let regimeColor = "#38bdf8";
-      if (shouldUseRealLiveTicks()) {
-        const realSym = (symData && symData.realTradingSymbol) ? ` • ${symData.realTradingSymbol}` : "";
-        regimeTag = `🟢 LIVE ZERODHA NSE FEED (${tradingMode})${realSym}`;
-        regimeColor = "#10b981";
-      } else if (symData && symData.regime) {
-        const simPrefix = (dataFeedMode === "AUTO" && zerodhaAfterHoursAnchored) ? "KITE ANCHOR + SIM • " : (dataFeedMode === "SIM" ? "SIM • " : "");
-        if (symData.isStopHuntActive) {
-          regimeTag = `${simPrefix}LIQUIDITY SWEEP / WICK`;
-          regimeColor = "#f59e0b";
-        } else if (symData.regime === 'BREAKOUT_UP') {
-          regimeTag = `${simPrefix}IMPULSE BREAKOUT`;
-          regimeColor = "#10b981";
-        } else if (symData.regime === 'BREAKDOWN_DN') {
-          regimeTag = `${simPrefix}DISTRIBUTION FLUSH`;
-          regimeColor = "#f43f5e";
-        } else if (symData.regime === 'UPTREND') {
-          regimeTag = `${simPrefix}ACCUMULATION / UPTREND`;
-          regimeColor = "#34d399";
-        } else if (symData.regime === 'DOWNTREND') {
-          regimeTag = `${simPrefix}BLEED / DOWNTREND`;
-          regimeColor = "#fb7185";
-        } else {
-          regimeTag = `${simPrefix}CONSOLIDATION / RANGE`;
-          regimeColor = "#38bdf8";
-        }
-      }
-      ctx.font = "bold 9px monospace";
-      ctx.fillStyle = regimeColor;
-      ctx.fillText(`[ ${regimeTag} ]`, 20 + headerTitleWidth, 15.5);
+      ctx.fillText(`${currentSymbol} • ${timeframeMinutes}m`, 10, 16);
 
       ctx.font = "10px monospace";
       const oStr = `O: ${lastCandle.open.toFixed(2)}`;
@@ -5203,10 +5303,10 @@ function calculateStockMetrics(sym) {
       const chgPct = (chgVal / lastCandle.open) * 100;
       const chgStr = `${chgVal >= 0 ? '+' : ''}${chgVal.toFixed(2)} (${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%)`;
 
-      ctx.fillStyle = "#94a3b8";
-      ctx.fillText(`${oStr}  ${hStr}  ${lStr}  `, 10, 31);
+      ctx.fillStyle = "#64748b";
+      ctx.fillText(`${oStr}  ${hStr}  ${lStr}  `, 10, 30);
       ctx.fillStyle = isGreenTick ? "#34d399" : "#fb7185";
-      ctx.fillText(`${cStr}  ${chgStr}`, 10 + ctx.measureText(`${oStr}  ${hStr}  ${lStr}  `).width, 31);
+      ctx.fillText(`${cStr}  ${chgStr}`, 10 + ctx.measureText(`${oStr}  ${hStr}  ${lStr}  `).width, 30);
 
       renderRsiSubChart(candles, minP, maxP);
     }
@@ -5301,7 +5401,18 @@ function calculateStockMetrics(sym) {
 
       const now = Date.now();
       const isLiveNSE = isNSEMarketHoursIST() && (dataFeedMode === "LIVE" || (dataFeedMode === "AUTO" && isLiveZerodhaFeedActive));
-      const requiredScore = isLiveNSE ? 72 : 60; // Strict 72 on Live Market NSE; 60 in Sim/Paper mode for disciplined entry
+      const requiredScore = isLiveNSE ? 72 : 65; // Strict conviction requirement
+
+      const activeStrategy = document.getElementById("sel-algo-strategy")?.value || "rsi_scalp";
+      const stratDisplayNames = {
+        "rsi_scalp": "RSI Extreme Scalper (<30 Buy / >70 Sell)",
+        "supertrend_ema": "Supertrend (10,3) + 20 EMA Cross",
+        "vwap_breakout": "VWAP Institutional Momentum",
+        "option_breakout": "Option Momentum Buyer",
+        "straddle_920": "9:20 AM Short Straddle",
+        "news_breakout": "News Catalyst Sentiment Breakout"
+      };
+      const stratTitle = stratDisplayNames[activeStrategy] || activeStrategy;
 
       const candidateSymbols = Object.keys(marketCatalog[currentMarket].symbols).filter(s => {
         const symObj = marketCatalog[currentMarket].symbols[s];
@@ -5319,19 +5430,38 @@ function calculateStockMetrics(sym) {
         return !isPositionOpen && !isCoolingDown && isInBasket && canAfford;
       });
 
-      if (candidateSymbols.length > 0) {
-        const scoredCandidates = candidateSymbols.map(s => calculateStockMetrics(s)).filter(Boolean);
-        scoredCandidates.sort((a, b) => b.score - a.score);
+      if (candidateSymbols.length === 0) return;
 
-        const topPick = scoredCandidates[0];
-        if (topPick && topPick.score >= requiredScore) {
-          const isShort = topPick.side === "SELL";
-          logTerminal(`${isShort ? '📉' : '🚀'} <strong class="${isShort ? 'text-rose-400' : 'text-emerald-400'}">[HIGH-CONVICTION SETUP]</strong> ${isShort ? 'Bearish breakdown (SHORT)' : 'Bullish breakout (LONG)'} on <strong>${topPick.sym}</strong> [Score <strong>${topPick.score}/100</strong> • 4/4 Risk Gates Cleared]. Routing <strong>${topPick.side}</strong>...`);
-          triggerImmediateTrade(topPick.sym, false, topPick.side);
-          autoEntryCooldownUntil = Date.now() + (isLiveNSE ? 45000 : 15000); // 15s in sim, 45s on real market
-        } else if (topPick && isInitialScan) {
-          logTerminal(`⏳ <span class="text-slate-400">[BASKET SCAN COMPLETE]</span> Top candidate <strong>${topPick.sym}</strong> scored <strong>${topPick.score}/100</strong> (Required: ${requiredScore}/100). All 4 Conviction Gates armed & monitoring tick flow.`);
-        }
+      // 1. Evaluate Strategy Trigger + Conviction Metrics on each candidate
+      const evaluated = candidateSymbols.map(s => {
+        const trig = evaluateStrategyTrigger(s, activeStrategy);
+        const metrics = calculateStockMetrics(s);
+        const score = metrics ? metrics.score : 0;
+        return {
+          sym: s,
+          trig,
+          metrics,
+          score,
+          isTriggered: trig ? trig.isTriggered : false,
+          side: trig?.side || metrics?.side || "BUY",
+          reason: trig?.reason || ""
+        };
+      });
+
+      // 2. Strict Filter: ONLY candidates where the actual strategy TRIGGER FIRED!
+      const triggeredCandidates = evaluated.filter(e => e.isTriggered && e.score >= requiredScore);
+
+      if (triggeredCandidates.length > 0) {
+        triggeredCandidates.sort((a, b) => b.score - a.score);
+        const topPick = triggeredCandidates[0];
+        const isShort = topPick.side === "SELL";
+
+        logTerminal(`🔔 <strong class="${isShort ? 'text-rose-400' : 'text-emerald-400'}">[SETUP TRIGGERED: ${stratTitle}]</strong> ${topPick.reason} on <strong>${topPick.sym}</strong> [Score <strong>${topPick.score}/100</strong> • 4/4 Gates Cleared]. Routing <strong>${topPick.side}</strong>...`);
+        triggerImmediateTrade(topPick.sym, false, topPick.side);
+        autoEntryCooldownUntil = Date.now() + (isLiveNSE ? 45000 : 20000);
+      } else if (isInitialScan) {
+        const sample = evaluated.slice(0, 3).map(e => `${e.sym} (RSI: ${e.trig?.rsi || 50})`).join(", ");
+        logTerminal(`⏳ <span class="text-slate-400">[NO TRIGGER DETECTED]</span> All ${evaluated.length} assets currently in neutral chop range (e.g. ${sample}). Holding 100% cash — patiently monitoring tick flow...`);
       }
     }
 
