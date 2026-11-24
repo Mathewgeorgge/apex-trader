@@ -114,12 +114,18 @@
     </div>
 
     <!-- Market Selector Tabs (Sleek Segmented Control) -->
-    <div class="flex items-center gap-1 border border-slate-800/80 bg-[#080d17] p-1 rounded-lg">
+    <div class="flex flex-wrap items-center gap-1 border border-slate-800/80 bg-[#080d17] p-1 rounded-lg">
       <button onclick="switchMarket('india')" id="market-btn-india" class="market-tab active px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5">
-        <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span> NSE Cash Equities (Stocks)
+        <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span> NSE Stocks
       </button>
       <button onclick="switchMarket('fno')" id="market-btn-fno" class="market-tab px-3 py-1.5 rounded-md text-xs text-slate-400 hover:text-slate-200 font-semibold flex items-center gap-1.5">
-        <span class="w-1.5 h-1.5 rounded-full bg-slate-600"></span> NSE F&O (Options Desk)
+        <span class="w-1.5 h-1.5 rounded-full bg-slate-600"></span> NSE F&O
+      </button>
+      <button onclick="switchMarket('commodity')" id="market-btn-commodity" class="market-tab px-3 py-1.5 rounded-md text-xs text-slate-400 hover:text-slate-200 font-semibold flex items-center gap-1.5" title="MCX Indian Commodities (Crude Oil, Gold, Natural Gas, Silver) • Open until 11:30 PM IST">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 pulse-dot"></span> MCX Commodities (Live ₹)
+      </button>
+      <button onclick="switchMarket('crypto')" id="market-btn-crypto" class="market-tab px-3 py-1.5 rounded-md text-xs text-slate-400 hover:text-slate-200 font-semibold flex items-center gap-1.5" title="Global Crypto 24/7 (BTC, ETH, SOL) • Live Binance Streaming Feed">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span> Crypto (24/7 $)
       </button>
     </div>
 
@@ -1845,22 +1851,37 @@
       let sebi = 0.0;
       let gst = 0.0;
 
-      if (mkt === "india" || mkt === "fno") {
-        brokerage = isFno ? 20.0 : Math.min(20.0, turnover * 0.0003);
-        exchange = turnover * (isFno ? 0.0005 : 0.0000297);
-        sebi = turnover * 0.000001; // ₹10 per crore
-
-        if (side === "BUY") {
-          stamp = turnover * 0.00003; // 0.003% or ₹300/Cr on BUY
-          stt = 0.0; // Intraday equity STT is zero on BUY
+      if (mkt === "india" || mkt === "fno" || mkt === "commodity") {
+        if (isFno) {
+          brokerage = 20.0;
+          exchange = turnover * 0.0005;
+          sebi = turnover * 0.000001;
+          stamp = (side === "BUY") ? turnover * 0.00003 : 0.0;
+          stt = (side === "SELL") ? turnover * 0.001 : 0.0;
+        } else if (mkt === "commodity") {
+          // Zerodha MCX Commodities: 0.03% or Rs 20 max
+          brokerage = Math.min(20.0, turnover * 0.0003);
+          exchange = turnover * 0.000026; // MCX exchange fee
+          sebi = turnover * 0.000001;
+          stamp = (side === "BUY") ? turnover * 0.00002 : 0.0;
+          stt = (side === "SELL") ? turnover * 0.0001 : 0.0; // CTT 0.01% on sell
         } else {
-          stamp = 0.0; // Stamp duty is zero on SELL
-          stt = isFno ? (turnover * 0.001) : (turnover * 0.00025); // 0.025% on SELL
+          // NSE Cash Equities: 0.03% or Rs 20 max
+          brokerage = Math.min(20.0, turnover * 0.0003);
+          exchange = turnover * 0.0000297;
+          sebi = turnover * 0.000001;
+          stamp = (side === "BUY") ? turnover * 0.00003 : 0.0;
+          stt = (side === "SELL") ? turnover * 0.00025 : 0.0;
         }
-        gst = (brokerage + exchange + sebi) * 0.18; // 18% on brokerage, exchange & sebi
+        gst = (brokerage + exchange + sebi) * 0.18;
       } else {
-        brokerage = turnover * 0.00056;
-        exchange = turnover * 0.00024;
+        // Crypto Desk (0.1% Binance flat fee, zero Govt STT/GST)
+        brokerage = turnover * 0.001;
+        exchange = 0.0;
+        stamp = 0.0;
+        stt = 0.0;
+        sebi = 0.0;
+        gst = 0.0;
       }
 
       const total = brokerage + stt + exchange + stamp + sebi + gst;
@@ -2490,12 +2511,23 @@
       "crypto": {
         currency: "$",
         symbols: {
-          "BTC/USDT": { name: "Bitcoin", ltp: 91420.50, open: 87800.00, lot: 0.05, history: [], sector: "Layer 1" },
-          "ETH/USDT": { name: "Ethereum", ltp: 3145.80, open: 3060.00, lot: 0.5, history: [], sector: "Smart Contracts" },
-          "SOL/USDT": { name: "Solana", ltp: 218.40, open: 205.00, lot: 5.0, history: [], sector: "DeFi / L1" },
-          "DOGE/USDT": { name: "Dogecoin", ltp: 0.384, open: 0.362, lot: 2500, history: [], sector: "Meme / P2P" },
-          "BNB/USDT": { name: "Binance Coin", ltp: 648.20, open: 635.00, lot: 2.0, history: [], sector: "Exchange" },
-          "AVAX/USDT": { name: "Avalanche", ltp: 38.60, open: 39.80, lot: 25.0, history: [], sector: "Subnets" }
+          "BTC/USDT": { name: "Bitcoin", ltp: 91420.50, open: 87800.00, lot: 0.01, history: [], sector: "Layer 1" },
+          "ETH/USDT": { name: "Ethereum", ltp: 3145.80, open: 3060.00, lot: 0.1, history: [], sector: "Smart Contracts" },
+          "SOL/USDT": { name: "Solana", ltp: 218.40, open: 205.00, lot: 1.0, history: [], sector: "DeFi / L1" },
+          "DOGE/USDT": { name: "Dogecoin", ltp: 0.384, open: 0.362, lot: 500, history: [], sector: "Meme / P2P" },
+          "BNB/USDT": { name: "Binance Coin", ltp: 648.20, open: 635.00, lot: 0.5, history: [], sector: "Exchange" },
+          "AVAX/USDT": { name: "Avalanche", ltp: 38.60, open: 39.80, lot: 5.0, history: [], sector: "Subnets" }
+        }
+      },
+      "commodity": {
+        currency: "₹",
+        symbols: {
+          "CRUDEOIL": { name: "Crude Oil Futures (MCX)", ltp: 5885.00, open: 5840.00, lot: 10, history: [], sector: "Energy", officialClose: 5840.00 },
+          "NATURALGAS": { name: "Natural Gas Futures (MCX)", ltp: 268.40, open: 262.00, lot: 125, history: [], sector: "Energy", officialClose: 262.00 },
+          "GOLD": { name: "Gold Mini Futures (MCX)", ltp: 76480.00, open: 76100.00, lot: 1, history: [], sector: "Precious Metals", officialClose: 76100.00 },
+          "SILVER": { name: "Silver Mini Futures (MCX)", ltp: 89350.00, open: 88700.00, lot: 1, history: [], sector: "Precious Metals", officialClose: 88700.00 },
+          "COPPER": { name: "Copper Futures (MCX)", ltp: 818.50, open: 812.00, lot: 25, history: [], sector: "Base Metals", officialClose: 812.00 },
+          "ZINC": { name: "Zinc Futures (MCX)", ltp: 279.40, open: 276.50, lot: 50, history: [], sector: "Base Metals", officialClose: 276.50 }
         }
       },
       "us": {
@@ -2580,7 +2612,22 @@
       "HINDUNILVR":  { hv: 0.182, beta: 0.72, atrPct: 0.0110, avgDeliv: 61.2, hurst: 0.48, optimalSL: 0.009, optimalTarget: 0.020 },
       "TATASTEEL":   { hv: 0.354, beta: 1.55, atrPct: 0.0215, avgDeliv: 53.5, hurst: 0.61, optimalSL: 0.015, optimalTarget: 0.034 },
       "LT":          { hv: 0.225, beta: 1.05, atrPct: 0.0135, avgDeliv: 61.8, hurst: 0.54, optimalSL: 0.011, optimalTarget: 0.024 },
-      "SUNPHARMA":   { hv: 0.208, beta: 0.82, atrPct: 0.0125, avgDeliv: 57.2, hurst: 0.50, optimalSL: 0.010, optimalTarget: 0.022 }
+      "SUNPHARMA":   { hv: 0.208, beta: 0.82, atrPct: 0.0125, avgDeliv: 57.2, hurst: 0.50, optimalSL: 0.010, optimalTarget: 0.022 },
+
+      // MCX Indian Commodities Empirical Profiles
+      "CRUDEOIL":    { hv: 0.380, beta: 1.45, atrPct: 0.0220, avgDeliv: 50.0, hurst: 0.62, optimalSL: 0.015, optimalTarget: 0.034 },
+      "NATURALGAS":  { hv: 0.520, beta: 1.85, atrPct: 0.0320, avgDeliv: 50.0, hurst: 0.65, optimalSL: 0.020, optimalTarget: 0.045 },
+      "GOLD":        { hv: 0.145, beta: 0.45, atrPct: 0.0090, avgDeliv: 75.0, hurst: 0.52, optimalSL: 0.008, optimalTarget: 0.018 },
+      "SILVER":      { hv: 0.260, beta: 0.85, atrPct: 0.0160, avgDeliv: 65.0, hurst: 0.56, optimalSL: 0.012, optimalTarget: 0.026 },
+      "COPPER":      { hv: 0.220, beta: 0.95, atrPct: 0.0140, avgDeliv: 55.0, hurst: 0.54, optimalSL: 0.011, optimalTarget: 0.025 },
+      "ZINC":        { hv: 0.240, beta: 1.05, atrPct: 0.0150, avgDeliv: 55.0, hurst: 0.55, optimalSL: 0.012, optimalTarget: 0.026 },
+
+      // Global Crypto Volatility Profiles
+      "BTC/USDT":    { hv: 0.550, beta: 1.20, atrPct: 0.0280, avgDeliv: 50.0, hurst: 0.61, optimalSL: 0.018, optimalTarget: 0.042 },
+      "ETH/USDT":    { hv: 0.680, beta: 1.40, atrPct: 0.0350, avgDeliv: 50.0, hurst: 0.63, optimalSL: 0.022, optimalTarget: 0.050 },
+      "SOL/USDT":    { hv: 0.850, beta: 1.75, atrPct: 0.0450, avgDeliv: 50.0, hurst: 0.67, optimalSL: 0.028, optimalTarget: 0.065 },
+      "DOGE/USDT":   { hv: 0.950, beta: 1.95, atrPct: 0.0550, avgDeliv: 50.0, hurst: 0.69, optimalSL: 0.035, optimalTarget: 0.080 },
+      "BNB/USDT":    { hv: 0.580, beta: 1.15, atrPct: 0.0300, avgDeliv: 50.0, hurst: 0.59, optimalSL: 0.020, optimalTarget: 0.045 }
     };
 
     // =========================================================================
@@ -2951,14 +2998,15 @@
     }
 
     function populateMarketSymbols(mkt, selectedSym = null) {
-      currentMarket = (mkt === 'fno') ? 'fno' : 'india';
-      ['india', 'fno'].forEach(m => {
+      const validMkts = ['india', 'fno', 'commodity', 'crypto'];
+      currentMarket = validMkts.includes(mkt) ? mkt : 'india';
+      validMkts.forEach(m => {
         const btn = document.getElementById('market-btn-' + m);
         if (btn) {
           if (m === currentMarket) {
-            btn.className = "market-tab active px-3 py-1 rounded text-xs transition";
+            btn.className = "market-tab active px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition";
           } else {
-            btn.className = "market-tab px-3 py-1 rounded text-xs text-gray-400 hover:text-white transition";
+            btn.className = "market-tab px-3 py-1.5 rounded-md text-xs text-slate-400 hover:text-slate-200 font-semibold flex items-center gap-1.5 transition";
           }
         }
       });
@@ -2966,9 +3014,20 @@
       const curr = getCurrSymbol();
       if (document.getElementById('curr-symbol-1')) document.getElementById('curr-symbol-1').innerText = curr;
       const brokTag = document.getElementById('hud-brokerage-tag');
-      if (brokTag) brokTag.innerText = (currentMarket === 'fno') ? 'Flat ₹20/order (F&O)' : '0.03% or ₹20 max (MIS)';
+      if (brokTag) {
+        if (currentMarket === 'fno') brokTag.innerText = 'Flat ₹20/order (F&O)';
+        else if (currentMarket === 'commodity') brokTag.innerText = '0.03% or ₹20 max (MCX)';
+        else if (currentMarket === 'crypto') brokTag.innerText = '0.1% Flat (Crypto)';
+        else brokTag.innerText = '0.03% or ₹20 max (MIS)';
+      }
       if (document.getElementById('curr-symbol-maxloss')) document.getElementById('curr-symbol-maxloss').innerText = curr;
-      if (document.getElementById('depth-market-tag')) document.getElementById('depth-market-tag').innerText = (currentMarket === 'fno') ? 'NSE F&O' : (currentMarket === 'india' ? 'NSE INDIA' : currentMarket.toUpperCase());
+      if (document.getElementById('depth-market-tag')) {
+        let tag = 'NSE INDIA';
+        if (currentMarket === 'fno') tag = 'NSE F&O';
+        else if (currentMarket === 'commodity') tag = 'MCX COMMODITIES (LIVE)';
+        else if (currentMarket === 'crypto') tag = 'GLOBAL CRYPTO (24/7)';
+        document.getElementById('depth-market-tag').innerText = tag;
+      }
 
       const sel = document.getElementById("sel-chart-symbol");
       if (sel) {
@@ -3005,7 +3064,15 @@
     function switchMarket(mkt) {
       populateMarketSymbols(mkt);
       if (mkt === 'fno') switchSubTab('optionchain');
+      if (mkt === 'crypto') startLiveCryptoStream();
       saveSessionState();
+      const deskNames = {
+        'india': 'NSE Cash Equities (Stocks)',
+        'fno': 'NSE F&O Options Desk',
+        'commodity': 'MCX Commodities (Crude, Gold, Natural Gas • Open to 11:30 PM)',
+        'crypto': 'Global Crypto 24/7 (Live Binance Feed)'
+      };
+      logTerminal(`🌐 <strong class="text-cyan-400">[MARKET SWITCHED]</strong> Active Desk: <strong>${deskNames[mkt] || mkt}</strong>. Algorithmic scanner and basket synchronized.`);
     }
 
 
@@ -4210,7 +4277,16 @@
 
       if (currentMarket === 'crypto') {
         badge.className = "px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold text-[10px]";
-        badge.innerHTML = "🟢 CRYPTO 24/7 OPEN (Live Execution)";
+        badge.innerHTML = "🟢 CRYPTO 24/7 OPEN (Live Binance Feed)";
+      } else if (currentMarket === 'commodity') {
+        const isMcxHours = isWeekday && ((hours >= 9 && hours < 23) || (hours === 23 && minutes <= 30));
+        if (isMcxHours) {
+          badge.className = "px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold text-[10px]";
+          badge.innerHTML = "🟢 MCX COMMODITIES LIVE (09:00 - 23:30 IST)";
+        } else {
+          badge.className = "px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800/80 font-bold text-[10px]";
+          badge.innerHTML = "🌙 MCX CLOSED (Reopens 09:00 AM IST • Simulated Sandbox)";
+        }
       } else if (currentMarket === 'us') {
         badge.className = "px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold text-[10px]";
         badge.innerHTML = "🌙 US STOCKS (Pre-Market / Simulated Sandbox)";
@@ -4294,7 +4370,7 @@
           netRealizedPnl,
           totalTaxesPaid,
           positions,
-          currentMarket: (currentMarket === 'fno') ? 'fno' : 'india',
+          currentMarket: (['india', 'fno', 'commodity', 'crypto'].includes(currentMarket)) ? currentMarket : 'india',
           currentSymbol,
           selectedStrategy: document.getElementById("sel-algo-strategy") ? document.getElementById("sel-algo-strategy").value : "straddle_920",
           activeBasket: Array.from(activeBasket || []),
@@ -4382,7 +4458,7 @@
         maxDailyLoss = (typeof state.maxDailyLoss === 'number' && !isNaN(state.maxDailyLoss)) ? state.maxDailyLoss : 200;
 
         // Active market
-        const targetMkt = (state.currentMarket === 'fno') ? 'fno' : 'india';
+        const targetMkt = (['india', 'fno', 'commodity', 'crypto'].includes(state.currentMarket)) ? state.currentMarket : 'india';
         currentMarket = targetMkt;
 
         // 100% Position Preservation: NEVER discard or drop open trades on refresh!
@@ -4558,7 +4634,37 @@
         return { qty: 0, cost: marginRequired, exposure: exposure, leverage: INTRADAY_LEVERAGE, scaled: false };
       }
 
-      // US & Crypto markets fallback (0.48 capital allocation or standard lot)
+      // MCX Indian Commodities (Zerodha MIS 5x Leverage):
+      if (currentMarket === "commodity") {
+        const COMMODITY_LEVERAGE = 5.0;
+        const MARGIN_RATE = 1.0 / COMMODITY_LEVERAGE;
+        const lot = symObj.lot || 1;
+        const fullLotCost = Math.round(lot * symObj.ltp * MARGIN_RATE * 100) / 100;
+        const fullExposure = Math.round(lot * symObj.ltp * 100) / 100;
+        if (fullLotCost <= availableCash) {
+          return { qty: lot, cost: fullLotCost, exposure: fullExposure, leverage: COMMODITY_LEVERAGE, scaled: false };
+        }
+        // Scaled unit position
+        const unitCost = Math.round(symObj.ltp * MARGIN_RATE * 100) / 100;
+        if (unitCost <= availableCash) {
+          return { qty: 1, cost: unitCost, exposure: symObj.ltp, leverage: COMMODITY_LEVERAGE, scaled: true };
+        }
+        return { qty: 0, cost: fullLotCost, exposure: fullExposure, leverage: COMMODITY_LEVERAGE, scaled: false };
+      }
+
+      // Global Crypto Desk (Dynamically sized to 25%-35% cash allocation, fractional execution):
+      if (currentMarket === "crypto") {
+        const alloc = Math.min(availableCash * 0.35, 2500);
+        let cryptoQty = Math.round((alloc / symObj.ltp) * 10000) / 10000;
+        if (cryptoQty <= 0) cryptoQty = symObj.lot || 0.01;
+        const cryptoCost = Math.round(cryptoQty * symObj.ltp * 100) / 100;
+        if (cryptoCost <= availableCash) {
+          return { qty: cryptoQty, cost: cryptoCost, exposure: cryptoCost, leverage: 1.0, scaled: true };
+        }
+        return { qty: 0, cost: cryptoCost, exposure: cryptoCost, leverage: 1.0, scaled: false };
+      }
+
+      // US markets fallback (0.48 capital allocation or standard lot)
       if (stdCost <= availableCash) {
         return { qty: stdLot, cost: stdCost, exposure: stdCost, leverage: 1.0, scaled: false };
       }
@@ -5683,6 +5789,93 @@
       if (activeSubTab === 'breadth') renderMarketHeatmap();
       if (activeSubTab === 'optionchain') renderOptionChain();
     }, 1100);
+
+    // =========================================================================
+    // Real-Time Live Binance Crypto WebSocket & REST Feeds
+    // Connects directly to Binance public stream for sub-second live ticks (Zero API key needed)
+    // =========================================================================
+    let cryptoWs = null;
+    let isBinanceStreaming = false;
+
+    function startLiveCryptoStream() {
+      if (cryptoWs && cryptoWs.readyState === WebSocket.OPEN) return;
+      try {
+        const streams = "btcusdt@ticker/ethusdt@ticker/solusdt@ticker/dogeusdt@ticker/bnbusdt@ticker";
+        cryptoWs = new WebSocket(`wss://stream.binance.com:9443/ws/${streams}`);
+
+        cryptoWs.onopen = () => {
+          isBinanceStreaming = true;
+          logTerminal(`⚡ <strong class="text-emerald-400 font-bold">[BINANCE LIVE STREAM CONNECTED]</strong> Sub-second real-time crypto price stream active for BTC, ETH, SOL, DOGE, BNB!`);
+        };
+
+        cryptoWs.onmessage = (event) => {
+          try {
+            const d = JSON.parse(event.data);
+            const map = {
+              "BTCUSDT": "BTC/USDT",
+              "ETHUSDT": "ETH/USDT",
+              "SOLUSDT": "SOL/USDT",
+              "DOGEUSDT": "DOGE/USDT",
+              "BNBUSDT": "BNB/USDT"
+            };
+            const sym = map[d.s];
+            if (sym && marketCatalog["crypto"] && marketCatalog["crypto"].symbols[sym]) {
+              const ltp = parseFloat(d.c);
+              const item = marketCatalog["crypto"].symbols[sym];
+              item.ltp = ltp;
+              if (item.history && item.history.length > 0) {
+                const last = item.history[item.history.length - 1];
+                last.close = ltp;
+                if (ltp > last.high) last.high = ltp;
+                if (ltp < last.low) last.low = ltp;
+              }
+              if (currentMarket === "crypto" && currentSymbol === sym) {
+                renderChart();
+              }
+            }
+          } catch(e) {}
+        };
+
+        cryptoWs.onerror = () => {
+          pollBinanceRestFallback();
+        };
+        cryptoWs.onclose = () => {
+          isBinanceStreaming = false;
+        };
+      } catch(e) {
+        pollBinanceRestFallback();
+      }
+    }
+
+    async function pollBinanceRestFallback() {
+      try {
+        const res = await fetch("https://api.binance.com/api/v3/ticker/price");
+        if (!res.ok) return;
+        const data = await res.json();
+        const map = {
+          "BTCUSDT": "BTC/USDT",
+          "ETHUSDT": "ETH/USDT",
+          "SOLUSDT": "SOL/USDT",
+          "DOGEUSDT": "DOGE/USDT",
+          "BNBUSDT": "BNB/USDT"
+        };
+        data.forEach(t => {
+          const sym = map[t.symbol];
+          if (sym && marketCatalog["crypto"] && marketCatalog["crypto"].symbols[sym]) {
+            const ltp = parseFloat(t.price);
+            const item = marketCatalog["crypto"].symbols[sym];
+            item.ltp = ltp;
+            if (item.history && item.history.length > 0) {
+              const last = item.history[item.history.length - 1];
+              last.close = ltp;
+              if (ltp > last.high) last.high = ltp;
+              if (ltp < last.low) last.low = ltp;
+            }
+          }
+        });
+        if (currentMarket === "crypto") renderChart();
+      } catch(e) {}
+    }
 
     // Dynamic Live News Streamer (every 35 seconds injects fresh market pulse)
     setInterval(() => {
