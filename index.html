@@ -206,7 +206,7 @@
         <span class="text-[10px] text-gray-400">Circuit Breaker</span>
         <div class="flex items-center gap-1">
           <span id="curr-symbol-maxloss" class="text-rose-400 font-bold">₹</span>
-          <input id="input-maxloss" type="number" value="200" onchange="updateMaxLoss()" class="w-14 bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-xs font-bold text-rose-400 focus:outline-none focus:border-rose-500" title="Adjust daily max loss circuit breaker threshold" />
+          <input id="input-maxloss" type="number" value="200" onchange="updateMaxLoss()" oninput="updateMaxLoss()" class="w-14 bg-gray-900 border border-gray-700 rounded px-1 py-0.5 text-xs font-bold text-rose-400 focus:outline-none focus:border-rose-500" title="Adjust daily max loss circuit breaker threshold" />
           <span id="maxloss-pct-tag" class="text-[9px] text-gray-400 font-mono">(2.8%)</span>
         </div>
       </div>
@@ -4421,6 +4421,9 @@
           savedAt: Date.now()
         };
         localStorage.setItem("apex_persistent_session", JSON.stringify(state));
+        if (positions && positions.length > 0) {
+          localStorage.setItem("apex_active_positions_backup", JSON.stringify(positions));
+        }
       } catch(e) {
         console.error("saveSessionState error:", e);
       }
@@ -4506,7 +4509,18 @@
         currentMarket = targetMkt;
 
         // 100% Position Preservation: NEVER discard or drop open trades on refresh!
-        const rawPositions = Array.isArray(state.positions) ? state.positions : [];
+        let rawPositions = Array.isArray(state.positions) ? state.positions : [];
+        if (rawPositions.length === 0) {
+          try {
+            const backup = localStorage.getItem("apex_active_positions_backup");
+            if (backup) {
+              const parsedBackup = JSON.parse(backup);
+              if (Array.isArray(parsedBackup) && parsedBackup.length > 0) {
+                rawPositions = parsedBackup;
+              }
+            }
+          } catch(e) {}
+        }
         positions = rawPositions.map(p => {
           const posMkt = p.market || targetMkt;
           // Ensure catalog has symbol entry or create fallback entry so pricing never crashes
@@ -4787,6 +4801,10 @@
     }
 
     function triggerImmediateTrade(targetSym = null, isManual = true, side = null) {
+      if (tradingMode === "REAL" && currentMarket === "crypto") {
+        logTerminal(`⚠️ <strong class="text-amber-400">[REAL MODE RESTRICTION]</strong> Zerodha does not support Crypto trading. Crypto is strictly available for Paper practice only.`);
+        return;
+      }
       const sym = targetSym || currentSymbol;
       const mktObj = marketCatalog[currentMarket].symbols[sym];
       if (!mktObj) return;
@@ -4986,24 +5004,43 @@
         netElem.className = "font-mono font-extrabold text-rose-400 text-sm";
       }
 
-      // Enforce Circuit Breaker if daily loss threshold exceeded
+      // Enforce Circuit Breaker: pause new auto-entries when daily loss limit reached; NEVER dump open positions!
       if (netPnl <= -Math.abs(maxDailyLoss)) {
         if (isRunning) {
-          toggleEngine();
-          logTerminal(`<strong class="text-rose-500">🚨 CIRCUIT BREAKER TRIGGERED! Net loss reached ${curr}${Math.abs(netPnl).toFixed(2)} (Limit: ${curr}${maxDailyLoss}). Auto-liquidating open positions.</strong>`);
-          triggerKillSwitch();
+          isRunning = false;
+          autoEntryCooldownUntil = Date.now() + 60 * 60 * 1000;
+          const btn = document.getElementById("btn-toggle-engine");
+          const pill = document.getElementById("status-pill");
+          const statusTag = document.getElementById("bot-status-tag");
+          if (btn) {
+            btn.innerHTML = "<span>▶</span> START ALGO BOT";
+            btn.className = "w-full bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-200 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition glow-green";
+          }
+          if (pill) {
+            pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> <span>PAUSED (MAX LOSS)</span>`;
+            pill.className = "px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold bg-[#191507] text-amber-300 border border-amber-600/40 flex items-center gap-2";
+          }
+          if (statusTag) {
+            statusTag.innerText = "PAUSED";
+            statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-amber-950/70 text-amber-300 font-bold border border-amber-800";
+          }
+          logTerminal(`⚠️ <strong class="text-amber-400 font-bold">[MAX DAILY LOSS PAUSE]</strong> Daily net PnL reached ${curr}${Math.abs(netPnl).toFixed(2)} (Threshold: ${curr}${maxDailyLoss.toFixed(2)}). Algo Bot paused from new entries. All ${positions.length} open position(s) remain ACTIVE and protected by their Trailing Stop Loss & Target.`);
+          saveSessionState();
         }
       }
       document.getElementById("badge-pos-count").innerText = positions.length;
     }
 
     function updateMaxLoss() {
-      const val = parseFloat(document.getElementById("input-maxloss").value) || 200;
-      maxDailyLoss = val;
+      const raw = document.getElementById("input-maxloss")?.value;
+      const val = parseFloat(raw);
+      if (isNaN(val) || val <= 0) return; // Ignore invalid or intermediate typing values
+      maxDailyLoss = Math.abs(val);
       const pct = capital > 0 ? ((maxDailyLoss / capital) * 100).toFixed(1) : "2.8";
-      document.getElementById("maxloss-pct-tag").innerText = `(${pct}%)`;
+      const tag = document.getElementById("maxloss-pct-tag");
+      if (tag) tag.innerText = `(${pct}%)`;
       const curr = getCurrSymbol();
-      logTerminal(`[RISK SHIELD] Circuit breaker adjusted to max daily loss: <strong class="text-rose-400">${curr}${maxDailyLoss.toFixed(2)}</strong> (${pct}% of capital).`);
+      logTerminal(`🛡️ <strong class="text-emerald-400">[RISK LIMIT UPDATED]</strong> Max daily loss threshold set to <strong>${curr}${maxDailyLoss.toFixed(2)}</strong> (${pct}% of capital). Open positions remain 100% active and preserved.`);
       saveSessionState();
     }
 
@@ -5721,6 +5758,35 @@
 
     function scanAndExecuteSetup(isInitialScan = false) {
       if (!isRunning || positions.length >= MAX_OPEN_POSITIONS || Date.now() < autoEntryCooldownUntil) return;
+
+      // 1. Zerodha REAL Mode Security Barrier:
+      // When in REAL (Zerodha) mode, ONLY Indian exchange assets (NSE Stocks, NSE F&O, MCX) are allowed.
+      // Crypto desk is 100% blocked from executing in Zerodha mode!
+      if (tradingMode === "REAL" && currentMarket === "crypto") {
+        if (isInitialScan) {
+          logTerminal(`⚠️ <strong class="text-amber-400">[REAL MODE RESTRICTION]</strong> Zerodha does not support Crypto trading. Crypto is strictly available for Paper practice only.`);
+        }
+        return;
+      }
+
+      // 2. Schedule Gate: Crypto Practice Only AFTER Indian Market Hours!
+      // During Indian market hours (9:15 AM - 3:30 PM IST), focus strictly on Indian markets.
+      // Crypto practice is held until Indian market closes at 3:30 PM IST.
+      if (currentMarket === "crypto" && isNSEMarketHoursIST()) {
+        if (isInitialScan) {
+          logTerminal(`🕒 <span class="text-amber-400 font-bold">[INDIAN MARKET ACTIVE (9:15-3:30 IST)]</span> Crypto practice is scheduled AFTER Indian market closes. Indian market currently has 100% focus.`);
+        }
+        return;
+      }
+
+      // 3. Indian Market Real Hours Guard:
+      // In REAL mode, Indian Stocks and F&O only trade during live exchange hours (9:15 AM - 3:30 PM IST)
+      if (tradingMode === "REAL" && (currentMarket === "india" || currentMarket === "fno") && !isNSEMarketHoursIST()) {
+        if (isInitialScan) {
+          logTerminal(`🕒 <span class="text-amber-400 font-bold">[NSE MARKET CLOSED]</span> Real Zerodha orders for Stocks and F&O only execute during live market hours (9:15 AM - 3:30 PM IST).`);
+        }
+        return;
+      }
 
       const now = Date.now();
       const isLiveNSE = isNSEMarketHoursIST() && (dataFeedMode === "LIVE" || (dataFeedMode === "AUTO" && isLiveZerodhaFeedActive));
