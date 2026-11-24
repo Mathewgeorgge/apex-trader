@@ -269,18 +269,26 @@
             </div>
           </div>
 
-          <!-- Indicator Checkboxes -->
-          <div class="flex items-center space-x-3 text-[10px]">
-            <label class="flex items-center space-x-1 cursor-pointer">
-              <input type="checkbox" id="chk-ema" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-blue-500" />
-              <span class="text-blue-400 font-semibold">20 EMA</span>
+          <!-- Indicator Checkboxes: The Core Triad (Always Checked) + Volume Candles + Overlays -->
+          <div class="flex items-center space-x-2.5 text-[10px] flex-wrap gap-y-1">
+            <label class="flex items-center space-x-1 cursor-pointer" title="SuperTrend (10, 3) Institutional Trend Band">
+              <input type="checkbox" id="chk-supertrend" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-emerald-500" />
+              <span class="text-emerald-400 font-bold">SuperTrend (10,3)</span>
             </label>
-            <label class="flex items-center space-x-1 cursor-pointer">
-              <input type="checkbox" id="chk-supertrend" onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-emerald-500" />
-              <span class="text-emerald-400 font-semibold">Supertrend(10,3)</span>
+            <label class="flex items-center space-x-1 cursor-pointer" title="EMA Cross (9 Fast, 21 Slow) with Cross Signals">
+              <input type="checkbox" id="chk-emacross" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-teal-400" />
+              <span class="text-teal-400 font-bold">EMA Cross (9, 21)</span>
             </label>
-            <label class="flex items-center space-x-1 cursor-pointer">
-              <input type="checkbox" id="chk-vwap" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-amber-500" />
+            <label class="flex items-center space-x-1 cursor-pointer" title="200-Period Moving Average Baseline">
+              <input type="checkbox" id="chk-ma200" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-sky-400" />
+              <span class="text-sky-400 font-bold">MA 200</span>
+            </label>
+            <label class="flex items-center space-x-1 cursor-pointer" title="Volume-Weighted Candle Widths (Equivolume)">
+              <input type="checkbox" id="chk-volcandles" checked onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-cyan-400" />
+              <span class="text-cyan-300 font-bold">Volume Candles</span>
+            </label>
+            <label class="flex items-center space-x-1 cursor-pointer" title="Volume-Weighted Average Price">
+              <input type="checkbox" id="chk-vwap" onchange="renderChart()" class="rounded bg-gray-900 border-gray-700 text-amber-500" />
               <span class="text-amber-400 font-semibold">VWAP</span>
             </label>
             <label class="flex items-center space-x-1 cursor-pointer" title="Central Pivot Range (TC, Pivot, BC) from Bhavcopy EOD data">
@@ -294,9 +302,9 @@
           </div>
         </div>
 
-        <!-- Main Chart Canvas -->
-        <div class="bg-[#040711] rounded-lg p-2 border border-gray-800/80 relative flex-1 min-h-[300px]">
-          <canvas id="mainChartCanvas" height="300" class="w-full"></canvas>
+        <!-- Main Chart Canvas (Enlarged for Price + Dedicated Volume Pane) -->
+        <div class="bg-[#040711] rounded-lg p-2 border border-gray-800/80 relative flex-1 min-h-[350px]">
+          <canvas id="mainChartCanvas" height="350" class="w-full"></canvas>
         </div>
 
         <!-- Sub-Chart: RSI (14) Large High-Precision Oscillator Panel -->
@@ -341,7 +349,7 @@
             <select id="sel-algo-strategy" class="w-full bg-[#070b14] border border-gray-700 text-white rounded p-1.5 text-xs font-semibold">
               <option value="straddle_920">🎯 9:20 AM Short Straddle (Sell ATM CE + PE)</option>
               <option value="option_breakout">⚡ Option Momentum Buyer (Call/Put Breakout)</option>
-              <option value="supertrend_ema">Supertrend (10,3) + 20 EMA Cross</option>
+              <option value="supertrend_ema">Supertrend (10,3) + EMA Cross (9,21) + MA 200</option>
               <option value="vwap_breakout">VWAP Institutional Momentum</option>
               <option value="rsi_scalp">RSI Extreme Scalper (<30 Buy / >70 Sell)</option>
               <option value="news_breakout">News Catalyst Sentiment Breakout</option>
@@ -2978,7 +2986,7 @@
     // Pre-populate full intraday 1-minute history (450 bars for NSE Equities/F&O -> supports true 1m, 3m, 5m, 15m charts!)
     Object.keys(marketCatalog).forEach(mktKey => {
       const symObj = marketCatalog[mktKey].symbols;
-      const histCandles = (mktKey === "india" || mktKey === "fno") ? 450 : 90;
+      const histCandles = 450;
       Object.keys(symObj).forEach(sym => {
         const item = symObj[sym];
         const targetAnchor = item.ltp;
@@ -3774,27 +3782,53 @@
           reason = `RSI (${rsi.toFixed(1)}) Neutral (Awaiting <=${buyThresh} or >=${sellThresh})`;
         }
       } else if (strategyKey === "supertrend_ema") {
-        // Supertrend + 20 EMA Cross / Dynamic Bounce
+        // SuperTrend (10,3) + EMA (9, 21) Cross + MA 200 Trend Filter
         const isBullishCandle = lastCandle.close >= lastCandle.open;
         const isBearishCandle = lastCandle.close <= lastCandle.open;
-        const bouncedAboveEma = ltp > ema && prevCandle.low <= ema && isBullishCandle;
-        const freshCrossAbove = prevCandle.close <= ema && ltp > ema;
-        const trendFollowBull = ltp > ema && isBullishCandle && volRatio >= 1.1;
 
-        const bouncedBelowEma = ltp < ema && prevCandle.high >= ema && isBearishCandle;
-        const freshCrossBelow = prevCandle.close >= ema && ltp < ema;
-        const trendFollowBear = ltp < ema && isBearishCandle && volRatio >= 1.1;
+        // Calculate EMA 9 and EMA 21
+        let e9 = candles[0].close, e21 = candles[0].close;
+        const k9 = 2 / (9 + 1), k21 = 2 / (21 + 1);
+        candles.forEach(c => {
+          e9 = c.close * k9 + e9 * (1 - k9);
+          e21 = c.close * k21 + e21 * (1 - k21);
+        });
 
-        if (bouncedAboveEma || freshCrossAbove || (isSim && trendFollowBull)) {
+        // Calculate SuperTrend
+        let stBull = true, lastST = candles[0].close * 0.995;
+        let atr = Math.max(candles[0].high - candles[0].low, 0.01);
+        for (let i = 0; i < candles.length; i++) {
+          const b = candles[i];
+          const prevC = i > 0 ? candles[i - 1].close : b.open;
+          const tr = Math.max(b.high - b.low, Math.abs(b.high - prevC), Math.abs(b.low - prevC));
+          atr = (atr * 9 + tr) / 10;
+          const offset = atr * 3;
+          const hl2 = (b.high + b.low) / 2;
+          if (stBull) {
+            const cand = hl2 - offset;
+            lastST = Math.max(lastST, cand);
+            if (b.close < lastST) { stBull = false; lastST = hl2 + offset; }
+          } else {
+            const cand = hl2 + offset;
+            lastST = Math.min(lastST, cand);
+            if (b.close > lastST) { stBull = true; lastST = hl2 - offset; }
+          }
+        }
+
+        const isSupertrendBull = stBull;
+        const isEmaBull = e9 > e21;
+        const isEmaBear = e9 < e21;
+
+        if (isSupertrendBull && (isEmaBull || isBullishCandle) && (volRatio >= 1.05 || isSim)) {
           isTriggered = true;
           side = "BUY";
-          reason = `20 EMA Trend Confluence (${ltp.toFixed(2)} > EMA ${ema.toFixed(2)}) + ${volRatio}x Vol`;
-        } else if (bouncedBelowEma || freshCrossBelow || (isSim && trendFollowBear)) {
+          reason = `SuperTrend (10,3) Bullish + EMA 9 (${e9.toFixed(1)}) > 21 (${e21.toFixed(1)}) + ${volRatio}x Vol`;
+        } else if (!isSupertrendBull && (isEmaBear || isBearishCandle) && (volRatio >= 1.05 || isSim)) {
           isTriggered = true;
           side = "SELL";
-          reason = `20 EMA Breakdown (${ltp.toFixed(2)} < EMA ${ema.toFixed(2)}) + ${volRatio}x Vol`;
+          reason = `SuperTrend (10,3) Bearish + EMA 9 (${e9.toFixed(1)}) < 21 (${e21.toFixed(1)}) + ${volRatio}x Vol`;
         } else {
-          reason = `Awaiting 20 EMA test/cross (LTP ${ltp.toFixed(2)} vs EMA ${ema.toFixed(2)})`;
+          reason = `Awaiting SuperTrend & EMA (9,21) Confluence (ST: ${isSupertrendBull ? 'BULL' : 'BEAR'}, EMA9: ${e9.toFixed(1)} vs EMA21: ${e21.toFixed(1)})`;
         }
       } else if (strategyKey === "vwap_breakout") {
         // VWAP Institutional Momentum
@@ -4354,7 +4388,7 @@
       const strat = document.getElementById("sel-algo-strategy").value;
 
       const msgs = {
-        "supertrend_ema": `[SUPERTREND 10,3 + 20 EMA] ${sym} @ ${curr}${ltp.toLocaleString()}. Price above EMA. 6/6 Risk Gates Passed. Next resistance: ${curr}${(ltp * 1.018).toFixed(2)}.`,
+        "supertrend_ema": `[SUPERTREND (10,3) + EMA (9,21) + MA 200] ${sym} @ ${curr}${ltp.toLocaleString()}. Price above EMA. 6/6 Risk Gates Passed. Next resistance: ${curr}${(ltp * 1.018).toFixed(2)}.`,
         "vwap_breakout": `[INSTITUTIONAL VWAP] ${sym} volume surge 2.1x on 5m candle. VWAP support at ${curr}${(ltp * 0.994).toFixed(2)}. Order depth cleared.`,
         "rsi_scalp": `[RSI SCALPER] ${sym} RSI(14) neutral at 58.4. Monitoring boundaries (<30 Buy / >70 Sell) for mean-reversion scalp.`,
         "news_breakout": `[NEWS CATALYST] Active Sentiment Radar: 88% Bullish aggregate sentiment across ${currentMarket.toUpperCase()} assets. Long bias armed.`
@@ -4775,7 +4809,7 @@
         const stratVal = document.getElementById("sel-algo-strategy")?.value || "rsi_scalp";
         const stratMap = {
           "rsi_scalp": "RSI Extreme Scalper (<30 Buy / >70 Sell)",
-          "supertrend_ema": "Supertrend (10,3) + 20 EMA Cross",
+          "supertrend_ema": "Supertrend (10,3) + EMA (9,21) Cross + MA 200",
           "vwap_breakout": "VWAP Institutional Momentum",
           "option_breakout": "Option Momentum Buyer",
           "straddle_920": "9:20 AM Short Straddle",
@@ -5223,6 +5257,7 @@
     }
 
     // High-Resolution Professional Institutional Chart Canvas
+    // With SuperTrend (10,3), EMA Cross (9, 21), MA 200, Volume Candles & Dedicated Volume Sub-Panel
     function renderChart() {
       const canvas = document.getElementById("mainChartCanvas");
       if (!canvas) return;
@@ -5230,62 +5265,216 @@
       const rect = canvas.parentElement.getBoundingClientRect();
       if (!rect.width) return;
 
+      const chartH = 350;
       // High-DPI (Retina / Mobile) crispness
       const dpr = window.devicePixelRatio || 1;
       canvas.width = rect.width * dpr;
-      canvas.height = 300 * dpr;
+      canvas.height = chartH * dpr;
       canvas.style.width = `${rect.width}px`;
-      canvas.style.height = `300px`;
+      canvas.style.height = `${chartH}px`;
       ctx.scale(dpr, dpr);
 
       const w = rect.width;
-      const h = 300;
+      const h = chartH;
       ctx.clearRect(0, 0, w, h);
 
-      const symObj = marketCatalog[currentMarket].symbols[currentSymbol];
+      // Deep institutional midnight background
+      ctx.fillStyle = "#040711";
+      ctx.fillRect(0, 0, w, h);
+
+      const symObj = marketCatalog[currentMarket]?.symbols?.[currentSymbol];
       if (!symObj || !symObj.history || symObj.history.length === 0) return;
-      const candles = getAggregatedCandles(symObj.history, timeframeMinutes, 55);
+
+      // Aggregate full available history (up to 300 bars) for accurate MA 200 & EMA Cross calculations
+      const allAggregated = getAggregatedCandles(symObj.history, timeframeMinutes, 300);
+      if (allAggregated.length === 0) return;
+
+      const visibleCount = 55;
+      const candles = allAggregated.slice(-visibleCount);
       if (candles.length === 0) return;
 
-      let minP = Infinity, maxP = -Infinity, maxVol = 1;
-      candles.forEach(c => {
-        if (c.low < minP) minP = c.low;
-        if (c.high > maxP) maxP = c.high;
-        if (c.volume > maxVol) maxVol = c.volume;
-      });
-      const pad = (maxP - minP) * 0.12 || 1;
-      minP -= pad; maxP += pad;
+      // -----------------------------------------------------------------------
+      // 1. Calculate Core Indicators over allAggregated for mathematical precision
+      // -----------------------------------------------------------------------
 
-      const chartRightMargin = 68;
+      // A) MA 200 (Close)
+      const ma200All = [];
+      let ma200Sum = 0;
+      const k200 = 2 / (200 + 1);
+      for (let i = 0; i < allAggregated.length; i++) {
+        if (i < 200) {
+          ma200Sum += allAggregated[i].close;
+          ma200All.push(ma200Sum / (i + 1));
+        } else {
+          const prev = ma200All[i - 1];
+          ma200All.push(allAggregated[i].close * k200 + prev * (1 - k200));
+        }
+      }
+      const visibleMA200 = ma200All.slice(-candles.length);
+
+      // B) EMA Cross (9 Fast, 21 Slow)
+      const ema9All = [];
+      const ema21All = [];
+      let e9 = allAggregated[0].close;
+      let e21 = allAggregated[0].close;
+      const k9 = 2 / (9 + 1);
+      const k21 = 2 / (21 + 1);
+      allAggregated.forEach((b, idx) => {
+        if (idx === 0) {
+          e9 = b.close;
+          e21 = b.close;
+        } else {
+          e9 = b.close * k9 + e9 * (1 - k9);
+          e21 = b.close * k21 + e21 * (1 - k21);
+        }
+        ema9All.push(e9);
+        ema21All.push(e21);
+      });
+      const visibleEMA9 = ema9All.slice(-candles.length);
+      const visibleEMA21 = ema21All.slice(-candles.length);
+
+      // C) SuperTrend (10, 3) Stepped Institutional Band
+      const stAll = [];
+      let stBull = true;
+      let lastST = allAggregated[0].close * 0.995;
+      let atr = Math.max(allAggregated[0].high - allAggregated[0].low, 0.01);
+      for (let i = 0; i < allAggregated.length; i++) {
+        const b = allAggregated[i];
+        const prevC = i > 0 ? allAggregated[i - 1].close : b.open;
+        const tr = Math.max(b.high - b.low, Math.abs(b.high - prevC), Math.abs(b.low - prevC));
+        atr = (atr * 9 + tr) / 10;
+        const offset = atr * 3;
+        const hl2 = (b.high + b.low) / 2;
+
+        if (stBull) {
+          const candidate = hl2 - offset;
+          lastST = Math.max(lastST, candidate);
+          if (b.close < lastST) {
+            stBull = false;
+            lastST = hl2 + offset;
+          }
+        } else {
+          const candidate = hl2 + offset;
+          lastST = Math.min(lastST, candidate);
+          if (b.close > lastST) {
+            stBull = true;
+            lastST = hl2 - offset;
+          }
+        }
+        stAll.push({ value: lastST, isBull: stBull });
+      }
+      const visibleST = stAll.slice(-candles.length);
+
+      // D) Volume MA 20
+      const volMaSeries = [];
+      for (let i = 0; i < candles.length; i++) {
+        let sum = 0, count = 0;
+        for (let j = Math.max(0, i - 19); j <= i; j++) {
+          sum += (candles[j].volume || 0);
+          count++;
+        }
+        volMaSeries.push(sum / count);
+      }
+
+      // Checkbox state flags
+      const chkSupertrend = document.getElementById("chk-supertrend") ? document.getElementById("chk-supertrend").checked : true;
+      const chkEmaCross = document.getElementById("chk-emacross") ? document.getElementById("chk-emacross").checked : true;
+      const chkMA200 = document.getElementById("chk-ma200") ? document.getElementById("chk-ma200").checked : true;
+      const useVolCandles = document.getElementById("chk-volcandles") ? document.getElementById("chk-volcandles").checked : true;
+
+      // -----------------------------------------------------------------------
+      // 2. Layout Geometry & Coordinate Systems
+      // -----------------------------------------------------------------------
+      const chartRightMargin = 72;
       const chartBottomMargin = 22;
       const chartPlotW = w - chartRightMargin;
-      const chartPlotH = h - chartBottomMargin;
+      const chartTotalH = h - chartBottomMargin;
 
-      // Draw Grid Lines & Price Ticks
-      ctx.strokeStyle = "#131a29";
+      // Top ~74% Price Plot, Bottom ~26% Dedicated Volume Sub-panel
+      const pricePlotH = Math.floor(chartTotalH * 0.74);
+      const volTopY = pricePlotH;
+      const volPlotH = chartTotalH - volTopY;
+
+      // Determine price limits
+      let minP = Infinity, maxP = -Infinity;
+      candles.forEach((c, idx) => {
+        if (c.low < minP) minP = c.low;
+        if (c.high > maxP) maxP = c.high;
+        if (chkSupertrend && visibleST[idx]) {
+          if (visibleST[idx].value < minP) minP = visibleST[idx].value;
+          if (visibleST[idx].value > maxP) maxP = visibleST[idx].value;
+        }
+        if (chkEmaCross) {
+          if (visibleEMA9[idx] < minP) minP = visibleEMA9[idx];
+          if (visibleEMA9[idx] > maxP) maxP = visibleEMA9[idx];
+          if (visibleEMA21[idx] < minP) minP = visibleEMA21[idx];
+          if (visibleEMA21[idx] > maxP) maxP = visibleEMA21[idx];
+        }
+        if (chkMA200 && visibleMA200[idx]) {
+          if (visibleMA200[idx] < minP) minP = visibleMA200[idx];
+          if (visibleMA200[idx] > maxP) maxP = visibleMA200[idx];
+        }
+      });
+      const pad = (maxP - minP) * 0.08 || 1;
+      minP -= pad; maxP += pad;
+
+      // Determine volume limits
+      let maxVol = 1;
+      let totalVol = 0;
+      candles.forEach(c => {
+        const v = c.volume || 1;
+        if (v > maxVol) maxVol = v;
+        totalVol += v;
+      });
+      const avgVol = totalVol / candles.length || 1;
+
+      // -----------------------------------------------------------------------
+      // 3. Grid Lines & Axis Markers
+      // -----------------------------------------------------------------------
+      // Horizontal Price Grid Lines
+      ctx.strokeStyle = "#111827";
       ctx.lineWidth = 1;
-      for (let i = 1; i <= 5; i++) {
-        const y = (chartPlotH / 6) * i;
+      for (let i = 1; i <= 4; i++) {
+        const y = (pricePlotH / 5) * i;
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(chartPlotW, y);
         ctx.stroke();
 
-        const priceVal = maxP - (i / 6) * (maxP - minP);
+        const priceVal = maxP - (i / 5) * (maxP - minP);
         ctx.fillStyle = "#64748b";
         ctx.font = "9px monospace";
         ctx.textAlign = "left";
         ctx.fillText(priceVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}), chartPlotW + 6, y + 3);
       }
 
-      // Draw Time Grid Lines & Timeframe-Accurate Timestamps
+      // Separator line between Price and Volume Sub-panel
+      ctx.strokeStyle = "#1e293b";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, volTopY);
+      ctx.lineTo(chartPlotW, volTopY);
+      ctx.stroke();
+
+      // Volume sub-panel label & axis
+      ctx.fillStyle = "#475569";
+      ctx.font = "bold 9px system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("VOLUME", 8, volTopY + 12);
+
+      const volTopVal = (maxVol >= 1000000) ? (maxVol / 1000000).toFixed(1) + 'M' : (maxVol / 1000).toFixed(1) + 'K';
+      ctx.fillStyle = "#64748b";
+      ctx.font = "9px monospace";
+      ctx.fillText(volTopVal, chartPlotW + 6, volTopY + 14);
+
+      // Vertical Time Grid Lines across full canvas height
       const timeSteps = 5;
       for (let i = 1; i <= timeSteps; i++) {
         const x = (chartPlotW / (timeSteps + 1)) * i;
-        ctx.strokeStyle = "#131a29";
+        ctx.strokeStyle = "#111827";
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x, chartPlotH);
+        ctx.lineTo(x, chartTotalH);
         ctx.stroke();
 
         const cIdx = Math.min(candles.length - 1, Math.floor((i / (timeSteps + 1)) * candles.length));
@@ -5296,137 +5485,225 @@
           ctx.fillStyle = "#64748b";
           ctx.font = "9px monospace";
           ctx.textAlign = "center";
-          ctx.fillText(`${hh}:${mm}`, x, chartPlotH + 14);
+          ctx.fillText(`${hh}:${mm}`, x, chartTotalH + 14);
         }
       }
 
-      // Draw Volume Histogram (bottom 18% of chart)
-      const volAreaH = chartPlotH * 0.18;
+      // -----------------------------------------------------------------------
+      // 4. Candle & Volume Slot Calculations (Equivolume "Volume-Wise")
+      // -----------------------------------------------------------------------
       const candleSlot = chartPlotW / candles.length;
-      const candleW = Math.max(3, candleSlot - 2.5);
+      const baseW = Math.max(3, candleSlot * 0.68);
 
-      candles.forEach((c, idx) => {
-        const x = idx * candleSlot + 1.25;
-        const vH = Math.max(2, (c.volume / maxVol) * volAreaH);
-        const isUp = c.close >= c.open;
-        ctx.fillStyle = isUp ? "rgba(16, 185, 129, 0.22)" : "rgba(244, 63, 94, 0.22)";
-        ctx.fillRect(x, chartPlotH - vH, candleW, vH);
+      // Compute volume candle width for each bar
+      const candleGeometries = candles.map((c, idx) => {
+        const xCenter = idx * candleSlot + candleSlot / 2;
+        let cWidth = baseW;
+        if (useVolCandles) {
+          const v = c.volume || avgVol;
+          const ratio = v / avgVol;
+          // Smooth square-root expansion/compression
+          const factor = Math.max(0.42, Math.min(2.1, Math.sqrt(ratio)));
+          cWidth = Math.max(3.2, Math.min(candleSlot * 1.45, baseW * factor));
+        }
+        const xLeft = xCenter - cWidth / 2;
+        return { xCenter, xLeft, cWidth };
       });
 
-      // Draw Candlesticks (Historical + Live)
+      // -----------------------------------------------------------------------
+      // 5. Draw Volume Sub-Panel Bars & 20 Vol MA
+      // -----------------------------------------------------------------------
       candles.forEach((c, idx) => {
-        const x = idx * candleSlot + 1.25;
-        const xCenter = x + candleW / 2;
-        const yOpen = chartPlotH - ((c.open - minP) / (maxP - minP)) * chartPlotH;
-        const yClose = chartPlotH - ((c.close - minP) / (maxP - minP)) * chartPlotH;
-        const yHigh = chartPlotH - ((c.high - minP) / (maxP - minP)) * chartPlotH;
-        const yLow = chartPlotH - ((c.low - minP) / (maxP - minP)) * chartPlotH;
+        const geom = candleGeometries[idx];
+        const vH = Math.max(2, ((c.volume || 0) / maxVol) * (volPlotH - 14));
+        const vY = chartTotalH - vH;
+        const isUp = c.close >= c.open;
+
+        // Vibrant pastel fills matching TradingView style
+        ctx.fillStyle = isUp ? "rgba(16, 185, 129, 0.70)" : "rgba(244, 63, 94, 0.70)";
+        ctx.fillRect(geom.xLeft, vY, geom.cWidth, vH);
+        ctx.strokeStyle = isUp ? "#34d399" : "#fb7185";
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(geom.xLeft, vY, geom.cWidth, vH);
+      });
+
+      // Draw 20-period Volume Moving Average Line (Sky Blue)
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      volMaSeries.forEach((vma, idx) => {
+        const geom = candleGeometries[idx];
+        const vH = Math.max(2, (vma / maxVol) * (volPlotH - 14));
+        const vY = chartTotalH - vH;
+        if (idx === 0) ctx.moveTo(geom.xCenter, vY);
+        else ctx.lineTo(geom.xCenter, vY);
+      });
+      ctx.stroke();
+
+      // -----------------------------------------------------------------------
+      // 6. Draw Candlesticks in Price Area ("Volume-Wise Candles")
+      // -----------------------------------------------------------------------
+      candles.forEach((c, idx) => {
+        const geom = candleGeometries[idx];
+        const yOpen = pricePlotH - ((c.open - minP) / (maxP - minP)) * pricePlotH;
+        const yClose = pricePlotH - ((c.close - minP) / (maxP - minP)) * pricePlotH;
+        const yHigh = pricePlotH - ((c.high - minP) / (maxP - minP)) * pricePlotH;
+        const yLow = pricePlotH - ((c.low - minP) / (maxP - minP)) * pricePlotH;
 
         const isGreen = c.close >= c.open;
         const strokeColor = isGreen ? "#10b981" : "#f43f5e";
         const fillColor = isGreen ? "#10b981" : "#f43f5e";
 
-        // Wick
+        // Center Wick
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.moveTo(xCenter, yHigh);
-        ctx.lineTo(xCenter, yLow);
+        ctx.moveTo(geom.xCenter, yHigh);
+        ctx.lineTo(geom.xCenter, yLow);
         ctx.stroke();
 
-        // Body
+        // Volume-scaled Body
         const top = Math.min(yOpen, yClose);
         const height = Math.max(2, Math.abs(yClose - yOpen));
         ctx.fillStyle = fillColor;
-        ctx.fillRect(x, top, candleW, height);
+        ctx.fillRect(geom.xLeft, top, geom.cWidth, height);
 
-        // Highlight Current Live Active Candle
+        // Highlight Live Active Candle
         if (idx === candles.length - 1) {
           ctx.strokeStyle = isGreen ? "#34d399" : "#fb7185";
-          ctx.lineWidth = 1.5;
-          ctx.strokeRect(x - 0.5, top - 0.5, candleW + 1, height + 1);
+          ctx.lineWidth = 1.6;
+          ctx.strokeRect(geom.xLeft - 0.5, top - 0.5, geom.cWidth + 1, height + 1);
 
           // Pulsing live tick dot
           ctx.fillStyle = isGreen ? "#10b981" : "#f43f5e";
           ctx.beginPath();
-          ctx.arc(xCenter, yClose, 3, 0, Math.PI * 2);
+          ctx.arc(geom.xCenter, yClose, 3.5, 0, Math.PI * 2);
           ctx.fill();
         }
       });
 
-      // Overlay 20 EMA
-      if (document.getElementById("chk-ema") && document.getElementById("chk-ema").checked) {
-        ctx.strokeStyle = "#38bdf8";
-        ctx.lineWidth = 1.6;
+      // -----------------------------------------------------------------------
+      // 7. Overlay 1: SuperTrend (10, 3) Stepped Institutional Band
+      // -----------------------------------------------------------------------
+      if (chkSupertrend) {
+        ctx.lineWidth = 2.2;
+        for (let i = 0; i < candles.length; i++) {
+          const st = visibleST[i];
+          const x1 = candleGeometries[i].xCenter;
+          const x2 = (i + 1 < candles.length) ? candleGeometries[i + 1].xCenter : chartPlotW;
+          const y = pricePlotH - ((st.value - minP) / (maxP - minP)) * pricePlotH;
+
+          ctx.strokeStyle = st.isBull ? "#10b981" : "#ef4444";
+          ctx.beginPath();
+          ctx.moveTo(x1, y);
+          ctx.lineTo(x2, y);
+          ctx.stroke();
+
+          // Connect vertical step to next bar
+          if (i + 1 < candles.length) {
+            const nextST = visibleST[i + 1];
+            const nextY = pricePlotH - ((nextST.value - minP) / (maxP - minP)) * pricePlotH;
+            if (Math.abs(nextY - y) > 0.5) {
+              ctx.strokeStyle = nextST.isBull ? "#10b981" : "#ef4444";
+              ctx.beginPath();
+              ctx.moveTo(x2, y);
+              ctx.lineTo(x2, nextY);
+              ctx.stroke();
+            }
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 8. Overlay 2: EMA Cross (9 Fast, 21 Slow) + Cross Signals
+      // -----------------------------------------------------------------------
+      if (chkEmaCross) {
+        // Draw Fast EMA 9 (Vibrant Teal)
+        ctx.strokeStyle = "#14b8a6";
+        ctx.lineWidth = 1.8;
         ctx.beginPath();
-        let ema = candles[0].close;
-        const k = 2 / (20 + 1);
         candles.forEach((c, idx) => {
-          ema = c.close * k + ema * (1 - k);
-          const x = idx * candleSlot + candleW / 2;
-          const y = chartPlotH - ((ema - minP) / (maxP - minP)) * chartPlotH;
+          const x = candleGeometries[idx].xCenter;
+          const y = pricePlotH - ((visibleEMA9[idx] - minP) / (maxP - minP)) * pricePlotH;
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        // Draw Slow EMA 21 (Warm Amber)
+        ctx.strokeStyle = "#f59e0b";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        candles.forEach((c, idx) => {
+          const x = candleGeometries[idx].xCenter;
+          const y = pricePlotH - ((visibleEMA21[idx] - minP) / (maxP - minP)) * pricePlotH;
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        // Detect & Draw Cross Markers (Blue '+' cross symbol)
+        for (let i = 1; i < candles.length; i++) {
+          const prevE9 = visibleEMA9[i - 1];
+          const prevE21 = visibleEMA21[i - 1];
+          const curE9 = visibleEMA9[i];
+          const curE21 = visibleEMA21[i];
+          const x = candleGeometries[i].xCenter;
+
+          const isBullCross = prevE9 <= prevE21 && curE9 > curE21;
+          const isBearCross = prevE9 >= prevE21 && curE9 < curE21;
+
+          if (isBullCross || isBearCross) {
+            const crossPrice = (curE9 + curE21) / 2;
+            const y = pricePlotH - ((crossPrice - minP) / (maxP - minP)) * pricePlotH;
+
+            ctx.save();
+            ctx.strokeStyle = isBullCross ? "#38bdf8" : "#818cf8";
+            ctx.lineWidth = 2.4;
+            const crossSize = 5;
+            ctx.beginPath();
+            ctx.moveTo(x - crossSize, y);
+            ctx.lineTo(x + crossSize, y);
+            ctx.moveTo(x, y - crossSize);
+            ctx.lineTo(x, y + crossSize);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 9. Overlay 3: MA 200 (Close) Baseline
+      // -----------------------------------------------------------------------
+      if (chkMA200) {
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        candles.forEach((c, idx) => {
+          const x = candleGeometries[idx].xCenter;
+          const y = pricePlotH - ((visibleMA200[idx] - minP) / (maxP - minP)) * pricePlotH;
           if (idx === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         });
         ctx.stroke();
       }
 
-      // Overlay Supertrend (10,3) - Smooth Institutional Band without sawteeth
-      if (document.getElementById("chk-supertrend") && document.getElementById("chk-supertrend").checked) {
-        let isBull = true;
-        let lastBand = candles[0].close * 0.995;
-        ctx.lineWidth = 1.8;
-
-        for (let i = 0; i < candles.length; i++) {
-          const c = candles[i];
-          const x = i * candleSlot + candleW / 2;
-          const bandOffset = c.close * 0.004;
-
-          if (isBull) {
-            const candidate = c.close - bandOffset;
-            lastBand = Math.max(lastBand, candidate);
-            if (c.close < lastBand) {
-              isBull = false;
-              lastBand = c.close + bandOffset;
-            }
-          } else {
-            const candidate = c.close + bandOffset;
-            lastBand = Math.min(lastBand, candidate);
-            if (c.close > lastBand) {
-              isBull = true;
-              lastBand = c.close - bandOffset;
-            }
-          }
-
-          const y = chartPlotH - ((lastBand - minP) / (maxP - minP)) * chartPlotH;
-          ctx.strokeStyle = isBull ? "#10b981" : "#ef4444";
-
-          if (i === 0) {
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-          }
-        }
-      }
-
-      // Overlay VWAP
+      // -----------------------------------------------------------------------
+      // 10. Optional Overlays (VWAP, CPR, PDH/PDL)
+      // -----------------------------------------------------------------------
       if (document.getElementById("chk-vwap") && document.getElementById("chk-vwap").checked) {
-        ctx.strokeStyle = "#f59e0b";
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "#eab308";
+        ctx.lineWidth = 1.4;
         ctx.setLineDash([4, 3]);
         ctx.beginPath();
         let cumVol = 0, cumTypical = 0;
         candles.forEach((c, idx) => {
           const typical = (c.high + c.low + c.close) / 3;
-          cumVol += c.volume;
-          cumTypical += typical * c.volume;
+          cumVol += (c.volume || 1);
+          cumTypical += typical * (c.volume || 1);
           const vwap = cumTypical / cumVol;
-          const x = idx * candleSlot + candleW / 2;
-          const y = chartPlotH - ((vwap - minP) / (maxP - minP)) * chartPlotH;
+          const x = candleGeometries[idx].xCenter;
+          const y = pricePlotH - ((vwap - minP) / (maxP - minP)) * pricePlotH;
           if (idx === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         });
@@ -5434,13 +5711,12 @@
         ctx.setLineDash([]);
       }
 
-      // Overlay CPR (Central Pivot Range) from Bhavcopy EOD (clean lines only, no cloud clutter)
       if (document.getElementById("chk-cpr") && document.getElementById("chk-cpr").checked) {
         const piv = getSymbolPivots(currentSymbol);
         if (piv && piv.tc >= minP && piv.bc <= maxP) {
-          const yTC = chartPlotH - ((piv.tc - minP) / (maxP - minP)) * chartPlotH;
-          const yP = chartPlotH - ((piv.pivot - minP) / (maxP - minP)) * chartPlotH;
-          const yBC = chartPlotH - ((piv.bc - minP) / (maxP - minP)) * chartPlotH;
+          const yTC = pricePlotH - ((piv.tc - minP) / (maxP - minP)) * pricePlotH;
+          const yP = pricePlotH - ((piv.pivot - minP) / (maxP - minP)) * pricePlotH;
+          const yBC = pricePlotH - ((piv.bc - minP) / (maxP - minP)) * pricePlotH;
 
           ctx.save();
           ctx.setLineDash([2, 4]);
@@ -5467,7 +5743,6 @@
         }
       }
 
-      // Overlay PDH & PDL (Previous Day High & Low) Breakout Gates (clean lines only)
       if (document.getElementById("chk-pdh") && document.getElementById("chk-pdh").checked) {
         const piv = getSymbolPivots(currentSymbol);
         if (piv) {
@@ -5476,7 +5751,7 @@
           ctx.lineWidth = 1.1;
 
           if (piv.pdh >= minP && piv.pdh <= maxP) {
-            const yPDH = chartPlotH - ((piv.pdh - minP) / (maxP - minP)) * chartPlotH;
+            const yPDH = pricePlotH - ((piv.pdh - minP) / (maxP - minP)) * pricePlotH;
             ctx.strokeStyle = "#eab308";
             ctx.beginPath();
             ctx.moveTo(0, yPDH); ctx.lineTo(chartPlotW, yPDH);
@@ -5484,7 +5759,7 @@
           }
 
           if (piv.pdl >= minP && piv.pdl <= maxP) {
-            const yPDL = chartPlotH - ((piv.pdl - minP) / (maxP - minP)) * chartPlotH;
+            const yPDL = pricePlotH - ((piv.pdl - minP) / (maxP - minP)) * pricePlotH;
             ctx.strokeStyle = "#f59e0b";
             ctx.beginPath();
             ctx.moveTo(0, yPDL); ctx.lineTo(chartPlotW, yPDL);
@@ -5494,14 +5769,16 @@
         }
       }
 
-      // LIVE HORIZONTAL PRICE LINE & BADGE (TradingView / Zerodha Kite Style)
+      // -----------------------------------------------------------------------
+      // 11. Live Horizontal Price Line & Right Margin Badge
+      // -----------------------------------------------------------------------
       const lastCandle = candles[candles.length - 1];
       const livePrice = lastCandle.close;
-      const yLive = chartPlotH - ((livePrice - minP) / (maxP - minP)) * chartPlotH;
+      const yLive = pricePlotH - ((livePrice - minP) / (maxP - minP)) * pricePlotH;
       const isGreenTick = livePrice >= lastCandle.open;
       const badgeBg = isGreenTick ? "#059669" : "#e11d48";
 
-      // Dashed price tracker line
+      // Dashed tracker line
       ctx.save();
       ctx.setLineDash([3, 3]);
       ctx.strokeStyle = isGreenTick ? "#10b981" : "#f43f5e";
@@ -5514,10 +5791,10 @@
 
       // Right-hand Live Price Badge
       ctx.fillStyle = badgeBg;
-      const badgeW = 64;
+      const badgeW = 68;
       const badgeH = 18;
       const badgeX = chartPlotW + 2;
-      const badgeY = Math.max(0, Math.min(chartPlotH - badgeH, yLive - badgeH / 2));
+      const badgeY = Math.max(0, Math.min(pricePlotH - badgeH, yLive - badgeH / 2));
       if (ctx.roundRect) {
         ctx.beginPath();
         ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 3);
@@ -5530,19 +5807,22 @@
       ctx.textAlign = "left";
       ctx.fillText(livePrice.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}), badgeX + 4, badgeY + 12.5);
 
-      // Clean Institutional Minimal HUD Header
+      // -----------------------------------------------------------------------
+      // 12. Institutional TradingView Header Legend (All 3 Indicators + Volume)
+      // -----------------------------------------------------------------------
       ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
-      ctx.fillStyle = "#cbd5e1";
+      ctx.fillStyle = "#e2e8f0";
       ctx.textAlign = "left";
-      ctx.fillText(`${currentSymbol} • ${timeframeMinutes}m`, 10, 16);
+      ctx.fillText(`${currentSymbol} • ${timeframeMinutes}m • ${currentMarket.toUpperCase()}`, 10, 16);
 
+      // OHLCV Bar Readout
       ctx.font = "10px monospace";
       const oStr = `O: ${lastCandle.open.toFixed(2)}`;
       const hStr = `H: ${lastCandle.high.toFixed(2)}`;
       const lStr = `L: ${lastCandle.low.toFixed(2)}`;
       const cStr = `C: ${lastCandle.close.toFixed(2)}`;
       const chgVal = lastCandle.close - lastCandle.open;
-      const chgPct = (chgVal / lastCandle.open) * 100;
+      const chgPct = (chgVal / (lastCandle.open || 1)) * 100;
       const chgStr = `${chgVal >= 0 ? '+' : ''}${chgVal.toFixed(2)} (${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%)`;
 
       ctx.fillStyle = "#64748b";
@@ -5550,10 +5830,55 @@
       ctx.fillStyle = isGreenTick ? "#34d399" : "#fb7185";
       ctx.fillText(`${cStr}  ${chgStr}`, 10 + ctx.measureText(`${oStr}  ${hStr}  ${lStr}  `).width, 30);
 
+      // Active Indicators Readout Row (Exactly like TradingView)
+      const lastSTVal = visibleST[visibleST.length - 1];
+      const lastE9Val = visibleEMA9[visibleEMA9.length - 1];
+      const lastE21Val = visibleEMA21[visibleEMA21.length - 1];
+      const lastMAVal = visibleMA200[visibleMA200.length - 1];
+      const lastVolVal = lastCandle.volume || 0;
+      const volFormatted = (lastVolVal >= 1000000) ? (lastVolVal / 1000000).toFixed(2) + 'M' : (lastVolVal / 1000).toFixed(2) + 'K';
+
+      let legX = 10;
+      ctx.font = "bold 9.5px monospace";
+
+      // Volume
+      ctx.fillStyle = isGreenTick ? "#34d399" : "#fb7185";
+      const volTxt = `Vol ${volFormatted}  `;
+      ctx.fillText(volTxt, legX, 44);
+      legX += ctx.measureText(volTxt).width;
+
+      // SuperTrend (10, 3)
+      if (chkSupertrend && lastSTVal) {
+        ctx.fillStyle = lastSTVal.isBull ? "#10b981" : "#ef4444";
+        const stTxt = `SuperTrend 10 3 ${lastSTVal.value.toFixed(2)}  `;
+        ctx.fillText(stTxt, legX, 44);
+        legX += ctx.measureText(stTxt).width;
+      }
+
+      // EMA Cross (9, 21)
+      if (chkEmaCross && lastE9Val && lastE21Val) {
+        ctx.fillStyle = "#14b8a6";
+        const e9Txt = `EMA 9 ${lastE9Val.toFixed(2)}  `;
+        ctx.fillText(e9Txt, legX, 44);
+        legX += ctx.measureText(e9Txt).width;
+
+        ctx.fillStyle = "#f59e0b";
+        const e21Txt = `EMA 21 ${lastE21Val.toFixed(2)}  `;
+        ctx.fillText(e21Txt, legX, 44);
+        legX += ctx.measureText(e21Txt).width;
+      }
+
+      // MA 200
+      if (chkMA200 && lastMAVal) {
+        ctx.fillStyle = "#38bdf8";
+        const maTxt = `MA 200 ${lastMAVal.toFixed(2)}  `;
+        ctx.fillText(maTxt, legX, 44);
+        legX += ctx.measureText(maTxt).width;
+      }
+
       renderRsiSubChart(candles, minP, maxP);
     }
-
-    function renderRsiSubChart(candles, minP, maxP) {
+function renderRsiSubChart(candles, minP, maxP) {
       const rsiCanvas = document.getElementById("rsiCanvas");
       if (!rsiCanvas) return;
       const rsiCtx = rsiCanvas.getContext("2d");
@@ -5795,7 +6120,7 @@
       const activeStrategy = document.getElementById("sel-algo-strategy")?.value || "rsi_scalp";
       const stratDisplayNames = {
         "rsi_scalp": "RSI Extreme Scalper (<30 Buy / >70 Sell)",
-        "supertrend_ema": "Supertrend (10,3) + 20 EMA Cross",
+        "supertrend_ema": "Supertrend (10,3) + EMA (9,21) Cross + MA 200",
         "vwap_breakout": "VWAP Institutional Momentum",
         "option_breakout": "Option Momentum Buyer",
         "straddle_920": "9:20 AM Short Straddle",
