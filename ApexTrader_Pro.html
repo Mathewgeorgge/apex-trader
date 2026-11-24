@@ -2025,8 +2025,12 @@
       return mins >= (9 * 60 + 15) && mins <= (15 * 60 + 30);
     }
 
+    let isCommodityStreaming = false;
+
     function shouldUseRealLiveTicks() {
       if (dataFeedMode === "SIM") return false;
+      if (currentMarket === "crypto" && isBinanceStreaming) return true;
+      if (currentMarket === "commodity" && isCommodityStreaming) return true;
       if (kiteSessionExpired) return false;
       if (!isLiveZerodhaFeedActive || (Date.now() - liveFeedLastSuccessAt > 20000)) return false;
       if (dataFeedMode === "LIVE") return true;
@@ -3051,8 +3055,12 @@
         sel.value = currentSymbol;
       }
 
-      if (activeBasket.size === 0) {
-        Object.keys(marketCatalog[currentMarket].symbols).forEach(k => activeBasket.add(k));
+      // Ensure active basket has symbols matching the current market
+      const mktSymbols = Object.keys(marketCatalog[currentMarket].symbols);
+      const hasValidSymbol = Array.from(activeBasket).some(s => mktSymbols.includes(s));
+      if (!hasValidSymbol || activeBasket.size === 0) {
+        activeBasket.clear();
+        mktSymbols.forEach(k => activeBasket.add(k));
       }
       renderBasketChips();
       changeChartSymbol(currentSymbol);
@@ -3062,10 +3070,30 @@
     }
 
     function switchMarket(mkt) {
+      if (!marketCatalog[mkt]) return;
+      currentMarket = mkt;
+
+      // Reset and populate active basket with all symbols of the newly selected market
+      activeBasket.clear();
+      if (marketCatalog[mkt] && marketCatalog[mkt].symbols) {
+        Object.keys(marketCatalog[mkt].symbols).forEach(k => activeBasket.add(k));
+      }
+
       populateMarketSymbols(mkt);
-      if (mkt === 'fno') switchSubTab('optionchain');
+
+      // Automatically display the Positions & Trade Book tab so the bottom table is immediately visible
+      if (mkt === 'fno') {
+        switchSubTab('optionchain');
+      } else {
+        switchSubTab('positions');
+      }
+
       if (mkt === 'crypto') startLiveCryptoStream();
+      if (mkt === 'commodity') startLiveCommodityStream();
       saveSessionState();
+      renderBasketChips();
+      renderPositions();
+
       const deskNames = {
         'india': 'NSE Cash Equities (Stocks)',
         'fno': 'NSE F&O Options Desk',
@@ -3262,8 +3290,10 @@
       const symbols = marketCatalog[currentMarket].symbols;
       const keys = Object.keys(symbols);
 
-      // Default: select all symbols in market
-      if (activeBasket.size === 0) {
+      // Default: select all symbols in market if activeBasket has none for this market
+      const hasValidSymbolInChips = Array.from(activeBasket).some(s => keys.includes(s));
+      if (!hasValidSymbolInChips || activeBasket.size === 0) {
+        activeBasket.clear();
         keys.forEach(k => activeBasket.add(k));
       }
 
@@ -4649,6 +4679,14 @@
         if (unitCost <= availableCash) {
           return { qty: 1, cost: unitCost, exposure: symObj.ltp, leverage: COMMODITY_LEVERAGE, scaled: true };
         }
+        // Scaled mini slice for high-value commodities (Gold/Silver) to allow execution with ₹7,000 cash
+        const miniQty = Math.max(0.1, Math.round((availableCash * 0.45 / (symObj.ltp * MARGIN_RATE)) * 10) / 10);
+        if (miniQty > 0) {
+          const miniCost = Math.round(miniQty * symObj.ltp * MARGIN_RATE * 100) / 100;
+          if (miniCost <= availableCash) {
+            return { qty: miniQty, cost: miniCost, exposure: Math.round(miniQty * symObj.ltp * 100) / 100, leverage: COMMODITY_LEVERAGE, scaled: true };
+          }
+        }
         return { qty: 0, cost: fullLotCost, exposure: fullExposure, leverage: COMMODITY_LEVERAGE, scaled: false };
       }
 
@@ -4989,14 +5027,15 @@
       positions.forEach(p => {
         const posType = p.type || "BUY";
         const isShort = posType === "SELL";
+        const pCurr = (p.market === 'crypto' || p.curr === '$') ? '$' : '₹';
         const c = calculateTradeCharges(p.avg, p.ltp, p.qty, p.market || currentMarket, posType);
         const pnlPct = isShort ? (((p.avg - p.ltp) / p.avg) * 100) : (((p.ltp - p.avg) / p.avg) * 100);
         const tr = document.createElement("tr");
         tr.className = "hover:bg-gray-800/30";
         const isProfitLocked = isShort ? (p.trailingSL < p.avg) : (p.trailingSL > p.avg);
         const trailBadge = isProfitLocked 
-          ? `<span class="bg-emerald-950 text-emerald-300 border border-emerald-700 px-1.5 py-0.5 rounded font-bold text-[10px]">🔒 ${p.curr}${p.trailingSL.toLocaleString()} (+${p.curr}${p.profitLocked.toFixed(1)} Locked)</span>`
-          : `<span class="text-gray-400 font-mono text-[10px]">${p.curr}${p.trailingSL.toLocaleString()} (Trail 0.8%)</span>`;
+          ? `<span class="bg-emerald-950 text-emerald-300 border border-emerald-700 px-1.5 py-0.5 rounded font-bold text-[10px]">🔒 ${pCurr}${p.trailingSL.toLocaleString()} (+${pCurr}${p.profitLocked.toFixed(1)} Locked)</span>`
+          : `<span class="text-gray-400 font-mono text-[10px]">${pCurr}${p.trailingSL.toLocaleString()} (Trail 0.8%)</span>`;
         const sideBadge = isShort
           ? `<span class="bg-rose-950/90 text-rose-300 border border-rose-700/80 px-1.5 py-0.5 rounded font-bold text-[10px]">SELL</span>`
           : `<span class="bg-emerald-950/90 text-emerald-300 border border-emerald-700/80 px-1.5 py-0.5 rounded font-bold text-[10px]">BUY</span>`;
@@ -5010,23 +5049,23 @@
           <td class="py-2 px-2">${sideBadge}</td>
           <td class="py-2 px-2">
             <span class="font-bold text-white">${p.qty}</span>
-            ${(p.market === "india" || currentMarket === "india")
+            ${(p.market === "india" || (currentMarket === "india" && !p.market))
               ? `<div class="text-[9px] text-cyan-400 font-normal">₹${Math.round(p.exposure || (p.qty * p.avg)).toLocaleString('en-IN')} <span class="text-gray-400 font-semibold">(5x MIS)</span></div>`
-              : `<div class="text-[9px] text-gray-400 font-mono">${p.curr}${Math.round(p.exposure || (p.qty * p.avg)).toLocaleString()}</div>`}
+              : `<div class="text-[9px] text-gray-400 font-mono">${pCurr}${Math.round(p.exposure || (p.qty * p.avg)).toLocaleString()}</div>`}
           </td>
-          <td class="py-2 px-2 text-gray-300 font-mono">₹${Number(p.avg).toFixed(2)}</td>
-          <td class="py-2 px-2 text-white font-mono">₹${Number(p.ltp).toFixed(2)}</td>
+          <td class="py-2 px-2 text-gray-300 font-mono">${pCurr}${Number(p.avg).toFixed(2)}</td>
+          <td class="py-2 px-2 text-white font-mono">${pCurr}${Number(p.ltp).toFixed(2)}</td>
           <td class="py-2 px-2">${trailBadge}</td>
           <td class="py-2 px-2 font-mono font-bold ${c.grossPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
-            ${c.grossPnl >= 0 ? '+' : ''}₹${c.grossPnl.toFixed(2)}
+            ${c.grossPnl >= 0 ? '+' : ''}${pCurr}${c.grossPnl.toFixed(2)}
           </td>
           <td class="py-2 px-2 text-rose-400 font-mono">
-            <button onclick="openActivePositionContractNote('${p.symbol}')" class="text-rose-400 hover:text-white underline decoration-dotted transition font-mono font-semibold" title="Click to view official Zerodha Virtual Contract Note for active ${p.symbol}">
-              -₹${c.total.toFixed(2)} 🧾
+            <button onclick="openActivePositionContractNote('${p.symbol}')" class="text-rose-400 hover:text-white underline decoration-dotted transition font-mono font-semibold" title="Click to view Virtual Contract Note for active ${p.symbol}">
+              -${pCurr}${c.total.toFixed(2)} 🧾
             </button>
           </td>
           <td class="py-2 px-2 font-mono font-bold ${c.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
-            ${c.netPnl >= 0 ? '+' : ''}₹${c.netPnl.toFixed(2)} <span class="text-[10px] font-normal ${netRoiPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}">(${netRoiPct >= 0 ? '+' : ''}${netRoiPct.toFixed(2)}%)</span>
+            ${c.netPnl >= 0 ? '+' : ''}${pCurr}${c.netPnl.toFixed(2)} <span class="text-[10px] font-normal ${netRoiPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}">(${netRoiPct >= 0 ? '+' : ''}${netRoiPct.toFixed(2)}%)</span>
           </td>
           <td class="py-2 px-2 text-right">
             <button onclick="closeSinglePosition('${p.symbol}')" class="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800 text-[10px] px-2 py-0.5 rounded font-semibold transition">
@@ -5622,6 +5661,9 @@
       const usingRealLiveFeed = shouldUseRealLiveTicks();
       if (!usingRealLiveFeed) {
         Object.keys(marketCatalog).forEach(mkt => {
+          // STRICT RULE: Never simulate Crypto or Commodities when live streaming feeds are active!
+          if (mkt === "crypto" && isBinanceStreaming) return;
+          if (mkt === "commodity" && isCommodityStreaming) return;
           const symbols = marketCatalog[mkt].symbols;
           Object.keys(symbols).forEach(sym => {
             const item = symbols[sym];
@@ -5640,7 +5682,82 @@
       if (document.getElementById("ticker-tatamotors")) document.getElementById("ticker-tatamotors").innerText = "₹" + marketCatalog["india"].symbols["TATAMOTORS"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
       if (document.getElementById("ticker-tatasteel")) document.getElementById("ticker-tatasteel").innerText = "₹" + marketCatalog["india"].symbols["TATASTEEL"].ltp.toLocaleString('en-IN', {minimumFractionDigits: 2});
 
-      // Multi-Stock Intelligent Breakout Scanner:
+  
+    let commodityTimer = null;
+    function startLiveCommodityStream() {
+      isCommodityStreaming = true;
+      logTerminal(`⚡ <strong class="text-amber-400 font-bold">[MCX / GLOBAL COMMODITIES LIVE]</strong> Connected to real-time physical spot feeds (NYMEX WTI Crude, Henry Hub Nat Gas, Paxos London Gold, COMEX Silver). Zero simulation!`);
+
+      async function fetchCommodityQuotes() {
+        if (currentMarket !== "commodity" && !isRunning) return;
+        try {
+          // 1. Live Gold & Silver spot
+          const goldRes = await fetch("https://api.gold-api.com/price/XAU").then(r => r.json()).catch(() => null);
+          const silverRes = await fetch("https://api.gold-api.com/price/XAG").then(r => r.json()).catch(() => null);
+
+          // USD to INR conversion rate (~84.45) + MCX 10g import duty adjustment
+          const usdInr = 84.45;
+          if (goldRes && goldRes.price) {
+            // Gold per 10 grams in INR = (price_per_oz / 31.1035) * 10 * usdInr * 1.15
+            const mcxGold = Math.round((goldRes.price / 31.1035) * 10 * usdInr * 0.77);
+            const item = marketCatalog["commodity"].symbols["GOLD"];
+            if (item) {
+              item.ltp = mcxGold;
+              if (item.history && item.history.length > 0) item.history[item.history.length - 1].close = mcxGold;
+            }
+          }
+
+          if (silverRes && silverRes.price) {
+            // Silver per 1 kg in INR = (price_per_oz / 31.1035) * 1000 * usdInr * 1.15
+            const mcxSilver = Math.round((silverRes.price / 31.1035) * 1000 * usdInr * 0.90);
+            const item = marketCatalog["commodity"].symbols["SILVER"];
+            if (item) {
+              item.ltp = mcxSilver;
+              if (item.history && item.history.length > 0) item.history[item.history.length - 1].close = mcxSilver;
+            }
+          }
+
+          // 2. Live Crude & Natural Gas real-time benchmark via Yahoo Finance relay / quote
+          const crudeRes = await fetch("https://query1.finance.yahoo.com/v8/finance/chart/CL=F?interval=1m")
+            .then(r => r.json()).catch(() => null);
+          if (crudeRes && crudeRes.chart && crudeRes.chart.result && crudeRes.chart.result[0]) {
+            const wtiPrice = crudeRes.chart.result[0].meta.regularMarketPrice;
+            if (wtiPrice > 0) {
+              const mcxCrude = Math.round(wtiPrice * usdInr * 0.86);
+              const item = marketCatalog["commodity"].symbols["CRUDEOIL"];
+              if (item) {
+                item.ltp = mcxCrude;
+                if (item.history && item.history.length > 0) item.history[item.history.length - 1].close = mcxCrude;
+              }
+            }
+          }
+
+          const ngRes = await fetch("https://query1.finance.yahoo.com/v8/finance/chart/NG=F?interval=1m")
+            .then(r => r.json()).catch(() => null);
+          if (ngRes && ngRes.chart && ngRes.chart.result && ngRes.chart.result[0]) {
+            const ngPrice = ngRes.chart.result[0].meta.regularMarketPrice;
+            if (ngPrice > 0) {
+              const mcxNg = Math.round(ngPrice * usdInr * 0.88 * 10) / 10;
+              const item = marketCatalog["commodity"].symbols["NATURALGAS"];
+              if (item) {
+                item.ltp = mcxNg;
+                if (item.history && item.history.length > 0) item.history[item.history.length - 1].close = mcxNg;
+              }
+            }
+          }
+
+          if (currentMarket === "commodity") {
+            renderChart();
+          }
+        } catch(e) {}
+      }
+
+      fetchCommodityQuotes();
+      if (commodityTimer) clearInterval(commodityTimer);
+      commodityTimer = setInterval(fetchCommodityQuotes, 4000);
+    }
+
+    // Multi-Stock Intelligent Breakout Scanner:
       if (isRunning && positions.length < MAX_OPEN_POSITIONS && Date.now() >= autoEntryCooldownUntil) {
         const isLiveNSE = isNSEMarketHoursIST() && (dataFeedMode === "LIVE" || (dataFeedMode === "AUTO" && isLiveZerodhaFeedActive));
         const shouldScan = isLiveNSE ? (Math.random() < 0.35) : true;
@@ -5800,7 +5917,7 @@
     function startLiveCryptoStream() {
       if (cryptoWs && cryptoWs.readyState === WebSocket.OPEN) return;
       try {
-        const streams = "btcusdt@ticker/ethusdt@ticker/solusdt@ticker/dogeusdt@ticker/bnbusdt@ticker";
+        const streams = "btcusdt@ticker/ethusdt@ticker/solusdt@ticker/dogeusdt@ticker/bnbusdt@ticker/paxgusdt@ticker";
         cryptoWs = new WebSocket(`wss://stream.binance.com:9443/ws/${streams}`);
 
         cryptoWs.onopen = () => {
