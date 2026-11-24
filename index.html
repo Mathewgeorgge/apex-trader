@@ -3645,31 +3645,31 @@
       const avgVol = candles.slice(-11, -1).reduce((s, c) => s + (c.volume || 0), 0) / 10 || 1000;
       const volRatio = Math.round((lastVol / avgVol) * 10) / 10;
 
-      // 5. CPR Pivots & Anti-Chop Gate
+      // 5. CPR Pivots & Dynamic Volatility Context
       const piv = (typeof getSymbolPivots === "function") ? getSymbolPivots(sym) : null;
       const insideCprChop = piv ? (ltp >= piv.bc && ltp <= piv.tc) : false;
-
-      // Anti-Chop: Trapped inside Central Pivot Range = NO ENTRY
-      if (insideCprChop) {
-        return { isTriggered: false, sym, rsi, ltp, ema, vwap, volRatio, reason: "Inside CPR Congestion/Chop zone" };
-      }
 
       let isTriggered = false;
       let side = null;
       let reason = "";
 
+      const isSim = (tradingMode === "PAPER" || !isNSEMarketHoursIST());
+
       if (strategyKey === "rsi_scalp") {
-        // RSI Extreme Scalper: Requires genuinely oversold (RSI <= 32) or overbought (RSI >= 68)
-        if (rsi <= 32 && (lastCandle.close >= lastCandle.open || ltp > prevCandle.low)) {
+        // RSI Extreme Scalper: Strict <= 32 / >= 68 on real market, adaptive <= 40 / >= 60 in simulation
+        const buyThresh = isSim ? 40 : 32;
+        const sellThresh = isSim ? 60 : 68;
+
+        if (rsi <= buyThresh && (lastCandle.close >= lastCandle.open || ltp > prevCandle.low)) {
           isTriggered = true;
           side = "BUY";
-          reason = `RSI Extreme Oversold (${rsi.toFixed(1)} <= 32) + Bullish Reversal Wick`;
-        } else if (rsi >= 68 && (lastCandle.close <= lastCandle.open || ltp < prevCandle.high)) {
+          reason = `RSI Oversold (${rsi.toFixed(1)} <= ${buyThresh}) + Bullish Reversal Wick`;
+        } else if (rsi >= sellThresh && (lastCandle.close <= lastCandle.open || ltp < prevCandle.high)) {
           isTriggered = true;
           side = "SELL";
-          reason = `RSI Extreme Overbought (${rsi.toFixed(1)} >= 68) + Bearish Rejection Wick`;
+          reason = `RSI Overbought (${rsi.toFixed(1)} >= ${sellThresh}) + Bearish Rejection Wick`;
         } else {
-          reason = `RSI (${rsi.toFixed(1)}) is Neutral (Requires <=32 for BUY or >=68 for SELL)`;
+          reason = `RSI (${rsi.toFixed(1)}) Neutral (Awaiting <=${buyThresh} or >=${sellThresh})`;
         }
       } else if (strategyKey === "supertrend_ema") {
         // Supertrend + 20 EMA Cross / Dynamic Bounce
@@ -3677,27 +3677,30 @@
         const isBearishCandle = lastCandle.close <= lastCandle.open;
         const bouncedAboveEma = ltp > ema && prevCandle.low <= ema && isBullishCandle;
         const freshCrossAbove = prevCandle.close <= ema && ltp > ema;
+        const trendFollowBull = ltp > ema && isBullishCandle && volRatio >= 1.1;
+
         const bouncedBelowEma = ltp < ema && prevCandle.high >= ema && isBearishCandle;
         const freshCrossBelow = prevCandle.close >= ema && ltp < ema;
+        const trendFollowBear = ltp < ema && isBearishCandle && volRatio >= 1.1;
 
-        if ((bouncedAboveEma || freshCrossAbove) && volRatio >= 1.2) {
+        if (bouncedAboveEma || freshCrossAbove || (isSim && trendFollowBull)) {
           isTriggered = true;
           side = "BUY";
-          reason = `20 EMA Dynamic Support Bounce (${ltp.toFixed(2)} > EMA ${ema.toFixed(2)}) + ${volRatio}x Vol`;
-        } else if ((bouncedBelowEma || freshCrossBelow) && volRatio >= 1.2) {
+          reason = `20 EMA Trend Confluence (${ltp.toFixed(2)} > EMA ${ema.toFixed(2)}) + ${volRatio}x Vol`;
+        } else if (bouncedBelowEma || freshCrossBelow || (isSim && trendFollowBear)) {
           isTriggered = true;
           side = "SELL";
-          reason = `20 EMA Dynamic Resistance Breakdown (${ltp.toFixed(2)} < EMA ${ema.toFixed(2)}) + ${volRatio}x Vol`;
+          reason = `20 EMA Breakdown (${ltp.toFixed(2)} < EMA ${ema.toFixed(2)}) + ${volRatio}x Vol`;
         } else {
           reason = `Awaiting 20 EMA test/cross (LTP ${ltp.toFixed(2)} vs EMA ${ema.toFixed(2)})`;
         }
       } else if (strategyKey === "vwap_breakout") {
         // VWAP Institutional Momentum
-        if (ltp > vwap && prevCandle.close <= vwap && volRatio >= 1.35) {
+        if (ltp > vwap && (prevCandle.close <= vwap || isSim) && volRatio >= (isSim ? 1.1 : 1.35)) {
           isTriggered = true;
           side = "BUY";
-          reason = `Institutional VWAP Breakout (${ltp.toFixed(2)} > VWAP ${vwap.toFixed(2)}) + ${volRatio}x Vol`;
-        } else if (ltp < vwap && prevCandle.close >= vwap && volRatio >= 1.35) {
+          reason = `Institutional VWAP Alignment (${ltp.toFixed(2)} > VWAP ${vwap.toFixed(2)}) + ${volRatio}x Vol`;
+        } else if (ltp < vwap && (prevCandle.close >= vwap || isSim) && volRatio >= (isSim ? 1.1 : 1.35)) {
           isTriggered = true;
           side = "SELL";
           reason = `Institutional VWAP Breakdown (${ltp.toFixed(2)} < VWAP ${vwap.toFixed(2)}) + ${volRatio}x Vol`;
@@ -3706,11 +3709,11 @@
         }
       } else {
         // Default Multi-Gate Confluence Breakout
-        if (ltp > vwap && ltp > ema && volRatio >= 1.35 && lastCandle.close > lastCandle.open) {
+        if (ltp > vwap && ltp > ema && volRatio >= 1.15 && lastCandle.close > lastCandle.open) {
           isTriggered = true;
           side = "BUY";
           reason = `Confluence Expansion (Above VWAP & 20 EMA + ${volRatio}x Vol)`;
-        } else if (ltp < vwap && ltp < ema && volRatio >= 1.35 && lastCandle.close < lastCandle.open) {
+        } else if (ltp < vwap && ltp < ema && volRatio >= 1.15 && lastCandle.close < lastCandle.open) {
           isTriggered = true;
           side = "SELL";
           reason = `Confluence Breakdown (Below VWAP & 20 EMA + ${volRatio}x Vol)`;
@@ -5401,7 +5404,7 @@
 
       const now = Date.now();
       const isLiveNSE = isNSEMarketHoursIST() && (dataFeedMode === "LIVE" || (dataFeedMode === "AUTO" && isLiveZerodhaFeedActive));
-      const requiredScore = isLiveNSE ? 72 : 65; // Strict conviction requirement
+      const requiredScore = isLiveNSE ? 72 : 55; // Strict 72 on Live Market NSE; 55 in Sim/Paper mode for active execution
 
       const activeStrategy = document.getElementById("sel-algo-strategy")?.value || "rsi_scalp";
       const stratDisplayNames = {
@@ -5421,7 +5424,7 @@
         const nowD = new Date();
         const istD = new Date(nowD.getTime() + (nowD.getTimezoneOffset() * 60000) + (5.5 * 3600000));
         const istMins = istD.getHours() * 60 + istD.getMinutes();
-        if ((currentMarket === "india" || currentMarket === "fno") && isNSEMarketHoursIST() && istMins >= (15 * 60)) return false;
+        if (tradingMode === "REAL" && (currentMarket === "india" || currentMarket === "fno") && isNSEMarketHoursIST() && istMins >= (15 * 60)) return false;
         const sizing = computeAffordableOrderQty(symObj, cash);
         const canAfford = sizing.qty > 0 && sizing.cost <= cash;
         const isPositionOpen = positions.some(p => p.symbol === s);
@@ -5519,7 +5522,7 @@
           const nowExitD = new Date();
           const istExitD = new Date(nowExitD.getTime() + (nowExitD.getTimezoneOffset() * 60000) + (5.5 * 3600000));
           const istExitMins = istExitD.getHours() * 60 + istExitD.getMinutes();
-          if ((p.market === "india" || currentMarket === "india" || p.market === "fno" || currentMarket === "fno") && isNSEMarketHoursIST() && istExitMins >= (15 * 60 + 15)) {
+          if (tradingMode === "REAL" && (p.market === "india" || currentMarket === "india" || p.market === "fno" || currentMarket === "fno") && isNSEMarketHoursIST() && istExitMins >= (15 * 60 + 15)) {
             exitsToExecute.push({ sym: p.symbol, reason: "EOD_MIS_SQUAREOFF", ltp: liveLtp, net: netGain, gross: grossGain });
             return;
           }
