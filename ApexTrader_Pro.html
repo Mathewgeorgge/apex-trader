@@ -4843,17 +4843,27 @@
       }
     }
 
-    function triggerImmediateTrade(targetSym = null, isManual = true, side = null) {
-      if (tradingMode === "REAL" && currentMarket !== "india") {
-        const deskLabel = currentMarket === "commodity" ? "MCX Commodities" : (currentMarket === "crypto" ? "Crypto" : "NSE F&O Options");
+    function triggerImmediateTrade(targetSym = null, isManual = true, side = null, targetMkt = null) {
+      const mkt = targetMkt || currentMarket;
+
+      // 1. Strict 9:15 to 3:30 IST Indian Market Hours Rule: Trade ONLY in Stocks!
+      if (isNSEMarketHoursIST() && mkt !== "india") {
+        const deskNames = { 'fno': 'NSE F&O Options', 'commodity': 'MCX Commodities', 'crypto': 'Crypto' };
+        logTerminal(`🕒 <strong class="text-amber-400 font-bold">[INDIAN MARKET HOURS (9:15 - 3:30 IST)]</strong> Trading is dedicated strictly to <strong>NSE Cash Equities (Stocks)</strong>. <strong>${deskNames[mkt] || mkt}</strong> cannot be traded during Indian market hours.`);
+        return;
+      }
+
+      // 2. Zerodha REAL Mode Safety Wall:
+      if (tradingMode === "REAL" && mkt !== "india") {
+        const deskLabel = mkt === "commodity" ? "MCX Commodities" : (mkt === "crypto" ? "Crypto" : "NSE F&O Options");
         logTerminal(`🔒 <strong class="text-amber-400 font-bold">[REAL MODE SAFETY WALL]</strong> Real Zerodha trading is strictly locked to <strong>NSE Cash Equities (Stocks)</strong> for 100% capital safety. <strong>${deskLabel}</strong> is active in Paper Practice mode only.`);
         return;
       }
-      const sym = targetSym || currentSymbol;
-      const mktObj = marketCatalog[currentMarket].symbols[sym];
+const sym = targetSym || currentSymbol;
+      const mktObj = marketCatalog[mkt]?.symbols?.[sym];
       if (!mktObj) return;
       const ltp = mktObj.ltp;
-      const curr = getCurrSymbol();
+      const curr = marketCatalog[mkt]?.currency || getCurrSymbol();
       if (isManual) {
         logTerminal(`⚡ <strong class="text-indigo-400">[MANUAL TEST SIGNAL]</strong> Executing immediate test order on <strong>${sym}</strong> as requested by user.`);
       }
@@ -4862,7 +4872,7 @@
       if (existing) {
         // Evaluate Brokerage & Net Profit Filter (Supports BOTH LONG BUY & SHORT SELL!)
         const posType = existing.type || "BUY";
-        const charges = calculateTradeCharges(existing.avg, ltp, existing.qty, existing.market || currentMarket, posType);
+        const charges = calculateTradeCharges(existing.avg, ltp, existing.qty, existing.market || mkt, posType);
         if (!isManual && charges.netPnl <= 0) {
           return;
         }
@@ -4900,13 +4910,13 @@
         const isShort = (tradeType === "SELL");
 
         // Calculate estimated roundtrip breakeven for Long or Short
-        const estCharges = calculateTradeCharges(ltp, isShort ? ltp * 0.99 : ltp * 1.01, lotSize, currentMarket, tradeType);
+        const estCharges = calculateTradeCharges(ltp, isShort ? ltp * 0.99 : ltp * 1.01, lotSize, mkt, tradeType);
         const breakevenPoints = estCharges.breakeven;
 
         marginUsed += cost;
         cash -= cost;
         const totalExposure = sizing.exposure || (lotSize * ltp);
-        const isOption = (currentMarket === "fno");
+        const isOption = (mkt === "fno");
 
         // 5-Year Empirical Adaptive Risk:Reward Calibration
         // High-beta stocks (e.g. Tata Motors, Tata Steel) receive calibrated volatility breathing room (SL ~1.5%, Target ~3.4%)
@@ -4929,9 +4939,9 @@
           ltp: ltp,
           cost: cost,
           exposure: totalExposure,
-          leverage: sizing.leverage || (currentMarket === "india" ? 5.0 : 1.0),
+          leverage: sizing.leverage || (mkt === "india" ? 5.0 : 1.0),
           curr: curr,
-          market: currentMarket,
+          market: mkt,
           type: tradeType,
           peakPrice: ltp,
           initialSL: initSL,
@@ -6094,41 +6104,41 @@ function renderRsiSubChart(candles, minP, maxP) {
     function scanAndExecuteSetup(isInitialScan = false) {
       if (!isRunning || positions.length >= MAX_OPEN_POSITIONS || Date.now() < autoEntryCooldownUntil) return;
 
-      // 1. Zerodha REAL Mode Capital Protection Barrier:
-      // Real money orders are STRICTLY AND ONLY allowed on NSE Cash Equities (Stocks).
-      // MCX Commodities, F&O Options, and Crypto desks are 100% locked to Paper Practice mode only.
-      if (tradingMode === "REAL" && currentMarket !== "india") {
+      const inNSEHours = isNSEMarketHoursIST();
+
+      // Core Dynamic Routing Rule:
+      // 1. Between 9:15 AM and 3:30 PM IST -> Scanner trades ONLY in Stocks (NSE Cash Equities)!
+      // 2. Outside 9:15 to 3:30 IST -> Scanner trades in the active tab we are in (MCX Commodities, Crypto, etc.)
+      const scanMarket = inNSEHours ? "india" : currentMarket;
+
+      // In Indian market hours: non-stocks cannot execute trades
+      if (inNSEHours && currentMarket !== "india") {
         if (isInitialScan) {
-          const deskName = currentMarket === "commodity" ? "MCX Commodities" : (currentMarket === "crypto" ? "Crypto" : "NSE F&O Options");
+          logTerminal(`🕒 <span class="text-amber-400 font-bold">[INDIAN MARKET HOURS (9:15-3:30 IST)]</span> Algo Bot trading is dedicated strictly to <strong>NSE Cash Equities (Stocks)</strong>. Non-stock desks are view-only.`);
+        }
+      }
+
+      // If outside Indian market hours and user is on NSE Stocks or F&O tab: NSE is closed!
+      if (!inNSEHours && (scanMarket === "india" || scanMarket === "fno")) {
+        if (isInitialScan) {
+          logTerminal(`🕒 <span class="text-amber-400 font-bold">[NSE MARKET CLOSED]</span> NSE Cash & F&O markets trade 9:15 AM - 3:30 PM IST. Switch to <strong>MCX Commodities</strong> (open until 11:30 PM) or <strong>Crypto</strong> (24/7) to scan active markets.`);
+        }
+        return;
+      }
+
+      // In REAL mode, non-stocks are always blocked
+      if (tradingMode === "REAL" && scanMarket !== "india") {
+        if (isInitialScan) {
+          const deskName = scanMarket === "commodity" ? "MCX Commodities" : (scanMarket === "crypto" ? "Crypto" : "NSE F&O Options");
           logTerminal(`🔒 <strong class="text-amber-400 font-bold">[REAL MODE CAPITAL WALL]</strong> Real Zerodha trading is strictly locked to <strong>NSE Cash Equities (Stocks)</strong> for 100% safety. <strong>${deskName}</strong> is active in Paper Practice mode only.`);
         }
         return;
       }
 
-      // 2. Schedule Gate: Crypto Practice Only AFTER Indian Market Hours!
-      // During Indian market hours (9:15 AM - 3:30 PM IST), focus strictly on Indian markets.
-      // Crypto practice is held until Indian market closes at 3:30 PM IST.
-      if (currentMarket === "crypto" && isNSEMarketHoursIST()) {
-        if (isInitialScan) {
-          logTerminal(`🕒 <span class="text-amber-400 font-bold">[INDIAN MARKET ACTIVE (9:15-3:30 IST)]</span> Crypto practice is scheduled AFTER Indian market closes. Indian market currently has 100% focus.`);
-        }
-        return;
-      }
-
-      // 3. Indian Market Real Hours Guard:
-      // In REAL mode, Indian Stocks and F&O only trade during live exchange hours (9:15 AM - 3:30 PM IST)
-      if (tradingMode === "REAL" && (currentMarket === "india" || currentMarket === "fno") && !isNSEMarketHoursIST()) {
-        if (isInitialScan) {
-          logTerminal(`🕒 <span class="text-amber-400 font-bold">[NSE MARKET CLOSED]</span> Real Zerodha orders for Stocks and F&O only execute during live market hours (9:15 AM - 3:30 PM IST).`);
-        }
-        return;
-      }
-
       const now = Date.now();
-      const isLiveNSE = isNSEMarketHoursIST() && (dataFeedMode === "LIVE" || (dataFeedMode === "AUTO" && isLiveZerodhaFeedActive));
+      const isLiveNSE = inNSEHours && (dataFeedMode === "LIVE" || (dataFeedMode === "AUTO" && isLiveZerodhaFeedActive));
       const requiredScore = isLiveNSE ? 72 : 55; // Strict 72 on Live Market NSE; 55 in Sim/Paper mode for active execution
-
-      const activeStrategy = document.getElementById("sel-algo-strategy")?.value || "rsi_scalp";
+const activeStrategy = document.getElementById("sel-algo-strategy")?.value || "rsi_scalp";
       const stratDisplayNames = {
         "rsi_scalp": "RSI Extreme Scalper (<30 Buy / >70 Sell)",
         "supertrend_ema": "Supertrend (10,3) + EMA (9,21) Cross + MA 200",
@@ -6139,19 +6149,20 @@ function renderRsiSubChart(candles, minP, maxP) {
       };
       const stratTitle = stratDisplayNames[activeStrategy] || activeStrategy;
 
-      const candidateSymbols = Object.keys(marketCatalog[currentMarket].symbols).filter(s => {
-        const symObj = marketCatalog[currentMarket].symbols[s];
+      const candidateSymbols = Object.keys(marketCatalog[scanMarket].symbols).filter(s => {
+        const symObj = marketCatalog[scanMarket].symbols[s];
         if (!symObj) return false;
-        if (currentMarket === "india" && (s === "NIFTY 50" || s === "BANK NIFTY")) return false;
+        if (scanMarket === "india" && (s === "NIFTY 50" || s === "BANK NIFTY")) return false;
         const nowD = new Date();
         const istD = new Date(nowD.getTime() + (nowD.getTimezoneOffset() * 60000) + (5.5 * 3600000));
         const istMins = istD.getHours() * 60 + istD.getMinutes();
-        if (tradingMode === "REAL" && (currentMarket === "india" || currentMarket === "fno") && isNSEMarketHoursIST() && istMins >= (15 * 60)) return false;
+        if (tradingMode === "REAL" && scanMarket === "india" && inNSEHours && istMins >= (15 * 60)) return false;
         const sizing = computeAffordableOrderQty(symObj, cash);
         const canAfford = sizing.qty > 0 && sizing.cost <= cash;
         const isPositionOpen = positions.some(p => p.symbol === s);
         const isCoolingDown = (recentlyExitedSymbols[s] && recentlyExitedSymbols[s] > now);
-        const isInBasket = (activeBasket.size === 0 || activeBasket.has(s));
+        const basketSet = (scanMarket === currentMarket) ? activeBasket : new Set(Object.keys(marketCatalog[scanMarket].symbols));
+        const isInBasket = (basketSet.size === 0 || basketSet.has(s));
         return !isPositionOpen && !isCoolingDown && isInBasket && canAfford;
       });
 
@@ -6181,8 +6192,9 @@ function renderRsiSubChart(candles, minP, maxP) {
         const topPick = triggeredCandidates[0];
         const isShort = topPick.side === "SELL";
 
-        logTerminal(`🔔 <strong class="${isShort ? 'text-rose-400' : 'text-emerald-400'}">[SETUP TRIGGERED: ${stratTitle}]</strong> ${topPick.reason} on <strong>${topPick.sym}</strong> [Score <strong>${topPick.score}/100</strong> • 4/4 Gates Cleared]. Routing <strong>${topPick.side}</strong>...`);
-        triggerImmediateTrade(topPick.sym, false, topPick.side);
+        const deskTag = scanMarket === "india" ? "NSE Stocks" : (scanMarket === "commodity" ? "MCX" : (scanMarket === "crypto" ? "Crypto" : "F&O"));
+        logTerminal(`🔔 <strong class="${isShort ? 'text-rose-400' : 'text-emerald-400'}">[SETUP TRIGGERED: ${stratTitle}]</strong> ${topPick.reason} on <strong>${topPick.sym}</strong> (${deskTag}) [Score <strong>${topPick.score}/100</strong> • 4/4 Gates Cleared]. Routing <strong>${topPick.side}</strong>...`);
+        triggerImmediateTrade(topPick.sym, false, topPick.side, scanMarket);
         autoEntryCooldownUntil = Date.now() + (isLiveNSE ? 45000 : 20000);
       } else if (isInitialScan) {
         const sample = evaluated.slice(0, 3).map(e => `${e.sym} (RSI: ${e.trig?.rsi || 50})`).join(", ");
