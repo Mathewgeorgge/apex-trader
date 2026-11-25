@@ -2120,7 +2120,9 @@
       if (tradingMode === "REAL") {
         if (btn) btn.className = "bg-rose-950/90 hover:bg-rose-900 border border-rose-600 text-rose-300 px-2.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition shadow glow-red";
         if (icon) icon.innerText = "🔴";
-        if (label) label.innerText = "REAL ZERODHA";
+        if (label) {
+          label.innerText = currentMarket === "india" ? "REAL (NSE STOCKS)" : "REAL (STOCKS ONLY • DESK: PAPER)";
+        }
         if (modalBadge) {
           modalBadge.innerText = "REAL ZERODHA (LIVE ORDERS)";
           modalBadge.className = "bg-rose-950 text-rose-300 border border-rose-800 px-2 py-0.5 rounded font-mono font-bold";
@@ -2202,7 +2204,10 @@
           return;
         }
         tradingMode = "REAL";
-        logTerminal(`🚨 <strong class="text-rose-400 font-bold">[SWITCHED TO REAL MODE]</strong> Real mode selected (Relay remains read-only safe until live order routing is enabled).`);
+        if (currentMarket !== "india") {
+          switchMarket("india");
+        }
+        logTerminal(`🚨 <strong class="text-rose-400 font-bold">[SWITCHED TO REAL MODE]</strong> Real mode active. 🔒 <strong>Hard-locked to NSE Cash Equities (Stocks) only</strong> for 100% capital protection. MCX, F&O, and Crypto remain in safe Practice/Paper mode.`);
       } else {
         tradingMode = "PAPER";
         logTerminal(`🛡️ <strong class="text-emerald-400 font-bold">[SWITCHED TO PAPER MODE]</strong> 100% Safe Paper Mode active with live real-price data support.`);
@@ -3122,7 +3127,11 @@
         'commodity': 'MCX Commodities (Crude, Gold, Natural Gas • Open to 11:30 PM)',
         'crypto': 'Global Crypto 24/7 (Live Binance Feed)'
       };
-      logTerminal(`🌐 <strong class="text-cyan-400">[MARKET SWITCHED]</strong> Active Desk: <strong>${deskNames[mkt] || mkt}</strong>. Algorithmic scanner and basket synchronized.`);
+      if (tradingMode === "REAL" && mkt !== "india") {
+        logTerminal(`🌐 <strong class="text-cyan-400">[PRACTICE DESK VIEW]</strong> Active: <strong>${deskNames[mkt] || mkt}</strong>. 🔒 <span class="text-amber-300 font-bold">Real capital is safely locked to NSE Stocks</span>; this desk runs in Paper Practice mode.`);
+      } else {
+        logTerminal(`🌐 <strong class="text-cyan-400">[MARKET SWITCHED]</strong> Active Desk: <strong>${deskNames[mkt] || mkt}</strong>. Algorithmic scanner and basket synchronized.`);
+      }
     }
 
 
@@ -4835,8 +4844,9 @@
     }
 
     function triggerImmediateTrade(targetSym = null, isManual = true, side = null) {
-      if (tradingMode === "REAL" && currentMarket === "crypto") {
-        logTerminal(`⚠️ <strong class="text-amber-400">[REAL MODE RESTRICTION]</strong> Zerodha does not support Crypto trading. Crypto is strictly available for Paper practice only.`);
+      if (tradingMode === "REAL" && currentMarket !== "india") {
+        const deskLabel = currentMarket === "commodity" ? "MCX Commodities" : (currentMarket === "crypto" ? "Crypto" : "NSE F&O Options");
+        logTerminal(`🔒 <strong class="text-amber-400 font-bold">[REAL MODE SAFETY WALL]</strong> Real Zerodha trading is strictly locked to <strong>NSE Cash Equities (Stocks)</strong> for 100% capital safety. <strong>${deskLabel}</strong> is active in Paper Practice mode only.`);
         return;
       }
       const sym = targetSym || currentSymbol;
@@ -6084,12 +6094,13 @@ function renderRsiSubChart(candles, minP, maxP) {
     function scanAndExecuteSetup(isInitialScan = false) {
       if (!isRunning || positions.length >= MAX_OPEN_POSITIONS || Date.now() < autoEntryCooldownUntil) return;
 
-      // 1. Zerodha REAL Mode Security Barrier:
-      // When in REAL (Zerodha) mode, ONLY Indian exchange assets (NSE Stocks, NSE F&O, MCX) are allowed.
-      // Crypto desk is 100% blocked from executing in Zerodha mode!
-      if (tradingMode === "REAL" && currentMarket === "crypto") {
+      // 1. Zerodha REAL Mode Capital Protection Barrier:
+      // Real money orders are STRICTLY AND ONLY allowed on NSE Cash Equities (Stocks).
+      // MCX Commodities, F&O Options, and Crypto desks are 100% locked to Paper Practice mode only.
+      if (tradingMode === "REAL" && currentMarket !== "india") {
         if (isInitialScan) {
-          logTerminal(`⚠️ <strong class="text-amber-400">[REAL MODE RESTRICTION]</strong> Zerodha does not support Crypto trading. Crypto is strictly available for Paper practice only.`);
+          const deskName = currentMarket === "commodity" ? "MCX Commodities" : (currentMarket === "crypto" ? "Crypto" : "NSE F&O Options");
+          logTerminal(`🔒 <strong class="text-amber-400 font-bold">[REAL MODE CAPITAL WALL]</strong> Real Zerodha trading is strictly locked to <strong>NSE Cash Equities (Stocks)</strong> for 100% safety. <strong>${deskName}</strong> is active in Paper Practice mode only.`);
         }
         return;
       }
