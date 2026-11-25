@@ -347,12 +347,12 @@
           <div>
             <label class="block text-[10px] text-gray-400 font-semibold mb-1">Trading Strategy</label>
             <select id="sel-algo-strategy" class="w-full bg-[#070b14] border border-gray-700 text-white rounded p-1.5 text-xs font-semibold">
-              <option value="straddle_920">🎯 9:20 AM Short Straddle (Sell ATM CE + PE)</option>
-              <option value="option_breakout">⚡ Option Momentum Buyer (Call/Put Breakout)</option>
-              <option value="supertrend_ema">Supertrend (10,3) + EMA Cross (9,21) + MA 200</option>
-              <option value="vwap_breakout">VWAP Institutional Momentum</option>
-              <option value="rsi_scalp">RSI Extreme Scalper (<30 Buy / >70 Sell)</option>
-              <option value="news_breakout">News Catalyst Sentiment Breakout</option>
+              <option value="supertrend_ema" selected>🔥 SuperTrend (10,3) + EMA Cross (9,21) + MA 200 (Trend Follower)</option>
+              <option value="vwap_breakout">⚡ VWAP Institutional Momentum</option>
+              <option value="option_breakout">🎯 Option Momentum Buyer (Call/Put Breakout)</option>
+              <option value="straddle_920">📊 9:20 AM Short Straddle</option>
+              <option value="rsi_scalp">🔄 RSI Extreme Scalper (<30 Buy / >70 Sell)</option>
+              <option value="news_breakout">📰 News Catalyst Sentiment Breakout</option>
             </select>
           </div>
 
@@ -3775,18 +3775,23 @@
       const isSim = (tradingMode === "PAPER" || !isNSEMarketHoursIST());
 
       if (strategyKey === "rsi_scalp") {
-        // RSI Extreme Scalper: Strict <= 32 / >= 68 on real market, adaptive <= 40 / >= 60 in simulation
-        const buyThresh = isSim ? 40 : 32;
-        const sellThresh = isSim ? 60 : 68;
+        // RSI Extreme Scalper with Trend Alignment Shield:
+        // On a positive market day or when stock is above open/VWAP, NEVER short an overbought stock!
+        const stockPct = symObj ? (((ltp - (symObj.open || ltp)) / (symObj.open || ltp)) * 100) : 0;
+        const isBullishDay = stockPct >= 0 || ltp >= vwap;
+        const buyThresh = isSim ? 42 : 35;
+        const sellThresh = isSim ? 62 : 70;
 
         if (rsi <= buyThresh && (lastCandle.close >= lastCandle.open || ltp > prevCandle.low)) {
           isTriggered = true;
           side = "BUY";
-          reason = `RSI Oversold (${rsi.toFixed(1)} <= ${buyThresh}) + Bullish Reversal Wick`;
-        } else if (rsi >= sellThresh && (lastCandle.close <= lastCandle.open || ltp < prevCandle.high)) {
+          reason = `RSI Dip Oversold (${rsi.toFixed(1)} <= ${buyThresh}) + Bullish Reversal Wick`;
+        } else if (rsi >= sellThresh && !isBullishDay && (lastCandle.close <= lastCandle.open || ltp < prevCandle.high)) {
           isTriggered = true;
           side = "SELL";
           reason = `RSI Overbought (${rsi.toFixed(1)} >= ${sellThresh}) + Bearish Rejection Wick`;
+        } else if (rsi >= sellThresh && isBullishDay) {
+          reason = `RSI (${rsi.toFixed(1)}) Strong Bullish Momentum. Shorting is disabled on green days!`;
         } else {
           reason = `RSI (${rsi.toFixed(1)}) Neutral (Awaiting <=${buyThresh} or >=${sellThresh})`;
         }
@@ -4815,7 +4820,7 @@
         statusTag.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-300 font-bold border border-emerald-800";
         playBeep("buy");
         saveSessionState();
-        const stratVal = document.getElementById("sel-algo-strategy")?.value || "rsi_scalp";
+        const stratVal = document.getElementById("sel-algo-strategy")?.value || "supertrend_ema";
         const stratMap = {
           "rsi_scalp": "RSI Extreme Scalper (<30 Buy / >70 Sell)",
           "supertrend_ema": "Supertrend (10,3) + EMA (9,21) Cross + MA 200",
@@ -6138,7 +6143,7 @@ function renderRsiSubChart(candles, minP, maxP) {
       const now = Date.now();
       const isLiveNSE = inNSEHours && (dataFeedMode === "LIVE" || (dataFeedMode === "AUTO" && isLiveZerodhaFeedActive));
       const requiredScore = isLiveNSE ? 72 : 55; // Strict 72 on Live Market NSE; 55 in Sim/Paper mode for active execution
-const activeStrategy = document.getElementById("sel-algo-strategy")?.value || "rsi_scalp";
+const activeStrategy = document.getElementById("sel-algo-strategy")?.value || "supertrend_ema";
       const stratDisplayNames = {
         "rsi_scalp": "RSI Extreme Scalper (<30 Buy / >70 Sell)",
         "supertrend_ema": "Supertrend (10,3) + EMA (9,21) Cross + MA 200",
@@ -6168,19 +6173,41 @@ const activeStrategy = document.getElementById("sel-algo-strategy")?.value || "r
 
       if (candidateSymbols.length === 0) return;
 
-      // 1. Evaluate Strategy Trigger + Conviction Metrics on each candidate
+      // 1. Institutional Macro Trend Directional Shield:
+      // Check broad market bias (NIFTY 50 and BANK NIFTY intraday direction)
+      const niftySym = marketCatalog["india"]?.symbols?.["NIFTY 50"];
+      const bnfSym = marketCatalog["india"]?.symbols?.["BANK NIFTY"];
+      const niftyPct = niftySym ? (((niftySym.ltp - (niftySym.open || niftySym.ltp)) / (niftySym.open || niftySym.ltp)) * 100) : 0;
+      const bnfPct = bnfSym ? (((bnfSym.ltp - (bnfSym.open || bnfSym.ltp)) / (bnfSym.open || bnfSym.ltp)) * 100) : 0;
+      const isMarketBullishDay = (niftyPct >= 0 || bnfPct >= 0);
+
+      // 2. Evaluate Strategy Trigger + Conviction Metrics on each candidate
       const evaluated = candidateSymbols.map(s => {
+        const symObj = marketCatalog[scanMarket].symbols[s];
         const trig = evaluateStrategyTrigger(s, activeStrategy);
         const metrics = calculateStockMetrics(s);
         const score = metrics ? metrics.score : 0;
+        let side = trig?.side || metrics?.side || "BUY";
+        let isTriggered = trig ? trig.isTriggered : false;
+        let reason = trig?.reason || "";
+
+        // STRICT TREND SHIELD:
+        // On a positive market day or when a stock is positive on the day (or above VWAP/open),
+        // SHORT SELLING IS STRICTLY FORBIDDEN!
+        const stockPct = symObj ? (((symObj.ltp - (symObj.open || symObj.ltp)) / (symObj.open || symObj.ltp)) * 100) : 0;
+        if (side === "SELL" && (stockPct >= 0 || isMarketBullishDay)) {
+          isTriggered = false; // Discard counter-trend short signal!
+          reason = `[TREND SHIELD] Shorting blocked on positive stock/market (+${stockPct.toFixed(2)}%). Only BUY permitted on bull days.`;
+        }
+
         return {
           sym: s,
           trig,
           metrics,
           score,
-          isTriggered: trig ? trig.isTriggered : false,
-          side: trig?.side || metrics?.side || "BUY",
-          reason: trig?.reason || ""
+          isTriggered,
+          side,
+          reason
         };
       });
 
